@@ -37,6 +37,7 @@ public class View {
     // ------- referenceContainer ----------
     private final VBox referenceContainer = new VBox(5);
     private Rectangle marker = new Rectangle(0,0,0,50);
+    private final Pane referenceRect = new Pane();
     // ---------- tickContainer ----------
     private final HBox tickContainer = new HBox();
     private final Pane spaceWrapper1 = new Pane();
@@ -44,15 +45,14 @@ public class View {
     private EventHandler<MouseEvent> releaseSelectionHandler;
     // controlContainer
     private final HBox controlContainer = new HBox();
-    Button zoomInButton = new Button("Zoom In");
-    Button zoomOutButton = new Button("Zoom Out");
+    Button zoomInButton = new Button("+");
+    Button zoomOutButton = new Button("-");
     // ---------- callsPanel ----------
     private final VBox samplesContainer = new VBox(0);
     private final HBox selectionContainer = new HBox();
     private final Pane selectionWrapper = new Pane();
     private final StackPane samplePanel = new StackPane(samplesContainer, selectionContainer);
     private final ScrollPane callsPanel = new ScrollPane(samplePanel);
-    private final Pane referenceRect = new Pane();
     private final Pane markerWrapper = new Pane();
     private final Pane spaceWrapper2 = new Pane();
 
@@ -104,6 +104,21 @@ public class View {
     }
 
     public void initCoords() {
+        zoomInButton.setMinSize(35, 35);
+        zoomInButton.setMaxSize(35, 35);
+        zoomOutButton.setMinSize(35, 35);
+        zoomOutButton.setMaxSize(35, 35);
+        String circularStyle = """
+    -fx-background-radius: 10px;
+    -fx-border-radius: 10px;
+    -fx-text-fill: #555555;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+""";
+
+        zoomInButton.setStyle(circularStyle);
+        zoomOutButton.setStyle(circularStyle);
         controlContainer.getChildren().add(zoomInButton);
         controlContainer.getChildren().add(zoomOutButton);
         // coordinate ticks
@@ -175,7 +190,7 @@ public class View {
         });
     }
 
-    public void initSamples(ArrayList<Sample> samples) {
+    public void initSamples(ArrayList<Sample> samples, int refLength, double zoomLevel) {
         spaceWrapper2.setMinWidth(100);
         spaceWrapper2.setPrefWidth(100);
         spaceWrapper2.setMaxWidth(100);
@@ -185,6 +200,9 @@ public class View {
             // create sampContainer HBox to hold sample label and calls
             HBox sampContainer = new HBox();
             sampContainer.setPrefHeight(100);
+            sampContainer.setMinWidth(refLength * zoomLevel);
+            sampContainer.setPrefWidth(refLength * zoomLevel);
+            sampContainer.setMaxWidth(refLength * zoomLevel);
             // create labelWrapper Pane to hold sample name
             Pane labelWrapper = new Pane();
             Label sampleLabel = new Label(samples.get(i).getName());
@@ -205,7 +223,7 @@ public class View {
         this.callsPanel.setPannable(true);   // Optional: enables mouse drag scrolling
     }
 
-    public void showCalls(ArrayList<Sample> samples, double zoomLevel) {
+    public void showCalls(ArrayList<Sample> samples, double zoomLevel, int refLength) {
         /**
          *
          */
@@ -213,6 +231,9 @@ public class View {
             HBox currentSampContainer = (HBox) this.samplesContainer.getChildren().get(i);
             Pane currentCalls = (Pane) currentSampContainer.getChildren().get(1);
             currentCalls.getChildren().clear();
+            currentSampContainer.setMinWidth(refLength * zoomLevel);
+            currentSampContainer.setPrefWidth(refLength * zoomLevel);
+            currentSampContainer.setMaxWidth(refLength * zoomLevel);
             // loop through each call
             for (int j=0; j<samples.get(i).calls.size(); j++) {
                 // create line
@@ -250,7 +271,7 @@ public class View {
             }
         }
         // set width
-        double contentWidth = callsPanel.getContent().getBoundsInLocal().getWidth();
+        double contentWidth = refLength * zoomLevel;
         double viewportWidth = callsPanel.getViewportBounds().getWidth();
         double proportionVisible = viewportWidth / contentWidth;
         double markerWidth = Screen.getPrimary().getVisualBounds().getWidth() * proportionVisible;
@@ -284,12 +305,15 @@ public class View {
     }
 
     public void updateZoom(ArrayList<Sample> samples, double zoomLevel, int refLength) {
+        this.showCalls(samples, zoomLevel, refLength);
         this.showCoords(refLength, zoomLevel);
-        this.showCalls(samples, zoomLevel);
         // update marker width
-        double contentWidth = callsPanel.getContent().getBoundsInLocal().getWidth();
+        double contentWidth = refLength * zoomLevel;
+        System.out.println("ZOOM LEVEL " + zoomLevel);
+        System.out.println("CONTENT WIDTH " + contentWidth);
         double viewportWidth = callsPanel.getViewportBounds().getWidth();
         double proportionVisible = viewportWidth / contentWidth;
+        System.out.println(proportionVisible);
         double markerWidth = markerWrapper.getWidth() * proportionVisible;
         marker.setWidth(markerWidth);
     }

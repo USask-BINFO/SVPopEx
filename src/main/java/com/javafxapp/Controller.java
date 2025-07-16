@@ -47,9 +47,9 @@ public class Controller {
             model.processFile(fileContent);
             view.initReference(model.getRefLength(), model.getRefName());
             view.initCoords();
-            view.initSamples(model.getSamples());
+            view.initSamples(model.getSamples(), model.getRefLength(), model.getZoomLevel());
             view.showCoords(model.getRefLength(), model.getZoomLevel());
-            view.showCalls(model.getSamples(), model.getZoomLevel());
+            view.showCalls(model.getSamples(), model.getZoomLevel(), model.getRefLength());
         }
         // user closed or cancelled file
         else {
