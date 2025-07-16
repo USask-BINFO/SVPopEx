@@ -25,7 +25,7 @@ public class View {
     private MenuItem importVCFItem = new MenuItem("Import VCF");
     private MenuItem zoomInItem = new MenuItem("Zoom In");
     private MenuItem zoomOutItem = new MenuItem("Zoom Out");
-    private VBox referencePanel = new VBox(5);
+    private VBox referenceContainer = new VBox(5);
     private VBox samplesContainer = new VBox(0);
     HBox selectionContainer = new HBox();
     Pane selectionWrapper = new Pane();
@@ -54,8 +54,8 @@ public class View {
         menuBar.getMenus().add(fileMenu);
         menuBar.getMenus().add(viewMenu);
         // ---------- REF PANEL ---------
-        referencePanel.setStyle("-fx-background-color: white;");
-        layout.getChildren().addAll(menuBar, referencePanel, scrollPane);
+        referenceContainer.setStyle("-fx-background-color: white;");
+        layout.getChildren().addAll(menuBar, referenceContainer, tickContainer, scrollPane);
         // ---------- SAMPLE PANEL -------
         selectionWrapper.setPickOnBounds(false);
     }
@@ -91,7 +91,7 @@ public class View {
         labelsBox.setStyle("-fx-alignment: center;");
         StackPane rectangleWithLabels = new StackPane(referenceRect, labelsBox);
         StackPane rectWithMarker = new StackPane(rectangleWithLabels, markerWrapper);
-        this.referencePanel.getChildren().add(rectWithMarker);
+        this.referenceContainer.getChildren().add(rectWithMarker);
     }
 
     public void initCoords() {
@@ -103,7 +103,6 @@ public class View {
         tickContainer.getChildren().add(ticksWrapper);
         ticksWrapper.setOnMouseEntered(e -> ticksWrapper.setCursor(Cursor.HAND));
         ticksWrapper.setOnMouseExited(e -> ticksWrapper.setCursor(Cursor.DEFAULT));
-        this.referencePanel.getChildren().add(tickContainer);
         // sync scrollpane scroll with marker and coordinate ticks
         this.scrollPane.hvalueProperty().addListener((obs, oldVal, newVal) -> {
             // oldVal = old scroll position (between 0 and 1)
