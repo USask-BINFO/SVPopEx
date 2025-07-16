@@ -16,6 +16,10 @@ import javafx.stage.Stage;
 import java.util.ArrayList;
 import java.util.Objects;
 
+// naming conventions
+// HBox/VBox -> container
+// Pane -> panel
+
 public class View {
     private VBox layout = new VBox(10);
     private MenuItem importVCFItem = new MenuItem("Import VCF");
