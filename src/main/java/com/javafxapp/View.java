@@ -17,45 +17,54 @@ import java.util.ArrayList;
 import java.util.Objects;
 
 // naming conventions
-// HBox/VBox -> container
-// Pane -> panel
+// Stage -> ...Stage
+// HBox/VBox -> ...Container
+// MenuBar -> ...Bar
+// Menu -> ...Menu
+// MenuItem -> ...Item
+// ScrollPane/StackPane -> ...Panel
+// Button -> ...Button
+// Pane -> ...Wrapper
+// EventHandler -> ...Handler
 
 public class View {
-    private VBox layout = new VBox(10);
-    private MenuItem importVCFItem = new MenuItem("Import VCF");
-    private MenuItem zoomInItem = new MenuItem("Zoom In");
-    private MenuItem zoomOutItem = new MenuItem("Zoom Out");
-    private VBox referencePanel = new VBox(5);
-    private VBox samplesContainer = new VBox(0);
-    HBox selectionContainer = new HBox();
-    Pane selectionWrapper = new Pane();
-    StackPane samplePanel = new StackPane(samplesContainer, selectionContainer);
-    private ScrollPane scrollPane = new ScrollPane(samplePanel);
-    private Stage primaryStage;
+    private final VBox layout = new VBox(10);
+    private final Stage primaryStage;
+    // ---------- menuBar -------------
+    private final MenuBar menuBar = new MenuBar();
+    private final Menu fileMenu = new Menu("File");
+    private final MenuItem importVCFItem = new MenuItem("Import VCF");
+    // ------- referenceContainer ----------
+    private final VBox referenceContainer = new VBox(5);
+    private Rectangle marker = new Rectangle(0,0,0,50);
+    // ---------- tickContainer ----------
+    private final HBox tickContainer = new HBox();
+    private final Pane spaceWrapper1 = new Pane();
+    private final Pane ticksWrapper = new Pane();
     private EventHandler<MouseEvent> releaseSelectionHandler;
-    Pane referenceRect = new Pane();
-    Pane markerWrapper = new Pane();
-    HBox tickContainer = new HBox();
-    Pane spaceWrapper1 = new Pane();
-    Pane spaceWrapper2 = new Pane();
-    Pane ticksWrapper = new Pane();
-    Rectangle marker = new Rectangle(0,0,0,50);
+    // controlContainer
+    private final HBox controlContainer = new HBox();
+    Button zoomInButton = new Button("Zoom In");
+    Button zoomOutButton = new Button("Zoom Out");
+    // ---------- callsPanel ----------
+    private final VBox samplesContainer = new VBox(0);
+    private final HBox selectionContainer = new HBox();
+    private final Pane selectionWrapper = new Pane();
+    private final StackPane samplePanel = new StackPane(samplesContainer, selectionContainer);
+    private final ScrollPane callsPanel = new ScrollPane(samplePanel);
+    private final Pane referenceRect = new Pane();
+    private final Pane markerWrapper = new Pane();
+    private final Pane spaceWrapper2 = new Pane();
 
 
     public View(Stage primaryStage) {
         this.primaryStage = primaryStage;
         // ---------- MENU --------------
-        MenuBar menuBar = new MenuBar();
-        Menu fileMenu = new Menu("File");
         fileMenu.getItems().add(importVCFItem);
-        Menu viewMenu = new Menu("View");
-        viewMenu.getItems().add(zoomInItem);
-        viewMenu.getItems().add(zoomOutItem);
         menuBar.getMenus().add(fileMenu);
-        menuBar.getMenus().add(viewMenu);
         // ---------- REF PANEL ---------
-        referencePanel.setStyle("-fx-background-color: white;");
-        layout.getChildren().addAll(menuBar, referencePanel, scrollPane);
+        referenceContainer.setStyle("-fx-background-color: white;");
+        layout.getChildren().addAll(menuBar, referenceContainer, tickContainer, controlContainer, callsPanel);
         // ---------- SAMPLE PANEL -------
         selectionWrapper.setPickOnBounds(false);
     }
@@ -91,10 +100,12 @@ public class View {
         labelsBox.setStyle("-fx-alignment: center;");
         StackPane rectangleWithLabels = new StackPane(referenceRect, labelsBox);
         StackPane rectWithMarker = new StackPane(rectangleWithLabels, markerWrapper);
-        this.referencePanel.getChildren().add(rectWithMarker);
+        this.referenceContainer.getChildren().add(rectWithMarker);
     }
 
     public void initCoords() {
+        controlContainer.getChildren().add(zoomInButton);
+        controlContainer.getChildren().add(zoomOutButton);
         // coordinate ticks
         spaceWrapper1.setMinWidth(100);
         spaceWrapper1.setPrefWidth(100);
@@ -103,14 +114,13 @@ public class View {
         tickContainer.getChildren().add(ticksWrapper);
         ticksWrapper.setOnMouseEntered(e -> ticksWrapper.setCursor(Cursor.HAND));
         ticksWrapper.setOnMouseExited(e -> ticksWrapper.setCursor(Cursor.DEFAULT));
-        this.referencePanel.getChildren().add(tickContainer);
         // sync scrollpane scroll with marker and coordinate ticks
-        this.scrollPane.hvalueProperty().addListener((obs, oldVal, newVal) -> {
+        this.callsPanel.hvalueProperty().addListener((obs, oldVal, newVal) -> {
             // oldVal = old scroll position (between 0 and 1)
             // newVal = new scroll position (between 0 and 1)
             // getContent() gets node scrollpane is scrolling, getboundsinlocal gets actual width and height of node, so maxX is the maximum distance that can be scrolled
-            double maxX = scrollPane.getContent().getBoundsInLocal().getWidth()
-                    - scrollPane.getViewportBounds().getWidth();
+            double maxX = callsPanel.getContent().getBoundsInLocal().getWidth()
+                    - callsPanel.getViewportBounds().getWidth();
             double translateX = -newVal.doubleValue() * maxX;
             ticksWrapper.setTranslateX(translateX);
             double max = markerWrapper.getWidth() - marker.getWidth();
@@ -192,7 +202,7 @@ public class View {
             // add sampContainer to samplesContainer
             this.samplesContainer.getChildren().add(sampContainer);
         }
-        this.scrollPane.setPannable(true);   // Optional: enables mouse drag scrolling
+        this.callsPanel.setPannable(true);   // Optional: enables mouse drag scrolling
     }
 
     public void showCalls(ArrayList<Sample> samples, double zoomLevel) {
@@ -240,8 +250,8 @@ public class View {
             }
         }
         // set width
-        double contentWidth = scrollPane.getContent().getBoundsInLocal().getWidth();
-        double viewportWidth = scrollPane.getViewportBounds().getWidth();
+        double contentWidth = callsPanel.getContent().getBoundsInLocal().getWidth();
+        double viewportWidth = callsPanel.getViewportBounds().getWidth();
         double proportionVisible = viewportWidth / contentWidth;
         double markerWidth = Screen.getPrimary().getVisualBounds().getWidth() * proportionVisible;
         marker.setWidth(markerWidth);
@@ -277,8 +287,8 @@ public class View {
         this.showCoords(refLength, zoomLevel);
         this.showCalls(samples, zoomLevel);
         // update marker width
-        double contentWidth = scrollPane.getContent().getBoundsInLocal().getWidth();
-        double viewportWidth = scrollPane.getViewportBounds().getWidth();
+        double contentWidth = callsPanel.getContent().getBoundsInLocal().getWidth();
+        double viewportWidth = callsPanel.getViewportBounds().getWidth();
         double proportionVisible = viewportWidth / contentWidth;
         double markerWidth = markerWrapper.getWidth() * proportionVisible;
         marker.setWidth(markerWidth);
@@ -302,7 +312,7 @@ public class View {
         double percent = clampedX / markerWrapper.getWidth();
 
         System.out.printf("Marker at X: %.2f (%.1f%%)%n", clampedX, percent * 100);
-        this.scrollPane.setHvalue(percent);
+        this.callsPanel.setHvalue(percent);
     }
 
 
@@ -310,10 +320,10 @@ public class View {
         importVCFItem.setOnAction(handler);
     }
     public void zoomInListener(EventHandler<ActionEvent> handler) {
-        zoomInItem.setOnAction(handler);
+        zoomInButton.setOnAction(handler);
     }
     public void zoomOutListener(EventHandler<ActionEvent> handler) {
-        zoomOutItem.setOnAction(handler);
+        zoomOutButton.setOnAction(handler);
     }
     public void releaseSelectionListener(EventHandler<MouseEvent> handler) {
         this.releaseSelectionHandler = handler;
