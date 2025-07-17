@@ -64,6 +64,10 @@ public class Model {
         return this.selections;
     }
 
+    public void clearSelections() {
+        this.selections.clear();
+    }
+
     public void processFile(String fileContent) {
         String[] lines = fileContent.split("\\r?\\n");  // Splits on \n or \r\n
         for (String line : lines) {

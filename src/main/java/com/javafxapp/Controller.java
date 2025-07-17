@@ -21,6 +21,9 @@ public class Controller {
         view.zoomOutListener(e -> {
             this.updateZoomOut();
         });
+        view.clearSelectionsListener(e -> {
+            this.clearSelections();
+        });
         view.releaseSelectionListener(e -> {
             this.updateReleaseSelection(e);
         });
@@ -68,10 +71,15 @@ public class Controller {
         view.updateZoom(model.getSamples(), level, model.getRefLength(), model.getSelections(), model.getBaseLevel());
     }
 
+    public void clearSelections() {
+        view.clearAllSelections();
+        model.clearSelections();
+    }
+
     public void updateReleaseSelection(MouseEvent e) {
         Selection selection = new Selection(view.getSelectionRectangle().getX(), e.getX(), model.getZoomLevel());
         model.addSelection(selection);
-        view.clearSelection();
+        view.clearActiveSelection();
     }
 }
 

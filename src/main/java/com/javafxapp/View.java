@@ -47,6 +47,7 @@ public class View {
     private final HBox controlContainer = new HBox();
     Button zoomInButton = new Button("+");
     Button zoomOutButton = new Button("-");
+    Button clearButton = new Button("Clear");
     // ---------- callsPanel ----------
     private final VBox samplesContainer = new VBox(0);
     private final HBox selectionContainer = new HBox();
@@ -104,10 +105,12 @@ public class View {
     }
 
     public void initCoords() {
+        // button size
         zoomInButton.setMinSize(35, 35);
         zoomInButton.setMaxSize(35, 35);
         zoomOutButton.setMinSize(35, 35);
         zoomOutButton.setMaxSize(35, 35);
+        clearButton.setMinSize(50,35);
         String circularStyle = """
     -fx-background-radius: 10px;
     -fx-border-radius: 10px;
@@ -118,12 +121,18 @@ public class View {
     -fx-focus-color: transparent;
     -fx-faint-focus-color: transparent;
 """;
+        // button focus off
         zoomInButton.setFocusTraversable(false);
         zoomOutButton.setFocusTraversable(false);
+        clearButton.setFocusTraversable(false);
+        // button style
         zoomInButton.setStyle(circularStyle);
         zoomOutButton.setStyle(circularStyle);
+        clearButton.setStyle(circularStyle);
+        // add button
         controlContainer.getChildren().add(zoomInButton);
         controlContainer.getChildren().add(zoomOutButton);
+        controlContainer.getChildren().add(clearButton);
         // coordinate ticks
         spaceWrapper1.setMinWidth(100);
         spaceWrapper1.setPrefWidth(100);
@@ -300,11 +309,16 @@ public class View {
         return (Rectangle) this.ticksWrapper.lookup("#selectionRect");
     }
 
-    public void clearSelection() {
+    public void clearActiveSelection() {
         Rectangle tickRect = (Rectangle) this.ticksWrapper.lookup("#selectionRect");
         Rectangle selectRect = (Rectangle) this.selectionWrapper.lookup("#selectionRect");
         tickRect.setId(null);
         selectRect.setId(null);
+    }
+
+    public void clearAllSelections() {
+        this.selectionWrapper.getChildren().clear();
+        this.ticksWrapper.getChildren().removeIf(node -> node instanceof Rectangle);
     }
 
     public void updateSelections(ArrayList<Selection> selections, double zoomLevel, double baseLevel) {
@@ -368,6 +382,9 @@ public class View {
     }
     public void zoomOutListener(EventHandler<ActionEvent> handler) {
         zoomOutButton.setOnAction(handler);
+    }
+    public void clearSelectionsListener(EventHandler<ActionEvent> handler) {
+        clearButton.setOnAction(handler);
     }
     public void releaseSelectionListener(EventHandler<MouseEvent> handler) {
         this.releaseSelectionHandler = handler;
