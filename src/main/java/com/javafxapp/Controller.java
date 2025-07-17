@@ -60,12 +60,12 @@ public class Controller {
 
     public void updateZoomIn() {
         double level = model.updateZoomLevel(1.3);
-        view.updateZoom(model.getSamples(), level, model.getRefLength());
+        view.updateZoom(model.getSamples(), level, model.getRefLength(), model.getSelections(), model.getBaseLevel());
     }
 
     public void updateZoomOut() {
         double level = model.updateZoomLevel(0.7);
-        view.updateZoom(model.getSamples(), level, model.getRefLength());
+        view.updateZoom(model.getSamples(), level, model.getRefLength(), model.getSelections(), model.getBaseLevel());
     }
 
     public void updateReleaseSelection(MouseEvent e) {

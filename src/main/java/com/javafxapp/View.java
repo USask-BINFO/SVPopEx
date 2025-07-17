@@ -115,8 +115,11 @@ public class View {
     -fx-font-size: 16px;
     -fx-font-weight: bold;
     -fx-cursor: hand;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
 """;
-
+        zoomInButton.setFocusTraversable(false);
+        zoomOutButton.setFocusTraversable(false);
         zoomInButton.setStyle(circularStyle);
         zoomOutButton.setStyle(circularStyle);
         controlContainer.getChildren().add(zoomInButton);
@@ -238,7 +241,7 @@ public class View {
             for (int j=0; j<samples.get(i).calls.size(); j++) {
                 // create line
                 Call currentCall = samples.get(i).calls.get(j);
-                Rectangle callRect = new Rectangle(currentCall.getStart()*zoomLevel, 0, (currentCall.getStart() + currentCall.getLength())*zoomLevel, 100);
+                Rectangle callRect = new Rectangle(currentCall.getStart()*zoomLevel, 0, currentCall.getLength()*zoomLevel, 100);
                 callRect.setOpacity(1);
                 callRect.setStrokeWidth(2);
                 if (Objects.equals(currentCall.getType(), "DUP")) {
@@ -304,16 +307,28 @@ public class View {
         selectRect.setId(null);
     }
 
-    public void updateZoom(ArrayList<Sample> samples, double zoomLevel, int refLength) {
+    public void updateSelections(ArrayList<Selection> selections, double zoomLevel, double baseLevel) {
+        this.selectionWrapper.getChildren().clear();
+        // add back each selection considering the zoom
+        for (int i=0; i<selections.size(); i++) {
+            double start = (selections.get(i).getStart() * zoomLevel) / baseLevel;
+            double length = (selections.get(i).getLength() / baseLevel) * zoomLevel;
+            Rectangle rect = new Rectangle(start, 0, length, selectionWrapper.getHeight());
+            rect.setFill(Color.GRAY);
+            rect.setOpacity(0.3);
+            this.selectionWrapper.getChildren().add(rect);
+        }
+    }
+
+    public void updateZoom(ArrayList<Sample> samples, double zoomLevel, int refLength, ArrayList<Selection> selections, double baseLevel) {
         this.showCalls(samples, zoomLevel, refLength);
         this.showCoords(refLength, zoomLevel);
+        this.updateSelections(selections, zoomLevel, baseLevel);
         // update marker width
         double contentWidth = refLength * zoomLevel;
         System.out.println("ZOOM LEVEL " + zoomLevel);
-        System.out.println("CONTENT WIDTH " + contentWidth);
         double viewportWidth = callsPanel.getViewportBounds().getWidth();
         double proportionVisible = viewportWidth / contentWidth;
-        System.out.println(proportionVisible);
         double markerWidth = markerWrapper.getWidth() * proportionVisible;
         marker.setWidth(markerWidth);
     }

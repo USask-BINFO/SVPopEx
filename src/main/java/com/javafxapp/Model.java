@@ -14,6 +14,7 @@ public class Model {
     private ArrayList<Call> calls = new ArrayList<>();
     private ArrayList<Selection> selections = new ArrayList<>();
     private double zoomLevel = 0.2;
+    private final double baseLevel = 0.2;
 
     public String loadFile(java.io.File file) throws java.io.IOException {
         return new String(java.nio.file.Files.readAllBytes(file.toPath()));
@@ -21,6 +22,10 @@ public class Model {
 
     public double getZoomLevel() {
         return this.zoomLevel;
+    }
+
+    public double getBaseLevel() {
+        return this.baseLevel;
     }
 
     public double updateZoomLevel(double factor) {
@@ -53,6 +58,10 @@ public class Model {
 
     public ArrayList<Sample> getSamples() {
         return this.samples;
+    }
+
+    public ArrayList<Selection> getSelections() {
+        return this.selections;
     }
 
     public void processFile(String fileContent) {
