@@ -312,8 +312,8 @@ public class View {
         this.ticksWrapper.getChildren().removeIf(node -> node instanceof Rectangle);
         // add back each selection considering the zoom
         for (int i=0; i<selections.size(); i++) {
-            double start = (selections.get(i).getStart() * zoomLevel) / baseLevel;
-            double length = (selections.get(i).getLength() / baseLevel) * zoomLevel;
+            double start = (selections.get(i).getStart() * zoomLevel) / selections.get(i).getZoomLevel();
+            double length = (selections.get(i).getLength() / selections.get(i).getZoomLevel()) * zoomLevel;
             Rectangle rect = new Rectangle(start, 0, length, selectionWrapper.getHeight());
             rect.setFill(Color.GRAY);
             rect.setOpacity(0.3);

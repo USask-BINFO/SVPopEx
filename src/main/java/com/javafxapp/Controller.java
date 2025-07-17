@@ -69,7 +69,7 @@ public class Controller {
     }
 
     public void updateReleaseSelection(MouseEvent e) {
-        Selection selection = new Selection(view.getSelectionRectangle().getX(), e.getX());
+        Selection selection = new Selection(view.getSelectionRectangle().getX(), e.getX(), model.getZoomLevel());
         model.addSelection(selection);
         view.clearSelection();
     }

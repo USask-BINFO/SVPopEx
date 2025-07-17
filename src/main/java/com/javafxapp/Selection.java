@@ -5,10 +5,12 @@ public class Selection {
     private double startX;
     private double endX;
     private double length;
-    public Selection(double startX, double endX) {
+    private double zoomLevel;
+    public Selection(double startX, double endX, double zoomLevel) {
         this.startX = startX;
         this.endX = endX;
         this.length = endX - startX;
+        this.zoomLevel = zoomLevel;
     }
     public String toString() {
         return "Start: " + startX + " , End: " + endX;
@@ -24,5 +26,9 @@ public class Selection {
 
     public double getLength() {
         return this.length;
+    }
+
+    public double getZoomLevel() {
+        return this.zoomLevel;
     }
 }
