@@ -65,7 +65,7 @@ public class View {
         menuBar.getMenus().add(fileMenu);
         // ---------- REF PANEL ---------
         referenceContainer.setStyle("-fx-background-color: white;");
-        layout.getChildren().addAll(menuBar, referenceContainer, tickContainer, controlContainer, callsPanel);
+        layout.getChildren().addAll(menuBar, controlContainer, referenceContainer, tickContainer, callsPanel);
         // ---------- SAMPLE PANEL -------
         selectionWrapper.setPickOnBounds(false);
     }
@@ -253,6 +253,8 @@ public class View {
                 Rectangle callRect = new Rectangle(currentCall.getStart()*zoomLevel, 0, currentCall.getLength()*zoomLevel, 100);
                 callRect.setOpacity(1);
                 callRect.setStrokeWidth(2);
+                callRect.setArcWidth(5);   // horizontal roundness
+                callRect.setArcHeight(5);
                 if (Objects.equals(currentCall.getType(), "DUP")) {
                     callRect.setStroke(Color.rgb(40, 70, 160));
                     callRect.setOpacity(0.5);
