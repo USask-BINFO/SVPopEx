@@ -37,6 +37,7 @@ public class View {
     // ------- referenceContainer ----------
     private final VBox referenceContainer = new VBox(5);
     private Rectangle marker = new Rectangle(0,0,0,50);
+    private final Pane referenceRect = new Pane();
     // ---------- tickContainer ----------
     private final HBox tickContainer = new HBox();
     private final Pane spaceWrapper1 = new Pane();
@@ -44,15 +45,15 @@ public class View {
     private EventHandler<MouseEvent> releaseSelectionHandler;
     // controlContainer
     private final HBox controlContainer = new HBox();
-    Button zoomInButton = new Button("Zoom In");
-    Button zoomOutButton = new Button("Zoom Out");
+    Button zoomInButton = new Button("+");
+    Button zoomOutButton = new Button("-");
+    Button clearButton = new Button("Clear");
     // ---------- callsPanel ----------
     private final VBox samplesContainer = new VBox(0);
     private final HBox selectionContainer = new HBox();
     private final Pane selectionWrapper = new Pane();
     private final StackPane samplePanel = new StackPane(samplesContainer, selectionContainer);
     private final ScrollPane callsPanel = new ScrollPane(samplePanel);
-    private final Pane referenceRect = new Pane();
     private final Pane markerWrapper = new Pane();
     private final Pane spaceWrapper2 = new Pane();
 
@@ -64,7 +65,7 @@ public class View {
         menuBar.getMenus().add(fileMenu);
         // ---------- REF PANEL ---------
         referenceContainer.setStyle("-fx-background-color: white;");
-        layout.getChildren().addAll(menuBar, referenceContainer, tickContainer, controlContainer, callsPanel);
+        layout.getChildren().addAll(menuBar, controlContainer, referenceContainer, tickContainer, callsPanel);
         // ---------- SAMPLE PANEL -------
         selectionWrapper.setPickOnBounds(false);
     }
@@ -104,8 +105,34 @@ public class View {
     }
 
     public void initCoords() {
+        // button size
+        zoomInButton.setMinSize(35, 35);
+        zoomInButton.setMaxSize(35, 35);
+        zoomOutButton.setMinSize(35, 35);
+        zoomOutButton.setMaxSize(35, 35);
+        clearButton.setMinSize(50,35);
+        String circularStyle = """
+    -fx-background-radius: 10px;
+    -fx-border-radius: 10px;
+    -fx-text-fill: #555555;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+""";
+        // button focus off
+        zoomInButton.setFocusTraversable(false);
+        zoomOutButton.setFocusTraversable(false);
+        clearButton.setFocusTraversable(false);
+        // button style
+        zoomInButton.setStyle(circularStyle);
+        zoomOutButton.setStyle(circularStyle);
+        clearButton.setStyle(circularStyle);
+        // add button
         controlContainer.getChildren().add(zoomInButton);
         controlContainer.getChildren().add(zoomOutButton);
+        controlContainer.getChildren().add(clearButton);
         // coordinate ticks
         spaceWrapper1.setMinWidth(100);
         spaceWrapper1.setPrefWidth(100);
@@ -175,7 +202,7 @@ public class View {
         });
     }
 
-    public void initSamples(ArrayList<Sample> samples) {
+    public void initSamples(ArrayList<Sample> samples, int refLength, double zoomLevel) {
         spaceWrapper2.setMinWidth(100);
         spaceWrapper2.setPrefWidth(100);
         spaceWrapper2.setMaxWidth(100);
@@ -185,6 +212,9 @@ public class View {
             // create sampContainer HBox to hold sample label and calls
             HBox sampContainer = new HBox();
             sampContainer.setPrefHeight(100);
+            sampContainer.setMinWidth(refLength * zoomLevel);
+            sampContainer.setPrefWidth(refLength * zoomLevel);
+            sampContainer.setMaxWidth(refLength * zoomLevel);
             // create labelWrapper Pane to hold sample name
             Pane labelWrapper = new Pane();
             Label sampleLabel = new Label(samples.get(i).getName());
@@ -205,7 +235,7 @@ public class View {
         this.callsPanel.setPannable(true);   // Optional: enables mouse drag scrolling
     }
 
-    public void showCalls(ArrayList<Sample> samples, double zoomLevel) {
+    public void showCalls(ArrayList<Sample> samples, double zoomLevel, int refLength) {
         /**
          *
          */
@@ -213,13 +243,18 @@ public class View {
             HBox currentSampContainer = (HBox) this.samplesContainer.getChildren().get(i);
             Pane currentCalls = (Pane) currentSampContainer.getChildren().get(1);
             currentCalls.getChildren().clear();
+            currentSampContainer.setMinWidth(refLength * zoomLevel);
+            currentSampContainer.setPrefWidth(refLength * zoomLevel);
+            currentSampContainer.setMaxWidth(refLength * zoomLevel);
             // loop through each call
             for (int j=0; j<samples.get(i).calls.size(); j++) {
                 // create line
                 Call currentCall = samples.get(i).calls.get(j);
-                Rectangle callRect = new Rectangle(currentCall.getStart()*zoomLevel, 0, (currentCall.getStart() + currentCall.getLength())*zoomLevel, 100);
+                Rectangle callRect = new Rectangle(currentCall.getStart()*zoomLevel, 0, currentCall.getLength()*zoomLevel, 100);
                 callRect.setOpacity(1);
                 callRect.setStrokeWidth(2);
+                callRect.setArcWidth(5);   // horizontal roundness
+                callRect.setArcHeight(5);
                 if (Objects.equals(currentCall.getType(), "DUP")) {
                     callRect.setStroke(Color.rgb(40, 70, 160));
                     callRect.setOpacity(0.5);
@@ -250,7 +285,7 @@ public class View {
             }
         }
         // set width
-        double contentWidth = callsPanel.getContent().getBoundsInLocal().getWidth();
+        double contentWidth = refLength * zoomLevel;
         double viewportWidth = callsPanel.getViewportBounds().getWidth();
         double proportionVisible = viewportWidth / contentWidth;
         double markerWidth = Screen.getPrimary().getVisualBounds().getWidth() * proportionVisible;
@@ -276,18 +311,43 @@ public class View {
         return (Rectangle) this.ticksWrapper.lookup("#selectionRect");
     }
 
-    public void clearSelection() {
+    public void clearActiveSelection() {
         Rectangle tickRect = (Rectangle) this.ticksWrapper.lookup("#selectionRect");
         Rectangle selectRect = (Rectangle) this.selectionWrapper.lookup("#selectionRect");
         tickRect.setId(null);
         selectRect.setId(null);
     }
 
-    public void updateZoom(ArrayList<Sample> samples, double zoomLevel, int refLength) {
+    public void clearAllSelections() {
+        this.selectionWrapper.getChildren().clear();
+        this.ticksWrapper.getChildren().removeIf(node -> node instanceof Rectangle);
+    }
+
+    public void updateSelections(ArrayList<Selection> selections, double zoomLevel, double baseLevel) {
+        this.selectionWrapper.getChildren().clear();
+        this.ticksWrapper.getChildren().removeIf(node -> node instanceof Rectangle);
+        // add back each selection considering the zoom
+        for (int i=0; i<selections.size(); i++) {
+            double start = (selections.get(i).getStart() * zoomLevel) / selections.get(i).getZoomLevel();
+            double length = (selections.get(i).getLength() / selections.get(i).getZoomLevel()) * zoomLevel;
+            Rectangle rect = new Rectangle(start, 0, length, selectionWrapper.getHeight());
+            rect.setFill(Color.GRAY);
+            rect.setOpacity(0.3);
+            this.selectionWrapper.getChildren().add(rect);
+            Rectangle tickRect = new Rectangle(start, 0, length, ticksWrapper.getHeight());
+            tickRect.setFill(Color.GRAY);
+            tickRect.setOpacity(0.3);
+            this.ticksWrapper.getChildren().add(tickRect);
+        }
+    }
+
+    public void updateZoom(ArrayList<Sample> samples, double zoomLevel, int refLength, ArrayList<Selection> selections, double baseLevel) {
+        this.showCalls(samples, zoomLevel, refLength);
         this.showCoords(refLength, zoomLevel);
-        this.showCalls(samples, zoomLevel);
+        this.updateSelections(selections, zoomLevel, baseLevel);
         // update marker width
-        double contentWidth = callsPanel.getContent().getBoundsInLocal().getWidth();
+        double contentWidth = refLength * zoomLevel;
+        System.out.println("ZOOM LEVEL " + zoomLevel);
         double viewportWidth = callsPanel.getViewportBounds().getWidth();
         double proportionVisible = viewportWidth / contentWidth;
         double markerWidth = markerWrapper.getWidth() * proportionVisible;
@@ -324,6 +384,9 @@ public class View {
     }
     public void zoomOutListener(EventHandler<ActionEvent> handler) {
         zoomOutButton.setOnAction(handler);
+    }
+    public void clearSelectionsListener(EventHandler<ActionEvent> handler) {
+        clearButton.setOnAction(handler);
     }
     public void releaseSelectionListener(EventHandler<MouseEvent> handler) {
         this.releaseSelectionHandler = handler;

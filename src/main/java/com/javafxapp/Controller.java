@@ -21,6 +21,9 @@ public class Controller {
         view.zoomOutListener(e -> {
             this.updateZoomOut();
         });
+        view.clearSelectionsListener(e -> {
+            this.clearSelections();
+        });
         view.releaseSelectionListener(e -> {
             this.updateReleaseSelection(e);
         });
@@ -47,9 +50,9 @@ public class Controller {
             model.processFile(fileContent);
             view.initReference(model.getRefLength(), model.getRefName());
             view.initCoords();
-            view.initSamples(model.getSamples());
+            view.initSamples(model.getSamples(), model.getRefLength(), model.getZoomLevel());
             view.showCoords(model.getRefLength(), model.getZoomLevel());
-            view.showCalls(model.getSamples(), model.getZoomLevel());
+            view.showCalls(model.getSamples(), model.getZoomLevel(), model.getRefLength());
         }
         // user closed or cancelled file
         else {
@@ -60,18 +63,23 @@ public class Controller {
 
     public void updateZoomIn() {
         double level = model.updateZoomLevel(1.3);
-        view.updateZoom(model.getSamples(), level, model.getRefLength());
+        view.updateZoom(model.getSamples(), level, model.getRefLength(), model.getSelections(), model.getBaseLevel());
     }
 
     public void updateZoomOut() {
         double level = model.updateZoomLevel(0.7);
-        view.updateZoom(model.getSamples(), level, model.getRefLength());
+        view.updateZoom(model.getSamples(), level, model.getRefLength(), model.getSelections(), model.getBaseLevel());
+    }
+
+    public void clearSelections() {
+        view.clearAllSelections();
+        model.clearSelections();
     }
 
     public void updateReleaseSelection(MouseEvent e) {
-        Selection selection = new Selection(view.getSelectionRectangle().getX(), e.getX());
+        Selection selection = new Selection(view.getSelectionRectangle().getX(), e.getX(), model.getZoomLevel());
         model.addSelection(selection);
-        view.clearSelection();
+        view.clearActiveSelection();
     }
 }
 
