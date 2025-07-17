@@ -309,6 +309,7 @@ public class View {
 
     public void updateSelections(ArrayList<Selection> selections, double zoomLevel, double baseLevel) {
         this.selectionWrapper.getChildren().clear();
+        this.ticksWrapper.getChildren().removeIf(node -> node instanceof Rectangle);
         // add back each selection considering the zoom
         for (int i=0; i<selections.size(); i++) {
             double start = (selections.get(i).getStart() * zoomLevel) / baseLevel;
@@ -317,6 +318,10 @@ public class View {
             rect.setFill(Color.GRAY);
             rect.setOpacity(0.3);
             this.selectionWrapper.getChildren().add(rect);
+            Rectangle tickRect = new Rectangle(start, 0, length, ticksWrapper.getHeight());
+            tickRect.setFill(Color.GRAY);
+            tickRect.setOpacity(0.3);
+            this.ticksWrapper.getChildren().add(tickRect);
         }
     }
 
