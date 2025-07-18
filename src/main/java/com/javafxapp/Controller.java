@@ -24,6 +24,9 @@ public class Controller {
         view.clearSelectionsListener(e -> {
             this.clearSelections();
         });
+        view.processSelectionsListener(e -> {
+            this.processSelections();
+        });
         view.releaseSelectionListener(e -> {
             this.updateReleaseSelection(e);
         });
@@ -74,6 +77,10 @@ public class Controller {
     public void clearSelections() {
         view.clearAllSelections();
         model.clearSelections();
+    }
+
+    public void processSelections() {
+        model.processSelections();
     }
 
     public void updateReleaseSelection(MouseEvent e) {

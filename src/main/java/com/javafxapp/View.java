@@ -48,6 +48,7 @@ public class View {
     Button zoomInButton = new Button("+");
     Button zoomOutButton = new Button("-");
     Button clearButton = new Button("Clear");
+    Button processButton = new Button("Process");
     // ---------- callsPanel ----------
     private final VBox samplesContainer = new VBox(0);
     private final HBox selectionContainer = new HBox();
@@ -111,6 +112,7 @@ public class View {
         zoomOutButton.setMinSize(35, 35);
         zoomOutButton.setMaxSize(35, 35);
         clearButton.setMinSize(50,35);
+        processButton.setMinSize(50,35);
         String circularStyle = """
     -fx-background-radius: 10px;
     -fx-border-radius: 10px;
@@ -125,14 +127,17 @@ public class View {
         zoomInButton.setFocusTraversable(false);
         zoomOutButton.setFocusTraversable(false);
         clearButton.setFocusTraversable(false);
+        processButton.setFocusTraversable(false);
         // button style
         zoomInButton.setStyle(circularStyle);
         zoomOutButton.setStyle(circularStyle);
         clearButton.setStyle(circularStyle);
+        processButton.setStyle(circularStyle);
         // add button
         controlContainer.getChildren().add(zoomInButton);
         controlContainer.getChildren().add(zoomOutButton);
         controlContainer.getChildren().add(clearButton);
+        controlContainer.getChildren().add(processButton);
         // coordinate ticks
         spaceWrapper1.setMinWidth(100);
         spaceWrapper1.setPrefWidth(100);
@@ -387,6 +392,9 @@ public class View {
     }
     public void clearSelectionsListener(EventHandler<ActionEvent> handler) {
         clearButton.setOnAction(handler);
+    }
+    public void processSelectionsListener(EventHandler<ActionEvent> handler) {
+        processButton.setOnAction(handler);
     }
     public void releaseSelectionListener(EventHandler<MouseEvent> handler) {
         this.releaseSelectionHandler = handler;

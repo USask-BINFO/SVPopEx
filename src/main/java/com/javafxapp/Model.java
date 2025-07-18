@@ -56,6 +56,16 @@ public class Model {
         }
     }
 
+    public void processSelections() {
+        if (this.selections.isEmpty()) {
+            System.out.println("No selections to process");
+            // do nothing
+        }
+        else {
+
+        }
+    }
+
     public ArrayList<Sample> getSamples() {
         return this.samples;
     }
