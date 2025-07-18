@@ -1,16 +1,15 @@
 package com.javafxapp;
 
-import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.ArrayList;
-import java.util.Objects;
+import java.util.*;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
+import javafx.scene.paint.Color;
 
 public class Model {
     private String refName;
     private int refLength;
     private ArrayList<Sample> samples = new ArrayList<>();
+    LinkedHashMap<String, Color> sampleColors = new LinkedHashMap<>();
     private ArrayList<Call> calls = new ArrayList<>();
     private ArrayList<Selection> selections = new ArrayList<>();
     private double zoomLevel = 0.2;
@@ -54,6 +53,85 @@ public class Model {
         for (int i=0; i<selections.size(); i++) {
             System.out.println(selections.get(i).toString());
         }
+    }
+
+    public LinkedHashMap<Selection, LinkedHashMap<String,Color>> processSelections() {
+        LinkedHashMap<Selection, LinkedHashMap<String,Color>> result = new LinkedHashMap<>();
+        if (this.selections.isEmpty()) {
+            return result;
+        }
+        else {
+            for (Selection selection : selections) {
+                double selectionStart = selection.getGenomicStart();
+                double selectionEnd = selection.getGenomicEnd();
+                LinkedHashMap<String, ArrayList<String>> equiv = new LinkedHashMap<>();
+                LinkedHashMap<String, Boolean> locked = new LinkedHashMap<>();
+                for (int i=0; i<samples.size(); i++) {
+                    if (i == 0) {
+                        equiv.put(samples.get(i).getName(), new ArrayList<String>());
+                        equiv.get(samples.get(i).getName()).add(samples.get(i).getName());
+                        locked.put(samples.get(i).getName(), Boolean.TRUE);
+                    }
+                    else {
+                        equiv.put(samples.get(i).getName(), new ArrayList<String>());
+                        locked.put(samples.get(i).getName(), Boolean.FALSE);
+                    }
+                }
+                for (Call call : calls) {
+                    if (call.getStart() > selectionStart && call.getEnd() < selectionEnd ||
+                    call.getStart() < selectionStart && call.getEnd() < selectionEnd ||
+                    call.getStart() > selectionStart && call.getEnd() > selectionEnd) {
+                        for (int i=0; i<samples.size(); i++) {
+                            String curName = samples.get(i).getName();
+                            String curGT = call.getGenotypes().get(curName);
+                            if (locked.get(curName) == Boolean.TRUE) {
+                                // do nothing
+                            }
+                            else {
+                                if (equiv.get(curName).isEmpty()) {
+                                    for (int j=0; j<i; j++) {
+                                        if (Objects.equals(call.getGenotypes().get(samples.get(j).getName()), curGT)) {
+                                            equiv.get(curName).add(samples.get(j).getName());
+                                        }
+                                    }
+                                    // if still no equivalences, add itself and lock
+                                    if (equiv.get(curName).isEmpty()) {
+                                        equiv.get(curName).add(curName);
+                                        locked.put(curName, Boolean.TRUE);
+                                    }
+                                }
+                                else {
+                                    for (int j=0; j<equiv.get(curName).size(); j++) {
+                                        if (Objects.equals(call.getGenotypes().get(samples.get(j).getName()), curGT)) {
+                                            // do nothing
+                                        }
+                                        else {
+                                            equiv.get(curName).remove(j);
+                                            if (equiv.get(curName).isEmpty()) {
+                                                equiv.get(curName).add(curName);
+                                                locked.put(curName, Boolean.TRUE);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                result.put(selection, new LinkedHashMap<>());
+                for (int i=0; i<samples.size(); i++) {
+                    result.get(selection).put(samples.get(i).getName(), this.sampleColors.get(equiv.get(samples.get(i).getName()).getFirst()));
+                }
+                for (Map.Entry<String, ArrayList<String>> entry : equiv.entrySet()) {
+                    System.out.println(entry.getKey() + " = " + entry.getValue());
+                }
+            }
+        }
+        return result;
+    }
+
+    public static Color getRandomColor() {
+        return Color.rgb(new Random().nextInt(256), new Random().nextInt(256), new Random().nextInt(256));
     }
 
     public ArrayList<Sample> getSamples() {
@@ -128,6 +206,7 @@ public class Model {
         for (int i=0; i<sampleNames.length; i++) {
             Sample sample = new Sample(sampleNames[i]);
             this.samples.add(sample);
+            this.sampleColors.put(samples.get(i).getName(), this.getRandomColor());
         }
     }
 }

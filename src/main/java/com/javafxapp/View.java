@@ -4,6 +4,7 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.scene.Cursor;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
@@ -14,7 +15,9 @@ import javafx.scene.shape.Rectangle;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.Objects;
+import java.util.Set;
 
 // naming conventions
 // Stage -> ...Stage
@@ -28,7 +31,7 @@ import java.util.Objects;
 // EventHandler -> ...Handler
 
 public class View {
-    private final VBox layout = new VBox(10);
+    private final VBox layout = new VBox();
     private final Stage primaryStage;
     // ---------- menuBar -------------
     private final MenuBar menuBar = new MenuBar();
@@ -48,6 +51,7 @@ public class View {
     Button zoomInButton = new Button("+");
     Button zoomOutButton = new Button("-");
     Button clearButton = new Button("Clear");
+    Button processButton = new Button("Process");
     // ---------- callsPanel ----------
     private final VBox samplesContainer = new VBox(0);
     private final HBox selectionContainer = new HBox();
@@ -111,6 +115,7 @@ public class View {
         zoomOutButton.setMinSize(35, 35);
         zoomOutButton.setMaxSize(35, 35);
         clearButton.setMinSize(50,35);
+        processButton.setMinSize(50,35);
         String circularStyle = """
     -fx-background-radius: 10px;
     -fx-border-radius: 10px;
@@ -125,14 +130,17 @@ public class View {
         zoomInButton.setFocusTraversable(false);
         zoomOutButton.setFocusTraversable(false);
         clearButton.setFocusTraversable(false);
+        processButton.setFocusTraversable(false);
         // button style
         zoomInButton.setStyle(circularStyle);
         zoomOutButton.setStyle(circularStyle);
         clearButton.setStyle(circularStyle);
+        processButton.setStyle(circularStyle);
         // add button
         controlContainer.getChildren().add(zoomInButton);
         controlContainer.getChildren().add(zoomOutButton);
         controlContainer.getChildren().add(clearButton);
+        controlContainer.getChildren().add(processButton);
         // coordinate ticks
         spaceWrapper1.setMinWidth(100);
         spaceWrapper1.setPrefWidth(100);
@@ -329,7 +337,7 @@ public class View {
         // add back each selection considering the zoom
         for (int i=0; i<selections.size(); i++) {
             double start = (selections.get(i).getStart() * zoomLevel) / selections.get(i).getZoomLevel();
-            double length = (selections.get(i).getLength() / selections.get(i).getZoomLevel()) * zoomLevel;
+            double length = (selections.get(i).getLength() * zoomLevel) / selections.get(i).getZoomLevel();
             Rectangle rect = new Rectangle(start, 0, length, selectionWrapper.getHeight());
             rect.setFill(Color.GRAY);
             rect.setOpacity(0.3);
@@ -338,6 +346,35 @@ public class View {
             tickRect.setFill(Color.GRAY);
             tickRect.setOpacity(0.3);
             this.ticksWrapper.getChildren().add(tickRect);
+        }
+    }
+
+    /**
+     * Removes nodes with class "mosaic"
+     */
+    public void clearMosaic() {
+        Set<Node> mosaicNodes = this.selectionWrapper.lookupAll(".mosaic");
+        for (Node node : mosaicNodes) {
+            this.selectionWrapper.getChildren().remove(node);
+        }
+    }
+
+    public void showPlot(LinkedHashMap<Selection, LinkedHashMap<String,Color>> results, ArrayList<Sample> samples, double zoomLevel) {
+        clearMosaic();
+        ArrayList<Selection> keys = new ArrayList<Selection>(results.keySet());
+        // for each selection
+        for (int i=0; i<results.size(); i++) {
+            double selectionStart = keys.get(i).getStart();
+            double selectionLength = keys.get(i).getLength();
+            double calcStart = selectionStart * zoomLevel / keys.get(i).getZoomLevel();
+            double calcLength = selectionLength * zoomLevel / keys.get(i).getZoomLevel();
+            for (int j=0; j<samples.size(); j++) {
+                Rectangle rect = new Rectangle(calcStart, j*100, calcLength, 100);
+                rect.getStyleClass().add("mosaic");
+                rect.setOpacity(0.6);
+                rect.setFill(results.get(keys.get(i)).get(samples.get(j).getName()));
+                this.selectionWrapper.getChildren().add(rect);
+            }
         }
     }
 
@@ -387,6 +424,9 @@ public class View {
     }
     public void clearSelectionsListener(EventHandler<ActionEvent> handler) {
         clearButton.setOnAction(handler);
+    }
+    public void processSelectionsListener(EventHandler<ActionEvent> handler) {
+        processButton.setOnAction(handler);
     }
     public void releaseSelectionListener(EventHandler<MouseEvent> handler) {
         this.releaseSelectionHandler = handler;

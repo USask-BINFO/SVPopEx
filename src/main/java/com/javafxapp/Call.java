@@ -8,15 +8,21 @@ public class Call {
     private String type;
     private int length;
     private int start;
+    private int end;
     LinkedHashMap<String,String> genotypes = new LinkedHashMap<>();
     public Call(String type, int length, int start, LinkedHashMap<String,String> genotypes) {
         this.type = type;
         this.length = length;
         this.start = start;
         this.genotypes = genotypes;
+        this.end = start + length;
     }
     public String toString() {
         return "TYPE " + this.type + " LENGTH " + this.length + " START " + this.start + " GENOTYPES " + genotypes.toString();
+    }
+
+    public LinkedHashMap<String,String> getGenotypes() {
+        return this.genotypes;
     }
 
     public String getType() {
@@ -29,6 +35,10 @@ public class Call {
 
     public int getStart() {
         return this.start;
+    }
+
+    public int getEnd() {
+        return this.end;
     }
 }
 
