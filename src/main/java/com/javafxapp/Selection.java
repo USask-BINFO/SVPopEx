@@ -34,6 +34,14 @@ public class Selection {
         return this.length;
     }
 
+    public double getGenomicStart() {
+        return this.genomicStart;
+    }
+
+    public double getGenomicEnd() {
+        return this.genomicEnd;
+    }
+
     public double getZoomLevel() {
         return this.zoomLevel;
     }

@@ -14,6 +14,7 @@ import javafx.scene.shape.Rectangle;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.Objects;
 
 // naming conventions
@@ -28,7 +29,7 @@ import java.util.Objects;
 // EventHandler -> ...Handler
 
 public class View {
-    private final VBox layout = new VBox(10);
+    private final VBox layout = new VBox();
     private final Stage primaryStage;
     // ---------- menuBar -------------
     private final MenuBar menuBar = new MenuBar();
@@ -343,6 +344,22 @@ public class View {
             tickRect.setFill(Color.GRAY);
             tickRect.setOpacity(0.3);
             this.ticksWrapper.getChildren().add(tickRect);
+        }
+    }
+
+    public void showPlot(LinkedHashMap<Selection, LinkedHashMap<String,Color>> results, ArrayList<Sample> samples, double zoomLevel) {
+        ArrayList<Selection> keys = new ArrayList<Selection>(results.keySet());
+        // for each selection
+        for (int i=0; i<results.size(); i++) {
+            double selectionStart = keys.get(i).getStart();
+            double selectionLength = keys.get(i).getLength();
+            double calcStart = selectionStart * zoomLevel / keys.get(i).getZoomLevel();
+            double calcLength = selectionLength * zoomLevel / keys.get(i).getZoomLevel();
+            for (int j=0; j<samples.size(); j++) {
+                Rectangle rect = new Rectangle(calcStart, j*100, calcLength, 100);
+                rect.setFill(results.get(keys.get(i)).get(samples.get(j).getName()));
+                this.selectionWrapper.getChildren().add(rect);
+            }
         }
     }
 

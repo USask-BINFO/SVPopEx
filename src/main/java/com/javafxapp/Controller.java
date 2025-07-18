@@ -80,7 +80,7 @@ public class Controller {
     }
 
     public void processSelections() {
-        model.processSelections();
+        view.showPlot(model.processSelections(), model.getSamples(), model.getZoomLevel());
     }
 
     public void updateReleaseSelection(MouseEvent e) {
