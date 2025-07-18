@@ -9,6 +9,7 @@ public class Model {
     private String refName;
     private int refLength;
     private ArrayList<Sample> samples = new ArrayList<>();
+    LinkedHashMap<String, Color> sampleColors = new LinkedHashMap<>();
     private ArrayList<Call> calls = new ArrayList<>();
     private ArrayList<Selection> selections = new ArrayList<>();
     private double zoomLevel = 0.2;
@@ -65,9 +66,7 @@ public class Model {
                 double selectionEnd = selection.getGenomicEnd();
                 LinkedHashMap<String, ArrayList<String>> equiv = new LinkedHashMap<>();
                 LinkedHashMap<String, Boolean> locked = new LinkedHashMap<>();
-                LinkedHashMap<String, Color> colors = new LinkedHashMap<>();
                 for (int i=0; i<samples.size(); i++) {
-                    colors.put(samples.get(i).getName(), this.getRandomColor());
                     if (i == 0) {
                         equiv.put(samples.get(i).getName(), new ArrayList<String>());
                         equiv.get(samples.get(i).getName()).add(samples.get(i).getName());
@@ -121,7 +120,7 @@ public class Model {
                 }
                 result.put(selection, new LinkedHashMap<>());
                 for (int i=0; i<samples.size(); i++) {
-                    result.get(selection).put(samples.get(i).getName(), colors.get(equiv.get(samples.get(i).getName()).getFirst()));
+                    result.get(selection).put(samples.get(i).getName(), this.sampleColors.get(equiv.get(samples.get(i).getName()).getFirst()));
                 }
                 for (Map.Entry<String, ArrayList<String>> entry : equiv.entrySet()) {
                     System.out.println(entry.getKey() + " = " + entry.getValue());
@@ -207,6 +206,7 @@ public class Model {
         for (int i=0; i<sampleNames.length; i++) {
             Sample sample = new Sample(sampleNames[i]);
             this.samples.add(sample);
+            this.sampleColors.put(samples.get(i).getName(), this.getRandomColor());
         }
     }
 }

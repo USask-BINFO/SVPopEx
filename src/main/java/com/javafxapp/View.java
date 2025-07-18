@@ -4,6 +4,7 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.scene.Cursor;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
@@ -16,6 +17,7 @@ import javafx.stage.Stage;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Objects;
+import java.util.Set;
 
 // naming conventions
 // Stage -> ...Stage
@@ -347,7 +349,18 @@ public class View {
         }
     }
 
+    /**
+     * Removes nodes with class "mosaic"
+     */
+    public void clearMosaic() {
+        Set<Node> mosaicNodes = this.selectionWrapper.lookupAll(".mosaic");
+        for (Node node : mosaicNodes) {
+            this.selectionWrapper.getChildren().remove(node);
+        }
+    }
+
     public void showPlot(LinkedHashMap<Selection, LinkedHashMap<String,Color>> results, ArrayList<Sample> samples, double zoomLevel) {
+        clearMosaic();
         ArrayList<Selection> keys = new ArrayList<Selection>(results.keySet());
         // for each selection
         for (int i=0; i<results.size(); i++) {
@@ -357,6 +370,8 @@ public class View {
             double calcLength = selectionLength * zoomLevel / keys.get(i).getZoomLevel();
             for (int j=0; j<samples.size(); j++) {
                 Rectangle rect = new Rectangle(calcStart, j*100, calcLength, 100);
+                rect.getStyleClass().add("mosaic");
+                rect.setOpacity(0.6);
                 rect.setFill(results.get(keys.get(i)).get(samples.get(j).getName()));
                 this.selectionWrapper.getChildren().add(rect);
             }
