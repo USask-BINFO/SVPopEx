@@ -6,13 +6,19 @@ public class Selection {
     private double endX;
     private double length;
     private double zoomLevel;
+    private double genomicStart;
+    private double genomicEnd;
     public Selection(double startX, double endX, double zoomLevel) {
         this.startX = startX;
         this.endX = endX;
         this.length = endX - startX;
         this.zoomLevel = zoomLevel;
+        this.genomicStart = this.startX/this.zoomLevel;
+        this.genomicEnd = this.endX/this.zoomLevel;
     }
     public String toString() {
+        System.out.println("START: " + genomicStart);
+        System.out.println("END: " + genomicEnd);
         return "Start: " + startX + " , End: " + endX;
     }
 

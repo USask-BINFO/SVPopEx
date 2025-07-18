@@ -329,7 +329,7 @@ public class View {
         // add back each selection considering the zoom
         for (int i=0; i<selections.size(); i++) {
             double start = (selections.get(i).getStart() * zoomLevel) / selections.get(i).getZoomLevel();
-            double length = (selections.get(i).getLength() / selections.get(i).getZoomLevel()) * zoomLevel;
+            double length = (selections.get(i).getLength() * zoomLevel) / selections.get(i).getZoomLevel();
             Rectangle rect = new Rectangle(start, 0, length, selectionWrapper.getHeight());
             rect.setFill(Color.GRAY);
             rect.setOpacity(0.3);
