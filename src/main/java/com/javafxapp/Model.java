@@ -57,56 +57,76 @@ public class Model {
 
     public LinkedHashMap<Selection, LinkedHashMap<String,Color>> processSelections() {
         LinkedHashMap<Selection, LinkedHashMap<String,Color>> result = new LinkedHashMap<>();
+        // if no selections are made, return empty linkedhashmap
         if (this.selections.isEmpty()) {
             return result;
         }
+        // if selections are made, process
         else {
             for (Selection selection : selections) {
+                // get selection start and end (genomic coords), make equivalence and locked structures
+                // equivalence holds the 'upper' equivalent sample currently
+                // locked tells if the signature is already unique and can be determined, true for determined
                 double selectionStart = selection.getGenomicStart();
                 double selectionEnd = selection.getGenomicEnd();
                 LinkedHashMap<String, ArrayList<String>> equiv = new LinkedHashMap<>();
                 LinkedHashMap<String, Boolean> locked = new LinkedHashMap<>();
+                // for each sample, set equivalence and locked
                 for (int i=0; i<samples.size(); i++) {
+                    // top sample - equivalence is itself and it is locked
                     if (i == 0) {
                         equiv.put(samples.get(i).getName(), new ArrayList<String>());
                         equiv.get(samples.get(i).getName()).add(samples.get(i).getName());
                         locked.put(samples.get(i).getName(), Boolean.TRUE);
                     }
+                    // other samples - equivalence is null (ArrayList is empty) and it is not locked
                     else {
                         equiv.put(samples.get(i).getName(), new ArrayList<String>());
                         locked.put(samples.get(i).getName(), Boolean.FALSE);
                     }
                 }
+                // loop through each SV call
                 for (Call call : calls) {
+                    System.out.println(call.toString());
+                    // include the call if it is within the selection region (doesn't have to be completely within)
                     if (call.getStart() > selectionStart && call.getEnd() < selectionEnd ||
-                    call.getStart() < selectionStart && call.getEnd() < selectionEnd ||
-                    call.getStart() > selectionStart && call.getEnd() > selectionEnd) {
+                    call.getStart() < selectionStart && call.getEnd() > selectionStart ||
+                    call.getStart() < selectionEnd && call.getEnd() > selectionEnd) {
+                        // loop through each sample
                         for (int i=0; i<samples.size(); i++) {
                             String curName = samples.get(i).getName();
                             String curGT = call.getGenotypes().get(curName);
+                            // if the sample is locked do nothing
                             if (locked.get(curName) == Boolean.TRUE) {
                                 // do nothing
                             }
+                            // otherwise
                             else {
+                                // if it has no equivalence yet, loop through all samples above and check
                                 if (equiv.get(curName).isEmpty()) {
                                     for (int j=0; j<i; j++) {
+                                        // if same genotype, add equivalence for sample
                                         if (Objects.equals(call.getGenotypes().get(samples.get(j).getName()), curGT)) {
                                             equiv.get(curName).add(samples.get(j).getName());
                                         }
                                     }
-                                    // if still no equivalences, add itself and lock
+                                    // if no equivalence found, add itself and lock
                                     if (equiv.get(curName).isEmpty()) {
                                         equiv.get(curName).add(curName);
                                         locked.put(curName, Boolean.TRUE);
                                     }
                                 }
+                                // if it has equivalences, loop through all equivalent samples and make sure still equivalent
                                 else {
                                     for (int j=0; j<equiv.get(curName).size(); j++) {
-                                        if (Objects.equals(call.getGenotypes().get(samples.get(j).getName()), curGT)) {
+                                        // if same genotype do nothing
+                                        if (Objects.equals(call.getGenotypes().get(equiv.get(curName).get(j)), curGT)) {
                                             // do nothing
                                         }
+                                        // otherwise, remove the sample from equivalences
                                         else {
                                             equiv.get(curName).remove(j);
+                                            // if its empty, no equivalence with any above sample, set equivalence to itself and lock
                                             if (equiv.get(curName).isEmpty()) {
                                                 equiv.get(curName).add(curName);
                                                 locked.put(curName, Boolean.TRUE);

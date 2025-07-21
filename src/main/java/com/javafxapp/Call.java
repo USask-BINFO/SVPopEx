@@ -1,6 +1,7 @@
 package com.javafxapp;
 
 import java.util.LinkedHashMap;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -12,13 +13,18 @@ public class Call {
     LinkedHashMap<String,String> genotypes = new LinkedHashMap<>();
     public Call(String type, int length, int start, LinkedHashMap<String,String> genotypes) {
         this.type = type;
-        this.length = length;
+        if (Objects.equals(type, "DEL")) {
+            this.length = Math.abs(length);
+        }
+        else {
+            this.length = length;
+        }
         this.start = start;
         this.genotypes = genotypes;
-        this.end = start + length;
+        this.end = start + this.length;
     }
     public String toString() {
-        return "TYPE " + this.type + " LENGTH " + this.length + " START " + this.start + " GENOTYPES " + genotypes.toString();
+        return "TYPE " + this.type + " LENGTH " + this.length + " START " + this.start + " END " + this.end + " GENOTYPES " + genotypes.toString();
     }
 
     public LinkedHashMap<String,String> getGenotypes() {
