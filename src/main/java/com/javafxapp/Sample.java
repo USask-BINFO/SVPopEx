@@ -17,10 +17,4 @@ public class Sample {
     public void addCall(Call call) {
         this.calls.add(call);
     }
-
-    public void showCalls() {
-        for (int i=0; i<calls.size(); i++) {
-            System.out.println(calls.get(i).toString());
-        }
-    }
 }

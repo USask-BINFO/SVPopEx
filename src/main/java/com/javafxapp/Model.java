@@ -1,5 +1,6 @@
 package com.javafxapp;
 
+import java.sql.Array;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
@@ -87,11 +88,11 @@ public class Model {
                 }
                 // loop through each SV call
                 for (Call call : calls) {
-                    System.out.println(call.toString());
                     // include the call if it is within the selection region (doesn't have to be completely within)
                     if (call.getStart() > selectionStart && call.getEnd() < selectionEnd ||
                     call.getStart() < selectionStart && call.getEnd() > selectionStart ||
                     call.getStart() < selectionEnd && call.getEnd() > selectionEnd) {
+                        System.out.println(call.toString());
                         // loop through each sample
                         for (int i=0; i<samples.size(); i++) {
                             String curName = samples.get(i).getName();
@@ -118,20 +119,37 @@ public class Model {
                                 }
                                 // if it has equivalences, loop through all equivalent samples and make sure still equivalent
                                 else {
+                                    ArrayList<String> removeNames = new ArrayList<String>();
+                                    System.out.println("-------------------------");
+                                    System.out.println(equiv.get(curName).toString());
+                                    System.out.println(equiv.get(curName).size());
+                                    System.out.println("Currently comparing equivalents of: " + curName);
                                     for (int j=0; j<equiv.get(curName).size(); j++) {
+                                        System.out.println("With: " + equiv.get(curName).get(j));
                                         // if same genotype do nothing
                                         if (Objects.equals(call.getGenotypes().get(equiv.get(curName).get(j)), curGT)) {
+                                            System.out.println("The same");
                                             // do nothing
                                         }
                                         // otherwise, remove the sample from equivalences
                                         else {
-                                            equiv.get(curName).remove(j);
-                                            // if its empty, no equivalence with any above sample, set equivalence to itself and lock
-                                            if (equiv.get(curName).isEmpty()) {
-                                                equiv.get(curName).add(curName);
-                                                locked.put(curName, Boolean.TRUE);
-                                            }
+                                            System.out.println("Different");
+                                            removeNames.add(equiv.get(curName).get(j));
+                                            System.out.println("REMOVE LIST " + removeNames.toString());
                                         }
+                                    }
+                                    Iterator<String> iterator = equiv.get(curName).iterator();
+                                    while (iterator.hasNext()) {
+                                        String s = iterator.next();
+                                        if (removeNames.contains(s)) {
+                                            iterator.remove();  // Safe removal during iteration
+                                        }
+                                    }
+                                    System.out.println("AFTER REMOVAL " + equiv.get(curName).toString());
+                                    // if its empty, no equivalence with any above sample, set equivalence to itself and lock
+                                    if (equiv.get(curName).isEmpty()) {
+                                        equiv.get(curName).add(curName);
+                                        locked.put(curName, Boolean.TRUE);
                                     }
                                 }
                             }
@@ -208,9 +226,17 @@ public class Model {
                         Matcher genotypeMatcher = genotypePattern.matcher(fields[startCol]);
                         // assign reference length if match is found, otherwise exit
                         if (genotypeMatcher.find()) {
-                            genotypes.put(sample.getName(), genotypeMatcher.group(1));
-                            if (Objects.equals(genotypeMatcher.group(1), "1/1") || Objects.equals(genotypeMatcher.group(1), "0/1")) {
-                                sample.addCall(currentCall);
+                            // if missing, add as reference
+                            if (Objects.equals(genotypeMatcher.group(1), "./.")) {
+                                genotypes.put(sample.getName(), "0/0");
+                            }
+                            // otherwise add as itself
+                            else {
+                                genotypes.put(sample.getName(), genotypeMatcher.group(1));
+                                // if has the variant, add
+                                if (Objects.equals(genotypeMatcher.group(1), "0/1") || Objects.equals(genotypeMatcher.group(1), "1/1")) {
+                                    sample.addCall(currentCall);
+                                }
                             }
                         } else {
                             System.err.println("Error: Could not find genotype for a sample on line:" + line + " . Ignoring call.");
