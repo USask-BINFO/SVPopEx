@@ -16,6 +16,13 @@ public class Model {
     private double zoomLevel = 0.2;
     private final double baseLevel = 0.2;
 
+    public void reset() {
+        this.samples.clear();
+        this.sampleColors.clear();
+        this.calls.clear();
+        this.selections.clear();
+    }
+
     public String loadFile(java.io.File file) throws java.io.IOException {
         return new String(java.nio.file.Files.readAllBytes(file.toPath()));
     }
@@ -101,7 +108,7 @@ public class Model {
                             if (locked.get(curName) == Boolean.TRUE) {
                                 // do nothing
                             }
-                            // otherwise
+                            // otherwise check the appropriate samples
                             else {
                                 // if it has no equivalence yet, loop through all samples above and check
                                 if (equiv.get(curName).isEmpty()) {
@@ -120,24 +127,18 @@ public class Model {
                                 // if it has equivalences, loop through all equivalent samples and make sure still equivalent
                                 else {
                                     ArrayList<String> removeNames = new ArrayList<String>();
-                                    System.out.println("-------------------------");
-                                    System.out.println(equiv.get(curName).toString());
-                                    System.out.println(equiv.get(curName).size());
-                                    System.out.println("Currently comparing equivalents of: " + curName);
+                                    // loop through equivalent samples
                                     for (int j=0; j<equiv.get(curName).size(); j++) {
-                                        System.out.println("With: " + equiv.get(curName).get(j));
                                         // if same genotype do nothing
                                         if (Objects.equals(call.getGenotypes().get(equiv.get(curName).get(j)), curGT)) {
-                                            System.out.println("The same");
                                             // do nothing
                                         }
-                                        // otherwise, remove the sample from equivalences
+                                        // otherwise, add to a list to remove the sample from equivalences
                                         else {
-                                            System.out.println("Different");
                                             removeNames.add(equiv.get(curName).get(j));
-                                            System.out.println("REMOVE LIST " + removeNames.toString());
                                         }
                                     }
+                                    // remove no longer equivalent samples
                                     Iterator<String> iterator = equiv.get(curName).iterator();
                                     while (iterator.hasNext()) {
                                         String s = iterator.next();
@@ -145,7 +146,6 @@ public class Model {
                                             iterator.remove();  // Safe removal during iteration
                                         }
                                     }
-                                    System.out.println("AFTER REMOVAL " + equiv.get(curName).toString());
                                     // if its empty, no equivalence with any above sample, set equivalence to itself and lock
                                     if (equiv.get(curName).isEmpty()) {
                                         equiv.get(curName).add(curName);
