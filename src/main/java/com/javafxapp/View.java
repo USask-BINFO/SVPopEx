@@ -1,6 +1,7 @@
 package com.javafxapp;
 
 import javafx.event.ActionEvent;
+import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.scene.Cursor;
@@ -41,12 +42,18 @@ public class View {
     private final VBox referenceContainer = new VBox(5);
     private Rectangle marker = new Rectangle(0,0,0,50);
     private final Pane referenceRect = new Pane();
+    private final Pane markerWrapper = new Pane();
+    private Label l1 = new Label("");
+    private Label l2 = new Label("");
+    VBox labelsBox = new VBox(10, l1, l2);
+    StackPane rectangleWithLabels = new StackPane(referenceRect, labelsBox);
+    StackPane rectWithMarker = new StackPane(rectangleWithLabels, markerWrapper);
     // ---------- tickContainer ----------
     private final HBox tickContainer = new HBox();
     private final Pane spaceWrapper1 = new Pane();
     private final Pane ticksWrapper = new Pane();
     private EventHandler<MouseEvent> releaseSelectionHandler;
-    // controlContainer
+    // ----------- controlContainer ---------
     private final HBox controlContainer = new HBox();
     Button zoomInButton = new Button("+");
     Button zoomOutButton = new Button("-");
@@ -58,7 +65,6 @@ public class View {
     private final Pane selectionWrapper = new Pane();
     private final StackPane samplePanel = new StackPane(samplesContainer, selectionContainer);
     private final ScrollPane callsPanel = new ScrollPane(samplePanel);
-    private final Pane markerWrapper = new Pane();
     private final Pane spaceWrapper2 = new Pane();
 
 
@@ -67,49 +73,12 @@ public class View {
         // ---------- MENU --------------
         fileMenu.getItems().add(importVCFItem);
         menuBar.getMenus().add(fileMenu);
-        // ---------- REF PANEL ---------
-        referenceContainer.setStyle("-fx-background-color: white;");
-        layout.getChildren().addAll(menuBar, controlContainer, referenceContainer, tickContainer, callsPanel);
-        // ---------- SAMPLE PANEL -------
-        selectionWrapper.setPickOnBounds(false);
-    }
-
-    public Scene getScene() {
-        return new Scene(layout);
-    }
-
-    public Stage getPrimaryStage() {
-        return this.primaryStage;
-    }
-
-    public void initReference(int refLength, String refName) {
-        // reference rectangle
-        this.referenceRect.setPrefHeight(50);
-        referenceRect.setBackground(new Background(new BackgroundFill(Color.LIGHTGRAY, CornerRadii.EMPTY, Insets.EMPTY)));
-        referenceRect.setBorder(new Border(new BorderStroke(
-                Color.BLACK,
-                BorderStrokeStyle.SOLID,
-                CornerRadii.EMPTY,
-                new BorderWidths(1)
-        )));
-        // marker
-        markerWrapper.getChildren().add(marker);
-        marker.setFill(Color.ORANGERED);
-        marker.setOpacity(0.5);
-        marker.setOnMouseDragged(event -> updateHighLevelView(event));
-        // reference name and length
-        Label l1 = new Label(refName);
-        Label l2 = new Label(String.valueOf(refLength) + " bp");
-        // in a VBox
-        VBox labelsBox = new VBox(10, l1, l2);
-        labelsBox.setStyle("-fx-alignment: center;");
-        StackPane rectangleWithLabels = new StackPane(referenceRect, labelsBox);
-        StackPane rectWithMarker = new StackPane(rectangleWithLabels, markerWrapper);
-        this.referenceContainer.getChildren().add(rectWithMarker);
-    }
-
-    public void initCoords() {
-        // button size
+        // ---------- CONTROL PANEL -----
+        // initially set buttons to disabled until file is loaded
+        zoomInButton.setDisable(true);
+        zoomOutButton.setDisable(true);
+        processButton.setDisable(true);
+        clearButton.setDisable(true);
         zoomInButton.setMinSize(35, 35);
         zoomInButton.setMaxSize(35, 35);
         zoomOutButton.setMinSize(35, 35);
@@ -141,7 +110,26 @@ public class View {
         controlContainer.getChildren().add(zoomOutButton);
         controlContainer.getChildren().add(clearButton);
         controlContainer.getChildren().add(processButton);
-        // coordinate ticks
+        // ---------- REF PANEL ---------
+        referenceContainer.setStyle("-fx-background-color: white;");
+        layout.getChildren().addAll(menuBar, controlContainer, referenceContainer, tickContainer, callsPanel);
+        // reference rectangle
+        this.referenceRect.setPrefHeight(50);
+        referenceRect.setBackground(new Background(new BackgroundFill(Color.LIGHTGRAY, CornerRadii.EMPTY, Insets.EMPTY)));
+        referenceRect.setBorder(new Border(new BorderStroke(
+                Color.BLACK,
+                BorderStrokeStyle.SOLID,
+                CornerRadii.EMPTY,
+                new BorderWidths(1)
+        )));
+        labelsBox.setStyle("-fx-alignment: center;");
+        this.referenceContainer.getChildren().add(rectWithMarker);
+        // marker
+        markerWrapper.getChildren().add(marker);
+        marker.setFill(Color.ORANGERED);
+        marker.setOpacity(0.5);
+        marker.setOnMouseDragged(event -> updateHighLevelView(event));
+        // ---------- TICK PANEL ---------
         spaceWrapper1.setMinWidth(100);
         spaceWrapper1.setPrefWidth(100);
         spaceWrapper1.setMaxWidth(100);
@@ -149,73 +137,121 @@ public class View {
         tickContainer.getChildren().add(ticksWrapper);
         ticksWrapper.setOnMouseEntered(e -> ticksWrapper.setCursor(Cursor.HAND));
         ticksWrapper.setOnMouseExited(e -> ticksWrapper.setCursor(Cursor.DEFAULT));
-        // sync scrollpane scroll with marker and coordinate ticks
-        this.callsPanel.hvalueProperty().addListener((obs, oldVal, newVal) -> {
-            // oldVal = old scroll position (between 0 and 1)
-            // newVal = new scroll position (between 0 and 1)
-            // getContent() gets node scrollpane is scrolling, getboundsinlocal gets actual width and height of node, so maxX is the maximum distance that can be scrolled
-            double maxX = callsPanel.getContent().getBoundsInLocal().getWidth()
-                    - callsPanel.getViewportBounds().getWidth();
-            double translateX = -newVal.doubleValue() * maxX;
-            ticksWrapper.setTranslateX(translateX);
-            double max = markerWrapper.getWidth() - marker.getWidth();
-            double scrollX = newVal.doubleValue() * max;
-            marker.setLayoutX(scrollX);
-        });
         this.ticksWrapper.setOnMousePressed(e -> {
-            double startX = e.getX();
-            Rectangle tickRect = new Rectangle(startX, 0, 0, ticksWrapper.getHeight());
-            tickRect.setId("selectionRect");
-            tickRect.setVisible(true);
-            tickRect.setFill(Color.GRAY);
-            tickRect.setOpacity(0.3);
-            ticksWrapper.getChildren().add(tickRect);
-            Rectangle selectRect = new Rectangle(startX, 0, 0, selectionWrapper.getHeight());
-            selectRect.setId("selectionRect");
-            selectRect.setVisible(true);
-            selectRect.setFill(Color.GRAY);
-            selectRect.setOpacity(0.3);
-            selectionWrapper.getChildren().add(selectRect);
+            this.ticksPressed(e);
         });
         this.ticksWrapper.setOnMouseDragged(e -> {
-            Rectangle tickRect = (Rectangle) this.ticksWrapper.lookup("#selectionRect");
-            Rectangle selectRect = (Rectangle) this.selectionWrapper.lookup("#selectionRect");
-            double width = e.getX() - tickRect.getX();
-            // only update selection in forward direction
-            if (width > 0) {
-                tickRect.setWidth(width);
-                selectRect.setWidth(width);
-            } else {
-                // do nothing!
-            }
+            this.ticksDragged(e);
         });
         this.ticksWrapper.setOnMouseReleased(e -> {
-            Rectangle tickRect = (Rectangle) this.ticksWrapper.lookup("#selectionRect");
-            Rectangle selectRect = (Rectangle) this.selectionWrapper.lookup("#selectionRect");
-            double width = e.getX() - tickRect.getX();
-            // only update selection in forward direction
-            if (width > 0) {
-                // update width
-                tickRect.setWidth(width);
-                selectRect.setWidth(width);
-                // CHANGE : this might not be best place to have this/handle this under the width > 0
-                if (this.releaseSelectionHandler != null) {
-                    releaseSelectionHandler.handle(e);
-                }
-            } else {
-                // this rectangle isn't displayed, so remove
-                this.ticksWrapper.getChildren().remove(tickRect);
-                this.selectionWrapper.getChildren().remove(selectRect);
-            }
+            this.ticksReleased(e);
         });
-    }
-
-    public void initSamples(ArrayList<Sample> samples, int refLength, double zoomLevel) {
+        // ---------- CALLS PANEL -------
+        selectionWrapper.setPickOnBounds(false);
+        this.callsPanel.hvalueProperty().addListener((obs, oldVal, newVal) -> {
+            this.syncScroll(newVal);
+        });
         spaceWrapper2.setMinWidth(100);
         spaceWrapper2.setPrefWidth(100);
         spaceWrapper2.setMaxWidth(100);
         this.selectionContainer.getChildren().add(spaceWrapper2);
         this.selectionContainer.getChildren().add(selectionWrapper);
+    }
+
+    public void enableControls() {
+        this.zoomInButton.setDisable(false);
+        this.zoomOutButton.setDisable(false);
+        this.processButton.setDisable(false);
+        this.clearButton.setDisable(false);
+    }
+
+    // sync scrollpane scroll with marker and coordinate ticks
+    public void syncScroll(Number newVal) {
+        // oldVal = old scroll position (between 0 and 1)
+        // newVal = new scroll position (between 0 and 1)
+        // getContent() gets node scrollpane is scrolling, getboundsinlocal gets actual width and height of node, so maxX is the maximum distance that can be scrolled
+        double maxX = callsPanel.getContent().getBoundsInLocal().getWidth()
+                - callsPanel.getViewportBounds().getWidth();
+        double translateX = -newVal.doubleValue() * maxX;
+        ticksWrapper.setTranslateX(translateX);
+        double max = markerWrapper.getWidth() - marker.getWidth();
+        double scrollX = newVal.doubleValue() * max;
+        marker.setLayoutX(scrollX);
+    }
+
+    public void ticksPressed(MouseEvent e) {
+        double startX = e.getX();
+        Rectangle tickRect = new Rectangle(startX, 0, 0, ticksWrapper.getHeight());
+        tickRect.setId("selectionRect");
+        tickRect.setVisible(true);
+        tickRect.setFill(Color.GRAY);
+        tickRect.setOpacity(0.3);
+        ticksWrapper.getChildren().add(tickRect);
+        Rectangle selectRect = new Rectangle(startX, 0, 0, selectionWrapper.getHeight());
+        selectRect.setId("selectionRect");
+        selectRect.setVisible(true);
+        selectRect.setFill(Color.GRAY);
+        selectRect.setOpacity(0.3);
+        selectionWrapper.getChildren().add(selectRect);
+    }
+
+    public void ticksDragged(MouseEvent e) {
+        Rectangle tickRect = (Rectangle) this.ticksWrapper.lookup("#selectionRect");
+        Rectangle selectRect = (Rectangle) this.selectionWrapper.lookup("#selectionRect");
+        double width = e.getX() - tickRect.getX();
+        // only update selection in forward direction
+        if (width > 0) {
+            tickRect.setWidth(width);
+            selectRect.setWidth(width);
+        } else {
+            // do nothing!
+        }
+    }
+
+    public void ticksReleased(MouseEvent e) {
+        Rectangle tickRect = (Rectangle) this.ticksWrapper.lookup("#selectionRect");
+        Rectangle selectRect = (Rectangle) this.selectionWrapper.lookup("#selectionRect");
+        double width = e.getX() - tickRect.getX();
+        // only update selection in forward direction
+        if (width > 0) {
+            // update width
+            tickRect.setWidth(width);
+            selectRect.setWidth(width);
+            // CHANGE : this might not be best place to have this/handle this under the width > 0
+            if (this.releaseSelectionHandler != null) {
+                releaseSelectionHandler.handle(e);
+            }
+        } else {
+            // this rectangle isn't displayed, so remove
+            this.ticksWrapper.getChildren().remove(tickRect);
+            this.selectionWrapper.getChildren().remove(selectRect);
+        }
+    }
+
+    public void reset() {
+        this.ticksWrapper.getChildren().clear();
+        this.selectionWrapper.getChildren().clear();
+        this.samplesContainer.getChildren().clear();
+        this.zoomInButton.setDisable(true);
+        this.zoomOutButton.setDisable(true);
+        this.processButton.setDisable(true);
+        this.clearButton.setDisable(true);
+    }
+
+    public Scene getScene() {
+        return new Scene(layout);
+    }
+
+    public Stage getPrimaryStage() {
+        return this.primaryStage;
+    }
+
+    public void initReference(int refLength, String refName) {
+        this.l1.setText(refName);
+        this.l2.setText(String.valueOf(refLength) + " bp");
+    }
+
+    public void initSamples(ArrayList<Sample> samples, int refLength, double zoomLevel) {
         for (int i=0; i<samples.size(); i++) {
             // create sampContainer HBox to hold sample label and calls
             HBox sampContainer = new HBox();
