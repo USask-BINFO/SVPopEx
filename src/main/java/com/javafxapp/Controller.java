@@ -13,8 +13,6 @@ public class Controller {
         this.model = model;
         this.view = view;
         view.importListener(e -> {
-            this.model.reset();
-            this.view.reset();
             this.importFile();
         });
         view.zoomInListener(e -> {
@@ -52,6 +50,8 @@ public class Controller {
                 System.err.println("Error: Could not load selected file. Exiting.");
                 System.exit(1);
             }
+            this.model.reset();
+            this.view.reset();
             model.processFile(fileContent);
             view.initReference(model.getRefLength(), model.getRefName());
             view.initSamples(model.getSamples(), model.getRefLength(), model.getZoomLevel());
