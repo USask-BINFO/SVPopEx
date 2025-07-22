@@ -57,6 +57,7 @@ public class Controller {
             view.initSamples(model.getSamples(), model.getRefLength(), model.getZoomLevel());
             view.showCoords(model.getRefLength(), model.getZoomLevel());
             view.showCalls(model.getSamples(), model.getZoomLevel(), model.getRefLength());
+            view.enableControls();
         }
         // user closed or cancelled file
         else {

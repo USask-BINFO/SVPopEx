@@ -74,6 +74,11 @@ public class View {
         fileMenu.getItems().add(importVCFItem);
         menuBar.getMenus().add(fileMenu);
         // ---------- CONTROL PANEL -----
+        // initially set buttons to disabled until file is loaded
+        zoomInButton.setDisable(true);
+        zoomOutButton.setDisable(true);
+        processButton.setDisable(true);
+        clearButton.setDisable(true);
         zoomInButton.setMinSize(35, 35);
         zoomInButton.setMaxSize(35, 35);
         zoomOutButton.setMinSize(35, 35);
@@ -146,6 +151,18 @@ public class View {
         this.callsPanel.hvalueProperty().addListener((obs, oldVal, newVal) -> {
             this.syncScroll(newVal);
         });
+        spaceWrapper2.setMinWidth(100);
+        spaceWrapper2.setPrefWidth(100);
+        spaceWrapper2.setMaxWidth(100);
+        this.selectionContainer.getChildren().add(spaceWrapper2);
+        this.selectionContainer.getChildren().add(selectionWrapper);
+    }
+
+    public void enableControls() {
+        this.zoomInButton.setDisable(false);
+        this.zoomOutButton.setDisable(false);
+        this.processButton.setDisable(false);
+        this.clearButton.setDisable(false);
     }
 
     // sync scrollpane scroll with marker and coordinate ticks
@@ -213,6 +230,12 @@ public class View {
 
     public void reset() {
         this.ticksWrapper.getChildren().clear();
+        this.selectionWrapper.getChildren().clear();
+        this.samplesContainer.getChildren().clear();
+        this.zoomInButton.setDisable(true);
+        this.zoomOutButton.setDisable(true);
+        this.processButton.setDisable(true);
+        this.clearButton.setDisable(true);
     }
 
     public Scene getScene() {
@@ -229,11 +252,6 @@ public class View {
     }
 
     public void initSamples(ArrayList<Sample> samples, int refLength, double zoomLevel) {
-        spaceWrapper2.setMinWidth(100);
-        spaceWrapper2.setPrefWidth(100);
-        spaceWrapper2.setMaxWidth(100);
-        this.selectionContainer.getChildren().add(spaceWrapper2);
-        this.selectionContainer.getChildren().add(selectionWrapper);
         for (int i=0; i<samples.size(); i++) {
             // create sampContainer HBox to hold sample label and calls
             HBox sampContainer = new HBox();

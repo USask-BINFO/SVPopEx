@@ -21,6 +21,8 @@ public class Model {
         this.sampleColors.clear();
         this.calls.clear();
         this.selections.clear();
+        // set zoom back to original
+        this.zoomLevel = this.baseLevel;
     }
 
     public String loadFile(java.io.File file) throws java.io.IOException {
