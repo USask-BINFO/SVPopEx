@@ -2,6 +2,7 @@ package com.javafxapp;
 
 import java.io.File;
 
+import javafx.scene.Node;
 import javafx.scene.input.MouseEvent;
 import javafx.stage.FileChooser;
 
@@ -50,6 +51,11 @@ public class Controller {
                 System.err.println("Error: Could not load selected file. Exiting.");
                 System.exit(1);
             }
+            // DEBUG TO SEE WHICH NODE
+//            view.getPrimaryStage().getScene().addEventFilter(MouseEvent.MOUSE_MOVED, e -> {
+//                Node hovered = e.getPickResult().getIntersectedNode();
+//                System.out.println("Mouse over: " + hovered);
+//            });
             this.model.reset();
             this.view.reset();
             model.processFile(fileContent);

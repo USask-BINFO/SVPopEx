@@ -4,6 +4,7 @@ import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -60,12 +61,14 @@ public class View {
     Button clearButton = new Button("Clear");
     Button processButton = new Button("Process");
     // ---------- callsPanel ----------
+    private ArrayList<Sample> sampleOrderInView = new ArrayList<Sample>();
+    private final HBox callsContentContainer = new HBox();
+    private final VBox samplesInfoContainer = new VBox();
     private final VBox samplesContainer = new VBox(0);
     private final HBox selectionContainer = new HBox();
     private final Pane selectionWrapper = new Pane();
     private final StackPane samplePanel = new StackPane(samplesContainer, selectionContainer);
     private final ScrollPane callsPanel = new ScrollPane(samplePanel);
-    private final Pane spaceWrapper2 = new Pane();
 
 
     public View(Stage primaryStage) {
@@ -112,7 +115,7 @@ public class View {
         controlContainer.getChildren().add(processButton);
         // ---------- REF PANEL ---------
         referenceContainer.setStyle("-fx-background-color: white;");
-        layout.getChildren().addAll(menuBar, controlContainer, referenceContainer, tickContainer, callsPanel);
+        layout.getChildren().addAll(menuBar, controlContainer, referenceContainer, tickContainer, callsContentContainer);
         // reference rectangle
         this.referenceRect.setPrefHeight(50);
         referenceRect.setBackground(new Background(new BackgroundFill(Color.LIGHTGRAY, CornerRadii.EMPTY, Insets.EMPTY)));
@@ -130,9 +133,9 @@ public class View {
         marker.setOpacity(0.5);
         marker.setOnMouseDragged(event -> updateHighLevelView(event));
         // ---------- TICK PANEL ---------
-        spaceWrapper1.setMinWidth(100);
-        spaceWrapper1.setPrefWidth(100);
-        spaceWrapper1.setMaxWidth(100);
+        spaceWrapper1.setMinWidth(90);
+        spaceWrapper1.setPrefWidth(90);
+        spaceWrapper1.setMaxWidth(90);
         tickContainer.getChildren().add(spaceWrapper1);
         tickContainer.getChildren().add(ticksWrapper);
         ticksWrapper.setOnMouseEntered(e -> ticksWrapper.setCursor(Cursor.HAND));
@@ -147,14 +150,12 @@ public class View {
             this.ticksReleased(e);
         });
         // ---------- CALLS PANEL -------
+        this.callsContentContainer.getChildren().add(samplesInfoContainer);
+        this.callsContentContainer.getChildren().add(callsPanel);
         selectionWrapper.setPickOnBounds(false);
         this.callsPanel.hvalueProperty().addListener((obs, oldVal, newVal) -> {
             this.syncScroll(newVal);
         });
-        spaceWrapper2.setMinWidth(100);
-        spaceWrapper2.setPrefWidth(100);
-        spaceWrapper2.setMaxWidth(100);
-        this.selectionContainer.getChildren().add(spaceWrapper2);
         this.selectionContainer.getChildren().add(selectionWrapper);
     }
 
@@ -187,6 +188,7 @@ public class View {
         tickRect.setFill(Color.GRAY);
         tickRect.setOpacity(0.3);
         ticksWrapper.getChildren().add(tickRect);
+        System.out.println(startX);
         Rectangle selectRect = new Rectangle(startX, 0, 0, selectionWrapper.getHeight());
         selectRect.setId("selectionRect");
         selectRect.setVisible(true);
@@ -253,30 +255,59 @@ public class View {
 
     public void initSamples(ArrayList<Sample> samples, int refLength, double zoomLevel) {
         for (int i=0; i<samples.size(); i++) {
-            // create sampContainer HBox to hold sample label and calls
+            sampleOrderInView.add(samples.get(i));
+            // create sampContainer HBox to hold calls
             HBox sampContainer = new HBox();
             sampContainer.setPrefHeight(100);
             sampContainer.setMinWidth(refLength * zoomLevel);
             sampContainer.setPrefWidth(refLength * zoomLevel);
             sampContainer.setMaxWidth(refLength * zoomLevel);
+            // create dragWrapper to hold drag lines
+            StackPane dragWrapper = new StackPane();
+            dragWrapper.setMinWidth(20);
+            dragWrapper.setMaxWidth(20);
+            dragWrapper.setPrefHeight(100);
+            // create drag lines
+            VBox lines = new VBox(2); // 5 is spacing between lines
+            lines.setAlignment(Pos.CENTER);
+            for (int l=0; l<3; l++) {
+                Line line = new Line(0, 0, 5, 0); // x1, y1, x2, y2
+                line.setStrokeWidth(1);
+                line.setStroke(Color.web("#888888")); // visible stroke color
+                lines.getChildren().add(line);
+            }
+            dragWrapper.getChildren().add(lines);
+            // set changes on drag
+            dragWrapper.setOnMouseEntered(e -> dragWrapper.setCursor(Cursor.HAND));
+            dragWrapper.setOnMouseExited(e -> dragWrapper.setCursor(Cursor.DEFAULT));
             // create labelWrapper Pane to hold sample name
             Pane labelWrapper = new Pane();
+            labelWrapper.setMinWidth(70);
+            labelWrapper.setMaxWidth(70);
+            // create sample label
             Label sampleLabel = new Label(samples.get(i).getName());
             sampleLabel.setLayoutX(5);
             sampleLabel.setLayoutY(40);
-            sampleLabel.setMinWidth(100);
-            sampleLabel.setPrefWidth(100);
-            sampleLabel.setMaxWidth(100);
-            // create calls Pane to hold sample calls
+            sampleLabel.setMinWidth(70);
+            sampleLabel.setPrefWidth(70);
+            sampleLabel.setMaxWidth(70);
+            // create callsWrapper to hold sample calls
             Pane callsWrapper = new Pane();
-            // add Label to Pane, and Pane to sampContainer
+            // create infoContainer to hold sample info
+            HBox infoContainer = new HBox();
+            // add drag lines, and sample label to infoContainer
             labelWrapper.getChildren().add(sampleLabel);
-            sampContainer.getChildren().add(labelWrapper);
+            infoContainer.getChildren().add(dragWrapper);
+            infoContainer.getChildren().add(labelWrapper);
+            this.samplesInfoContainer.getChildren().add(infoContainer);
             sampContainer.getChildren().add(callsWrapper);
             // add sampContainer to samplesContainer
             this.samplesContainer.getChildren().add(sampContainer);
         }
         this.callsPanel.setPannable(true);   // Optional: enables mouse drag scrolling
+        for (int i=0; i<sampleOrderInView.size(); i++) {
+            System.out.println(sampleOrderInView.get(i).getName());
+        }
     }
 
     public void showCalls(ArrayList<Sample> samples, double zoomLevel, int refLength) {
@@ -285,7 +316,7 @@ public class View {
          */
         for (int i=0; i<samples.size(); i++) {
             HBox currentSampContainer = (HBox) this.samplesContainer.getChildren().get(i);
-            Pane currentCalls = (Pane) currentSampContainer.getChildren().get(1);
+            Pane currentCalls = (Pane) currentSampContainer.getChildren().get(0);
             currentCalls.getChildren().clear();
             currentSampContainer.setMinWidth(refLength * zoomLevel);
             currentSampContainer.setPrefWidth(refLength * zoomLevel);
