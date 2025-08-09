@@ -152,6 +152,7 @@ public class View {
         // ---------- CALLS PANEL -------
         this.callsContentContainer.getChildren().add(samplesInfoContainer);
         this.callsContentContainer.getChildren().add(callsPanel);
+        this.callsPanel.setStyle("-fx-focus-color: transparent; -fx-faint-focus-color: transparent;");
         selectionWrapper.setPickOnBounds(false);
         this.callsPanel.hvalueProperty().addListener((obs, oldVal, newVal) -> {
             this.syncScroll(newVal);
@@ -188,7 +189,6 @@ public class View {
         tickRect.setFill(Color.GRAY);
         tickRect.setOpacity(0.3);
         ticksWrapper.getChildren().add(tickRect);
-        System.out.println(startX);
         Rectangle selectRect = new Rectangle(startX, 0, 0, selectionWrapper.getHeight());
         selectRect.setId("selectionRect");
         selectRect.setVisible(true);
@@ -256,12 +256,12 @@ public class View {
     public void initSamples(ArrayList<Sample> samples, int refLength, double zoomLevel) {
         for (int i=0; i<samples.size(); i++) {
             sampleOrderInView.add(samples.get(i));
-            // create sampContainer HBox to hold calls
-            HBox sampContainer = new HBox();
-            sampContainer.setPrefHeight(100);
-            sampContainer.setMinWidth(refLength * zoomLevel);
-            sampContainer.setPrefWidth(refLength * zoomLevel);
-            sampContainer.setMaxWidth(refLength * zoomLevel);
+            // create callsWrapper to hold sample calls
+            Pane callsWrapper = new Pane();
+            callsWrapper.setPrefHeight(100);
+            callsWrapper.setMinWidth(refLength * zoomLevel);
+            callsWrapper.setPrefWidth(refLength * zoomLevel);
+            callsWrapper.setMaxWidth(refLength * zoomLevel);
             // create dragWrapper to hold drag lines
             StackPane dragWrapper = new StackPane();
             dragWrapper.setMinWidth(20);
@@ -291,8 +291,6 @@ public class View {
             sampleLabel.setMinWidth(70);
             sampleLabel.setPrefWidth(70);
             sampleLabel.setMaxWidth(70);
-            // create callsWrapper to hold sample calls
-            Pane callsWrapper = new Pane();
             // create infoContainer to hold sample info
             HBox infoContainer = new HBox();
             // add drag lines, and sample label to infoContainer
@@ -300,9 +298,8 @@ public class View {
             infoContainer.getChildren().add(dragWrapper);
             infoContainer.getChildren().add(labelWrapper);
             this.samplesInfoContainer.getChildren().add(infoContainer);
-            sampContainer.getChildren().add(callsWrapper);
             // add sampContainer to samplesContainer
-            this.samplesContainer.getChildren().add(sampContainer);
+            this.samplesContainer.getChildren().add(callsWrapper);
         }
         this.callsPanel.setPannable(true);   // Optional: enables mouse drag scrolling
         for (int i=0; i<sampleOrderInView.size(); i++) {
@@ -315,12 +312,11 @@ public class View {
          *
          */
         for (int i=0; i<samples.size(); i++) {
-            HBox currentSampContainer = (HBox) this.samplesContainer.getChildren().get(i);
-            Pane currentCalls = (Pane) currentSampContainer.getChildren().get(0);
+            Pane currentCalls = (Pane) this.samplesContainer.getChildren().get(i);
             currentCalls.getChildren().clear();
-            currentSampContainer.setMinWidth(refLength * zoomLevel);
-            currentSampContainer.setPrefWidth(refLength * zoomLevel);
-            currentSampContainer.setMaxWidth(refLength * zoomLevel);
+            currentCalls.setMinWidth(refLength * zoomLevel);
+            currentCalls.setPrefWidth(refLength * zoomLevel);
+            currentCalls.setMaxWidth(refLength * zoomLevel);
             // loop through each call
             for (int j=0; j<samples.get(i).calls.size(); j++) {
                 // create line
@@ -361,8 +357,12 @@ public class View {
         }
         // set width
         double contentWidth = refLength * zoomLevel;
+        callsPanel.layout();
         double viewportWidth = callsPanel.getViewportBounds().getWidth();
+        System.out.println("AFTER LAYOUT VIEWPORT WIDTH " + viewportWidth);
         double proportionVisible = viewportWidth / contentWidth;
+        System.out.println("VIEWPORT WIDTH " + viewportWidth);
+        System.out.println("CONTENT WIDTH " + contentWidth);
         double markerWidth = Screen.getPrimary().getVisualBounds().getWidth() * proportionVisible;
         marker.setWidth(markerWidth);
     }
@@ -453,6 +453,7 @@ public class View {
         double contentWidth = refLength * zoomLevel;
         System.out.println("ZOOM LEVEL " + zoomLevel);
         double viewportWidth = callsPanel.getViewportBounds().getWidth();
+        System.out.println("UPDATED WIDTH" + viewportWidth);
         double proportionVisible = viewportWidth / contentWidth;
         double markerWidth = markerWrapper.getWidth() * proportionVisible;
         marker.setWidth(markerWidth);
