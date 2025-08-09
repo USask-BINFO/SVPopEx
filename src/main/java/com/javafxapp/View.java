@@ -14,6 +14,7 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.text.Text;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import java.util.ArrayList;
@@ -61,6 +62,7 @@ public class View {
     Button clearButton = new Button("Clear");
     Button processButton = new Button("Process");
     // ---------- callsPanel ----------
+    Tooltip callInfoTooltip = new Tooltip();
     private ArrayList<Sample> sampleOrderInView = new ArrayList<Sample>();
     private final HBox callsContentContainer = new HBox();
     private final VBox samplesInfoContainer = new VBox();
@@ -319,9 +321,13 @@ public class View {
             currentCalls.setMaxWidth(refLength * zoomLevel);
             // loop through each call
             for (int j=0; j<samples.get(i).calls.size(); j++) {
-                // create line
+                // get the current Call and set its id for the call and rectangle
                 Call currentCall = samples.get(i).calls.get(j);
                 Rectangle callRect = new Rectangle(currentCall.getStart()*zoomLevel, 0, currentCall.getLength()*zoomLevel, 100);
+                String callId = samples.get(i).getName() + "-" + j;
+                currentCall.setCallRectId(callId);
+                callRect.setId(callId);
+                // styling
                 callRect.setOpacity(1);
                 callRect.setStrokeWidth(2);
                 callRect.setArcWidth(5);   // horizontal roundness
@@ -360,15 +366,18 @@ public class View {
     public void showCoords(int refLength, double zoomLevel) {
         this.ticksWrapper.getChildren().clear();
         int tickSpacing = 1000;
-        int tickHeight = 10;
         // Draw ticks every 10 pixels horizontally
         for (int x = 0; x <= refLength; x += tickSpacing) {
-            Label label = new Label(String.valueOf(x));
-            label.setLayoutX(x*zoomLevel);
-            label.setLayoutY(10);
-            Line tick = new Line(x*zoomLevel, 0, x*zoomLevel, 5); // vertical line (tick)
+            // coordinate
+            Text text = new Text(String.valueOf(x));
+            double textWidth = text.getLayoutBounds().getWidth();
+            text.setX((x*zoomLevel) - textWidth / 2);
+            text.setY(20);
+            // tick
+            Line tick = new Line(x*zoomLevel, 0, x*zoomLevel, 5);
+            // add to pane
             this.ticksWrapper.getChildren().add(tick);
-            this.ticksWrapper.getChildren().add(label);
+            this.ticksWrapper.getChildren().add(text);
         }
     }
 

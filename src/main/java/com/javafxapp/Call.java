@@ -10,6 +10,7 @@ public class Call {
     private int length;
     private int start;
     private int end;
+    private String callRectId;
     LinkedHashMap<String,String> genotypes = new LinkedHashMap<>();
     public Call(String type, int length, int start, LinkedHashMap<String,String> genotypes) {
         this.type = type;
@@ -45,6 +46,14 @@ public class Call {
 
     public int getEnd() {
         return this.end;
+    }
+
+    public void setCallRectId(String id) {
+        this.callRectId = id;
+    }
+
+    public String getCallRectId() {
+        return this.callRectId;
     }
 }
 
