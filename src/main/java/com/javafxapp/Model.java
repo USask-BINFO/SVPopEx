@@ -17,6 +17,9 @@ public class Model {
     private final double baseLevel = 0.2;
     private ArrayList<Integer> increments = new ArrayList<>(Arrays.asList(100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000, 500000, 1000000, 2000000, 5000000, 10000000, 20000000, 50000000, 100000000));
     private int coordIncrementIndex = 3;
+    private double trackHeightScale = 1;
+    private final double baseFontSize = 12;
+    private final int originalTrackHeight = 100;
 
     public void reset() {
         this.samples.clear();
@@ -58,6 +61,14 @@ public class Model {
 
     public void setRefLength(int length) {
         this.refLength = length;
+    }
+
+    public double getBaseFontSize() {
+        return this.baseFontSize;
+    }
+
+    public int getOriginalTrackHeight() {
+        return this.originalTrackHeight;
     }
 
     public void addSelection(Selection selection) {
@@ -188,6 +199,21 @@ public class Model {
         this.selections.clear();
     }
 
+    public void updateTrackHeightScale(double increment) {
+        if ((this.trackHeightScale + increment) < 0.2) {
+            // do nothing, too small
+        }
+        else {
+            this.trackHeightScale += increment;
+            // round to 1 decimal place
+            this.trackHeightScale = Math.round(this.trackHeightScale * 10) / 10.0;
+        }
+    }
+
+    public double getTrackHeightScale() {
+        return this.trackHeightScale;
+    }
+
     public void processFile(String fileContent) {
         String[] lines = fileContent.split("\\r?\\n");  // Splits on \n or \r\n
         for (String line : lines) {
@@ -270,7 +296,7 @@ public class Model {
         System.out.println(tickDist);
         // increase increment
         if (tickDist < lowerThreshold) {
-            if (coordIncrementIndex == increments.size()) {
+            if (coordIncrementIndex+1 == increments.size()) {
                 // do nothing, already at largest
             }
             else {
