@@ -31,6 +31,10 @@ public class Controller {
         view.releaseSelectionListener(e -> {
             this.updateReleaseSelection(e);
         });
+        view.viewportWidthChange(e -> {
+            this.processViewportWidthChange();
+        });
+
     }
 
     public void importFile() {
@@ -95,6 +99,11 @@ public class Controller {
         Selection selection = new Selection(view.getSelectionRectangle().getX(), e.getX(), model.getZoomLevel());
         model.addSelection(selection);
         view.clearActiveSelection();
+    }
+
+    public void processViewportWidthChange() {
+        System.out.println("FIRED");
+        view.updateMarkerOnViewportScaleOrZoom(model.getRefLength(), model.getZoomLevel());
     }
 }
 

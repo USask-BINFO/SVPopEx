@@ -355,16 +355,6 @@ public class View {
                 currentCalls.getChildren().add(callRect);
             }
         }
-        // set width
-        double contentWidth = refLength * zoomLevel;
-        callsPanel.layout();
-        double viewportWidth = callsPanel.getViewportBounds().getWidth();
-        System.out.println("AFTER LAYOUT VIEWPORT WIDTH " + viewportWidth);
-        double proportionVisible = viewportWidth / contentWidth;
-        System.out.println("VIEWPORT WIDTH " + viewportWidth);
-        System.out.println("CONTENT WIDTH " + contentWidth);
-        double markerWidth = Screen.getPrimary().getVisualBounds().getWidth() * proportionVisible;
-        marker.setWidth(markerWidth);
     }
 
     public void showCoords(int refLength, double zoomLevel) {
@@ -380,6 +370,16 @@ public class View {
             this.ticksWrapper.getChildren().add(tick);
             this.ticksWrapper.getChildren().add(label);
         }
+    }
+
+    public void updateMarkerOnViewportScaleOrZoom(int refLength, double zoomLevel) {
+        // set width
+        double contentWidth = refLength * zoomLevel;
+        callsPanel.layout();
+        double viewportWidth = callsPanel.getViewportBounds().getWidth();
+        double proportionVisible = viewportWidth / contentWidth;
+        double markerWidth = markerWrapper.getWidth() * proportionVisible;
+        marker.setWidth(markerWidth);
     }
 
     public Rectangle getSelectionRectangle() {
@@ -450,13 +450,7 @@ public class View {
         this.showCoords(refLength, zoomLevel);
         this.updateSelections(selections, zoomLevel, baseLevel);
         // update marker width
-        double contentWidth = refLength * zoomLevel;
-        System.out.println("ZOOM LEVEL " + zoomLevel);
-        double viewportWidth = callsPanel.getViewportBounds().getWidth();
-        System.out.println("UPDATED WIDTH" + viewportWidth);
-        double proportionVisible = viewportWidth / contentWidth;
-        double markerWidth = markerWrapper.getWidth() * proportionVisible;
-        marker.setWidth(markerWidth);
+        updateMarkerOnViewportScaleOrZoom(refLength, zoomLevel);
     }
 
     public void updateHighLevelView(MouseEvent event) {
@@ -498,6 +492,13 @@ public class View {
     }
     public void releaseSelectionListener(EventHandler<MouseEvent> handler) {
         this.releaseSelectionHandler = handler;
+    }
+    public void viewportWidthChange(EventHandler<ActionEvent> handler) {
+        callsPanel.viewportBoundsProperty().addListener((obs, oldBounds, newBounds) -> {
+            if (oldBounds == null || newBounds == null || oldBounds.getWidth() != newBounds.getWidth()) {
+                handler.handle(new ActionEvent(this, null));
+            }
+        });
     }
 }
 
