@@ -363,10 +363,8 @@ public class View {
         }
     }
 
-    public void showCoords(int refLength, double zoomLevel) {
+    public void showCoords(int refLength, double zoomLevel, int tickSpacing) {
         this.ticksWrapper.getChildren().clear();
-        int tickSpacing = 1000;
-        // Draw ticks every 10 pixels horizontally
         for (int x = 0; x <= refLength; x += tickSpacing) {
             // coordinate
             Text text = new Text(String.valueOf(x));
@@ -389,6 +387,10 @@ public class View {
         double proportionVisible = viewportWidth / contentWidth;
         double markerWidth = markerWrapper.getWidth() * proportionVisible;
         marker.setWidth(markerWidth);
+    }
+
+    public double getViewportWidth() {
+        return callsPanel.getViewportBounds().getWidth();
     }
 
     public Rectangle getSelectionRectangle() {
@@ -454,9 +456,9 @@ public class View {
         }
     }
 
-    public void updateZoom(ArrayList<Sample> samples, double zoomLevel, int refLength, ArrayList<Selection> selections, double baseLevel) {
+    public void updateZoom(ArrayList<Sample> samples, double zoomLevel, int refLength, ArrayList<Selection> selections, double baseLevel, int tickSpacing) {
         this.showCalls(samples, zoomLevel, refLength);
-        this.showCoords(refLength, zoomLevel);
+        this.showCoords(refLength, zoomLevel, tickSpacing);
         this.updateSelections(selections, zoomLevel, baseLevel);
         // update marker width
         updateMarkerOnViewportScaleOrZoom(refLength, zoomLevel);

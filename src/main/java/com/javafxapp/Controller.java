@@ -65,7 +65,7 @@ public class Controller {
             model.processFile(fileContent);
             view.initReference(model.getRefLength(), model.getRefName());
             view.initSamples(model.getSamples(), model.getRefLength(), model.getZoomLevel());
-            view.showCoords(model.getRefLength(), model.getZoomLevel());
+            view.showCoords(model.getRefLength(), model.getZoomLevel(), model.getTickSpacing());
             view.showCalls(model.getSamples(), model.getZoomLevel(), model.getRefLength());
             view.enableControls();
         }
@@ -78,12 +78,14 @@ public class Controller {
 
     public void updateZoomIn() {
         double level = model.updateZoomLevel(1.3);
-        view.updateZoom(model.getSamples(), level, model.getRefLength(), model.getSelections(), model.getBaseLevel());
+        model.updateCoordIncrement(view.getViewportWidth());
+        view.updateZoom(model.getSamples(), level, model.getRefLength(), model.getSelections(), model.getBaseLevel(), model.getTickSpacing());
     }
 
     public void updateZoomOut() {
         double level = model.updateZoomLevel(0.7);
-        view.updateZoom(model.getSamples(), level, model.getRefLength(), model.getSelections(), model.getBaseLevel());
+        model.updateCoordIncrement(view.getViewportWidth());
+        view.updateZoom(model.getSamples(), level, model.getRefLength(), model.getSelections(), model.getBaseLevel(), model.getTickSpacing());
     }
 
     public void clearSelections() {
