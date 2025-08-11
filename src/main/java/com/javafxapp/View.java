@@ -16,6 +16,7 @@ import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
+import javafx.scene.transform.Scale;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import java.util.ArrayList;
@@ -33,8 +34,12 @@ import java.util.Set;
 // Button -> ...Button
 // Pane -> ...Wrapper
 // EventHandler -> ...Handler
-
+class Delta {
+    double x;
+    double y;
+}
 public class View {
+    private Delta dragCoords = new Delta();
     private final VBox layout = new VBox();
     private final Stage primaryStage;
     // ---------- menuBar -------------
@@ -299,6 +304,15 @@ public class View {
             // set changes on drag
             dragWrapper.setOnMouseEntered(e -> dragWrapper.setCursor(Cursor.HAND));
             dragWrapper.setOnMouseExited(e -> dragWrapper.setCursor(Cursor.DEFAULT));
+            dragWrapper.setOnMousePressed(e -> {
+                this.labelPressed(e, dragWrapper);
+            });
+            dragWrapper.setOnMouseDragged(e -> {
+                this.labelDragged(e, dragWrapper);
+            });
+            dragWrapper.setOnMouseReleased(e -> {
+                this.labelReleased(e);
+            });
             // create labelWrapper Pane to hold sample name
             StackPane labelWrapper = new StackPane();
             labelWrapper.setMinWidth(70);
@@ -404,10 +418,18 @@ public class View {
         marker.setWidth(markerWidth);
     }
 
+    public double getBaseCallPanelHeight() {
+        return this.callsPanel.getLayoutBounds().getHeight();
+    }
+
     public void updateTrackHeight(double val) {
-        this.callsPanel.setScaleY(val);
-        double originalHeight = this.callsPanel.getLayoutBounds().getHeight();
-        this.callsPanel.setTranslateY(-(1 - val) * originalHeight / 2);
+        Scale scale = new Scale();
+        // pivot at top edge, so it grows and shrinks from top
+        scale.setPivotY(0);
+        scale.setY(val);
+        // remove old transforms
+        this.callsPanel.getTransforms().clear();
+        this.callsPanel.getTransforms().add(scale);
     }
 
     public void redrawSampleInfoAfterScale(ArrayList<Sample> samples, double baseFontSize, double trackHeightScale, int originalTrackHeight) {

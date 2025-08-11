@@ -110,13 +110,15 @@ public class Controller {
     }
 
     public void updateTrackHeight(double increment) {
+        if (!model.isCallPanelHeightStored()) {
+            model.setBaseCallPanelHeight(view.getBaseCallPanelHeight());
+        }
         model.updateTrackHeightScale(increment);
         view.updateTrackHeight(model.getTrackHeightScale());
         view.redrawSampleInfoAfterScale(model.getSamples(), model.getBaseFontSize(), model.getTrackHeightScale(), model.getOriginalTrackHeight());
     }
 
     public void processViewportWidthChange() {
-        System.out.println("FIRED");
         view.updateMarkerOnViewportScaleOrZoom(model.getRefLength(), model.getZoomLevel());
     }
 }

@@ -20,6 +20,7 @@ public class Model {
     private double trackHeightScale = 1;
     private final double baseFontSize = 12;
     private final int originalTrackHeight = 100;
+    private Double baseCallPanelHeight;
 
     public void reset() {
         this.samples.clear();
@@ -45,6 +46,23 @@ public class Model {
     public double updateZoomLevel(double factor) {
         this.zoomLevel *= factor;
         return this.zoomLevel;
+    }
+
+    public boolean isCallPanelHeightStored() {
+        if (this.baseCallPanelHeight == null) {
+            return false;
+        }
+        else {
+            return true;
+        }
+    }
+
+    public void setBaseCallPanelHeight(double height) {
+        this.baseCallPanelHeight = height;
+    }
+
+    public double getBaseCallPanelHeight() {
+        return this.baseCallPanelHeight;
     }
 
     public String getRefName() {
