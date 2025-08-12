@@ -67,6 +67,7 @@ public class View {
     Button zoomOutButton = new Button("-");
     Button clearButton = new Button("Clear");
     Button processButton = new Button("Process");
+    Button processBlocksButton = new Button("Process Blocks");
     Button shrinkTrackHeightButton = new Button("- Track");
     Button growTrackHeightButton = new Button("+ Track");
     // ---------- callsPanel ----------
@@ -91,6 +92,7 @@ public class View {
         zoomInButton.setDisable(true);
         zoomOutButton.setDisable(true);
         processButton.setDisable(true);
+        processBlocksButton.setDisable(true);
         clearButton.setDisable(true);
         shrinkTrackHeightButton.setDisable(true);
         growTrackHeightButton.setDisable(true);
@@ -100,6 +102,7 @@ public class View {
         zoomOutButton.setMaxSize(35, 35);
         clearButton.setMinSize(50,35);
         processButton.setMinSize(50,35);
+        processBlocksButton.setMinSize(75,35);
         shrinkTrackHeightButton.setMinSize(75,35);
         shrinkTrackHeightButton.setMaxSize(75,35);
         growTrackHeightButton.setMinSize(80,35);
@@ -119,6 +122,7 @@ public class View {
         zoomOutButton.setFocusTraversable(false);
         clearButton.setFocusTraversable(false);
         processButton.setFocusTraversable(false);
+        processBlocksButton.setFocusTraversable(false);
         shrinkTrackHeightButton.setFocusTraversable(false);
         growTrackHeightButton.setFocusTraversable(false);
         // button style
@@ -126,6 +130,7 @@ public class View {
         zoomOutButton.setStyle(circularStyle);
         clearButton.setStyle(circularStyle);
         processButton.setStyle(circularStyle);
+        processBlocksButton.setStyle(circularStyle);
         shrinkTrackHeightButton.setStyle(circularStyle);
         growTrackHeightButton.setStyle(circularStyle);
         // add button
@@ -133,6 +138,7 @@ public class View {
         controlContainer.getChildren().add(zoomOutButton);
         controlContainer.getChildren().add(clearButton);
         controlContainer.getChildren().add(processButton);
+        controlContainer.getChildren().add(processBlocksButton);
         controlContainer.getChildren().add(shrinkTrackHeightButton);
         controlContainer.getChildren().add(growTrackHeightButton);
         // ---------- REF PANEL ---------
@@ -186,6 +192,7 @@ public class View {
         this.zoomInButton.setDisable(false);
         this.zoomOutButton.setDisable(false);
         this.processButton.setDisable(false);
+        this.processBlocksButton.setDisable(false);
         this.clearButton.setDisable(false);
         this.shrinkTrackHeightButton.setDisable(false);
         this.growTrackHeightButton.setDisable(false);
@@ -261,6 +268,7 @@ public class View {
         this.zoomInButton.setDisable(true);
         this.zoomOutButton.setDisable(true);
         this.processButton.setDisable(true);
+        this.processBlocksButton.setDisable(true);
         this.clearButton.setDisable(true);
         this.shrinkTrackHeightButton.setDisable(true);
         this.growTrackHeightButton.setDisable(true);
@@ -304,15 +312,6 @@ public class View {
             // set changes on drag
             dragWrapper.setOnMouseEntered(e -> dragWrapper.setCursor(Cursor.HAND));
             dragWrapper.setOnMouseExited(e -> dragWrapper.setCursor(Cursor.DEFAULT));
-            dragWrapper.setOnMousePressed(e -> {
-                this.labelPressed(e, dragWrapper);
-            });
-            dragWrapper.setOnMouseDragged(e -> {
-                this.labelDragged(e, dragWrapper);
-            });
-            dragWrapper.setOnMouseReleased(e -> {
-                this.labelReleased(e);
-            });
             // create labelWrapper Pane to hold sample name
             StackPane labelWrapper = new StackPane();
             labelWrapper.setMinWidth(70);
@@ -554,6 +553,9 @@ public class View {
     }
     public void processSelectionsListener(EventHandler<ActionEvent> handler) {
         processButton.setOnAction(handler);
+    }
+    public void processBlocksSelectionsListener(EventHandler<ActionEvent> handler) {
+        processBlocksButton.setOnAction(handler);
     }
     public void shrinkTrackHeightListener(EventHandler<ActionEvent> handler) {
         shrinkTrackHeightButton.setOnAction(handler);

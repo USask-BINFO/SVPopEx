@@ -28,6 +28,9 @@ public class Controller {
         view.processSelectionsListener(e -> {
             this.processSelections();
         });
+        view.processBlocksSelectionsListener(e -> {
+            this.processBlockSelections();
+        });
         view.shrinkTrackHeightListener(e -> {
             this.updateTrackHeight(-0.1);
         });
@@ -101,6 +104,10 @@ public class Controller {
 
     public void processSelections() {
         view.showPlot(model.processSelections(), model.getSamples(), model.getZoomLevel());
+    }
+
+    public void processBlockSelections() {
+        System.out.println("PROCESS BLOCKS!");
     }
 
     public void updateReleaseSelection(MouseEvent e) {
