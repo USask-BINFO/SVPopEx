@@ -1,6 +1,7 @@
 package com.javafxapp;
 
 import java.io.File;
+import java.util.ArrayList;
 
 import javafx.scene.Node;
 import javafx.scene.input.MouseEvent;
@@ -107,7 +108,10 @@ public class Controller {
     }
 
     public void processBlockSelections() {
+        ArrayList<Boolean> comparators = this.view.showConfigPopup(model.getSamples());
+        model.processBlockSelections(comparators);
         System.out.println("PROCESS BLOCKS!");
+        view.showSampleColorStrip(comparators, model.getSamples());
     }
 
     public void updateReleaseSelection(MouseEvent e) {

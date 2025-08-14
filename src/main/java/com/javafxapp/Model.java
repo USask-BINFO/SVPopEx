@@ -96,6 +96,28 @@ public class Model {
         }
     }
 
+    public LinkedHashMap<Block, Color> processBlockSelections(ArrayList<Boolean> comparators) {
+        LinkedHashMap<Block, Color> result = new LinkedHashMap<>();
+        // if no selections are made, return empty linkedhashmap
+        if (this.selections.isEmpty() || comparators == null) {
+            return result;
+        }
+        // if selections are made, process
+        else {
+            int index = 0;
+            for (Boolean comparator : comparators) {
+                if (comparator == true) {
+                }
+                else {
+                    // do nothing
+                }
+            }
+            Selection selection = selections.getLast();
+
+        }
+        return result;
+    }
+
     public LinkedHashMap<Selection, LinkedHashMap<String,Color>> processSelections() {
         LinkedHashMap<Selection, LinkedHashMap<String,Color>> result = new LinkedHashMap<>();
         // if no selections are made, return empty linkedhashmap

@@ -19,10 +19,8 @@ import javafx.scene.text.Text;
 import javafx.scene.transform.Scale;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.Objects;
-import java.util.Set;
+
+import java.util.*;
 
 // naming conventions
 // Stage -> ...Stage
@@ -321,13 +319,18 @@ public class View {
             sampleLabel.setFont(Font.font("System", baseFontSize));
             // create infoContainer to hold sample info
             HBox infoContainer = new HBox();
-            infoContainer.setMinHeight(originalTrackHeight);
-            infoContainer.setMaxHeight(originalTrackHeight);
+            // create visualContainer to hold sample info and color rectangle
+            VBox visualContainer = new VBox();
+            visualContainer.setMinHeight(originalTrackHeight);
+            visualContainer.setMaxHeight(originalTrackHeight);
+            Rectangle colorRect = new Rectangle(40, 5, Color.TRANSPARENT);
+            visualContainer.getChildren().addAll(infoContainer, colorRect);
+            visualContainer.setAlignment(Pos.CENTER);
             // add drag lines, and sample label to infoContainer
             labelWrapper.getChildren().add(sampleLabel);
             infoContainer.getChildren().add(dragWrapper);
             infoContainer.getChildren().add(labelWrapper);
-            this.samplesInfoContainer.getChildren().add(infoContainer);
+            this.samplesInfoContainer.getChildren().add(visualContainer);
             // add sampContainer to samplesContainer
             this.samplesContainer.getChildren().add(callsWrapper);
         }
@@ -433,9 +436,10 @@ public class View {
 
     public void redrawSampleInfoAfterScale(ArrayList<Sample> samples, double baseFontSize, double trackHeightScale, int originalTrackHeight) {
         for (int i=0; i<samples.size(); i++) {
-            HBox infoContainer = (HBox) samplesInfoContainer.getChildren().get(i);
-            infoContainer.setMinHeight(originalTrackHeight * trackHeightScale);
-            infoContainer.setMaxHeight(originalTrackHeight * trackHeightScale);
+            VBox container = (VBox) samplesInfoContainer.getChildren().get(i);
+            container.setMinHeight(originalTrackHeight * trackHeightScale);
+            container.setMaxHeight(originalTrackHeight * trackHeightScale);
+            HBox infoContainer = (HBox) container.getChildren().get(0);
             Pane labelWrapper = (Pane) infoContainer.getChildren().get(1);
             Label sampleLabel = (Label) labelWrapper.getChildren().getFirst();
             sampleLabel.setFont(Font.font(sampleLabel.getFont().getFamily(), baseFontSize));
@@ -488,6 +492,39 @@ public class View {
         for (Node node : mosaicNodes) {
             this.selectionWrapper.getChildren().remove(node);
         }
+    }
+
+    public void showSampleColorStrip(ArrayList<Boolean> comparators, ArrayList<Sample> samples) {
+
+    }
+
+    public ArrayList<Boolean> showConfigPopup(ArrayList<Sample> samples) {
+        Dialog<ButtonType> dialog = new Dialog<>();
+        ArrayList<CheckBox> checkboxes = new ArrayList<>();
+        ArrayList<Boolean> result = new ArrayList<>();
+        VBox comparators = new VBox();
+        comparators.getChildren().add(new Label("Check samples to highlight:"));
+        for (Sample sample : samples) {
+            Label label = new Label(sample.getName());
+            CheckBox checkBox = new CheckBox();
+            HBox hBox = new HBox(10);
+            hBox.getChildren().addAll(label, checkBox);
+            checkboxes.add(checkBox);
+            comparators.getChildren().add(hBox);
+        }
+        dialog.setTitle("Options");
+        dialog.getDialogPane().setContent(comparators);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        Optional<ButtonType> buttonResult = dialog.showAndWait();
+        if (buttonResult.isPresent() && buttonResult.get() == ButtonType.OK) {
+            for (CheckBox checkbox : checkboxes) {
+                result.add(checkbox.isSelected());
+            }
+        }
+        else {
+            return null;
+        }
+        return result;
     }
 
     public void showPlot(LinkedHashMap<Selection, LinkedHashMap<String,Color>> results, ArrayList<Sample> samples, double zoomLevel) {
