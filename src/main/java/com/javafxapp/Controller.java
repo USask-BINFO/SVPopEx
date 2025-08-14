@@ -108,10 +108,11 @@ public class Controller {
     }
 
     public void processBlockSelections() {
-        ArrayList<Boolean> comparators = this.view.showConfigPopup(model.getSamples());
-        model.processBlockSelections(comparators);
-        System.out.println("PROCESS BLOCKS!");
-        view.showSampleColorStrip(comparators, model.getSamples());
+        if (model.getComparators() == null) {
+            model.processConfig(this.view.showConfigPopup(model.getSamples()));
+        }
+        model.processBlockSelections();
+        view.showSampleColorStrip(model.getComparators(), model.getSamples(), model.getSampleColors());
     }
 
     public void updateReleaseSelection(MouseEvent e) {

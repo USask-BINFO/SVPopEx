@@ -323,7 +323,7 @@ public class View {
             VBox visualContainer = new VBox();
             visualContainer.setMinHeight(originalTrackHeight);
             visualContainer.setMaxHeight(originalTrackHeight);
-            Rectangle colorRect = new Rectangle(40, 5, Color.TRANSPARENT);
+            Rectangle colorRect = new Rectangle(40, 3, Color.TRANSPARENT);
             visualContainer.getChildren().addAll(infoContainer, colorRect);
             visualContainer.setAlignment(Pos.CENTER);
             // add drag lines, and sample label to infoContainer
@@ -494,14 +494,23 @@ public class View {
         }
     }
 
-    public void showSampleColorStrip(ArrayList<Boolean> comparators, ArrayList<Sample> samples) {
-
+    public void showSampleColorStrip(HashMap<String, Boolean> comparators, ArrayList<Sample> samples, HashMap<String, Color> sampleColors) {
+        int index = 0;
+        for (Sample sample : samples) {
+            // comparing sample, show color strip
+            if (comparators.get(sample.getName()) == true) {
+                VBox visualContainer = (VBox) this.samplesInfoContainer.getChildren().get(index);
+                Rectangle rectangle = (Rectangle) visualContainer.getChildren().get(1);
+                rectangle.setFill(sampleColors.get(sample.getName()));
+            }
+            index++;
+        }
     }
 
-    public ArrayList<Boolean> showConfigPopup(ArrayList<Sample> samples) {
+    public HashMap<String,Boolean> showConfigPopup(ArrayList<Sample> samples) {
         Dialog<ButtonType> dialog = new Dialog<>();
         ArrayList<CheckBox> checkboxes = new ArrayList<>();
-        ArrayList<Boolean> result = new ArrayList<>();
+        HashMap<String,Boolean> result = new HashMap<>();
         VBox comparators = new VBox();
         comparators.getChildren().add(new Label("Check samples to highlight:"));
         for (Sample sample : samples) {
@@ -517,8 +526,10 @@ public class View {
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
         Optional<ButtonType> buttonResult = dialog.showAndWait();
         if (buttonResult.isPresent() && buttonResult.get() == ButtonType.OK) {
+            int index = 0;
             for (CheckBox checkbox : checkboxes) {
-                result.add(checkbox.isSelected());
+                result.put(samples.get(index).getName(),checkbox.isSelected());
+                index++;
             }
         }
         else {
@@ -527,7 +538,7 @@ public class View {
         return result;
     }
 
-    public void showPlot(LinkedHashMap<Selection, LinkedHashMap<String,Color>> results, ArrayList<Sample> samples, double zoomLevel) {
+    public void showPlot(HashMap<Selection, HashMap<String,Color>> results, ArrayList<Sample> samples, double zoomLevel) {
         clearMosaic();
         ArrayList<Selection> keys = new ArrayList<Selection>(results.keySet());
         // for each selection

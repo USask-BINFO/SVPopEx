@@ -10,7 +10,7 @@ public class Model {
     private String refName;
     private int refLength;
     private ArrayList<Sample> samples = new ArrayList<>();
-    LinkedHashMap<String, Color> sampleColors = new LinkedHashMap<>();
+    HashMap<String, Color> sampleColors = new HashMap<>();
     private ArrayList<Call> calls = new ArrayList<>();
     private ArrayList<Selection> selections = new ArrayList<>();
     private double zoomLevel = 0.2;
@@ -21,6 +21,7 @@ public class Model {
     private final double baseFontSize = 12;
     private final int originalTrackHeight = 100;
     private Double baseCallPanelHeight;
+    private HashMap<String, Boolean> comparators;
 
     public void reset() {
         this.samples.clear();
@@ -61,6 +62,14 @@ public class Model {
         this.baseCallPanelHeight = height;
     }
 
+    public HashMap<String, Color> getSampleColors() {
+        return this.sampleColors;
+    }
+
+    public HashMap<String, Boolean> getComparators() {
+        return this.comparators;
+    }
+
     public double getBaseCallPanelHeight() {
         return this.baseCallPanelHeight;
     }
@@ -96,30 +105,30 @@ public class Model {
         }
     }
 
-    public LinkedHashMap<Block, Color> processBlockSelections(ArrayList<Boolean> comparators) {
-        LinkedHashMap<Block, Color> result = new LinkedHashMap<>();
+    public HashMap<Block, Color> processBlockSelections() {
+        HashMap<Block, Color> result = new HashMap<>();
         // if no selections are made, return empty linkedhashmap
-        if (this.selections.isEmpty() || comparators == null) {
+        if (this.selections.isEmpty() || this.comparators == null) {
             return result;
         }
-        // if selections are made, process
-        else {
-            int index = 0;
-            for (Boolean comparator : comparators) {
-                if (comparator == true) {
-                }
-                else {
-                    // do nothing
-                }
-            }
-            Selection selection = selections.getLast();
+//        // if selections are made, process
+//        else {
+//            int index = 0;
+//            for (Boolean comparator : comparators) {
+//                if (comparator == true) {
+//                }
+//                else {
+//                    // do nothing
+//                }
+//            }
+//            Selection selection = selections.getLast();
 
-        }
+        //}
         return result;
     }
 
-    public LinkedHashMap<Selection, LinkedHashMap<String,Color>> processSelections() {
-        LinkedHashMap<Selection, LinkedHashMap<String,Color>> result = new LinkedHashMap<>();
+    public HashMap<Selection, HashMap<String,Color>> processSelections() {
+        HashMap<Selection, HashMap<String,Color>> result = new HashMap<>();
         // if no selections are made, return empty linkedhashmap
         if (this.selections.isEmpty()) {
             return result;
@@ -132,8 +141,8 @@ public class Model {
                 // locked tells if the signature is already unique and can be determined, true for determined
                 double selectionStart = selection.getGenomicStart();
                 double selectionEnd = selection.getGenomicEnd();
-                LinkedHashMap<String, ArrayList<String>> equiv = new LinkedHashMap<>();
-                LinkedHashMap<String, Boolean> locked = new LinkedHashMap<>();
+                HashMap<String, ArrayList<String>> equiv = new HashMap<>();
+                HashMap<String, Boolean> locked = new HashMap<>();
                 // for each sample, set equivalence and locked
                 for (int i=0; i<samples.size(); i++) {
                     // top sample - equivalence is itself and it is locked
@@ -211,7 +220,7 @@ public class Model {
                         }
                     }
                 }
-                result.put(selection, new LinkedHashMap<>());
+                result.put(selection, new HashMap<>());
                 for (int i=0; i<samples.size(); i++) {
                     result.get(selection).put(samples.get(i).getName(), this.sampleColors.get(equiv.get(samples.get(i).getName()).getFirst()));
                 }
@@ -279,7 +288,7 @@ public class Model {
             else {
                 int startCol = 9;
                 String[] fields = line.split("\t");
-                LinkedHashMap<String,String> genotypes = new LinkedHashMap<>();
+                HashMap<String,String> genotypes = new HashMap<>();
                 // first regex for type and length
                 String infoRegex = "SVTYPE=(.+);SVLEN=(.+);END";
                 Pattern infoPattern = Pattern.compile(infoRegex);
@@ -324,6 +333,10 @@ public class Model {
             this.samples.add(sample);
             this.sampleColors.put(samples.get(i).getName(), this.getRandomColor());
         }
+    }
+
+    public void processConfig(HashMap<String, Boolean> comparators) {
+        this.comparators = comparators;
     }
 
     public void updateCoordIncrement(double viewportWidth) {
