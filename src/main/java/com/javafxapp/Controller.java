@@ -41,7 +41,10 @@ public class Controller {
         view.releaseSelectionListener(e -> {
             this.updateReleaseSelection(e);
         });
-        view.openSidePaneListener(e -> {
+        view.toggleSidePaneListener(e -> {
+            view.toggleSidePane();
+        });
+        view.closeSidePaneListener(e -> {
             view.toggleSidePane();
         });
         view.viewportWidthChange(e -> {
@@ -76,7 +79,7 @@ public class Controller {
             this.model.reset();
             this.view.reset();
             model.processFile(fileContent);
-            view.showConfigPopup(model.getSamples());
+            view.initSidePane(model.getSampleOrderInView());
             view.initReference(model.getRefLength(), model.getRefName());
             view.initSamples(model.getSampleOrderInView(), model.getRefLength(), model.getZoomLevel(), model.getBaseFontSize(), model.getOriginalTrackHeight());
             view.showCoords(model.getRefLength(), model.getZoomLevel(), model.getTickSpacing());
@@ -113,7 +116,6 @@ public class Controller {
 
     public void processBlockSelections() {
         if (model.getComparators() == null) {
-            model.processConfig(this.view.showConfigPopup(model.getSamples()));
         }
         model.processBlockSelections();
         view.showSampleColorStrip(model.getComparators(), model.getSampleOrderInView(), model.getSampleColors());

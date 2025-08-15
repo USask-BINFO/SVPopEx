@@ -39,8 +39,11 @@ class Delta {
     double y;
 }
 public class View {
+    // ----------- root and side pane ---------------
     private Delta dragCoords = new Delta();
-    VBox sidePane = new VBox();
+    VBox sidePane = new VBox(20);
+    Button closeSidePaneButton = new Button("\u00D7");
+    HBox closeButtonContainer = new HBox(closeSidePaneButton);
     private final VBox layout = new VBox();
     StackPane root = new StackPane(layout, sidePane);
     private final Stage primaryStage;
@@ -87,12 +90,27 @@ public class View {
 
 
     public View(Stage primaryStage) {
+        // ---------- ROOT AND SIDE PANE ---------
         this.primaryStage = primaryStage;
         root.setAlignment(sidePane, Pos.CENTER_RIGHT);
         sidePane.setMinWidth(250);
         sidePane.setMaxWidth(250);
-        sidePane.setStyle("-fx-background-color: #2c3e50;");
+        sidePane.setStyle("-fx-background-color: #bebebe;");
         sidePane.setTranslateX(250);
+        sidePane.setAlignment(Pos.TOP_CENTER);
+        // close button
+        sidePane.getChildren().add(closeButtonContainer);
+        closeButtonContainer.setAlignment(Pos.TOP_RIGHT);
+        // title
+        Label title = new Label("Selection Options");
+        title.setStyle("-fx-font-size: 24px;");
+        sidePane.getChildren().add(title);
+        // process button
+        sidePane.getChildren().add(processButton);
+        // process blocks button
+        sidePane.getChildren().add(processBlocksButton);
+
+
         // ---------- MENU --------------
         fileMenu.getItems().add(importVCFItem);
         menuBar.getMenus().add(fileMenu);
@@ -106,6 +124,7 @@ public class View {
         shrinkTrackHeightButton.setDisable(true);
         growTrackHeightButton.setDisable(true);
         sidePaneButton.setDisable(true);
+        closeSidePaneButton.setDisable(true);
         zoomInButton.setMinSize(35, 35);
         zoomInButton.setMaxSize(35, 35);
         zoomOutButton.setMinSize(35, 35);
@@ -119,6 +138,8 @@ public class View {
         growTrackHeightButton.setMaxSize(80,35);
         sidePaneButton.setMinSize(190,35);
         sidePaneButton.setMaxSize(190,35);
+        closeSidePaneButton.setMinSize(25,25);
+        closeSidePaneButton.setMaxSize(25,25);
         String circularStyle = """
     -fx-background-radius: 10px;
     -fx-border-radius: 10px;
@@ -138,6 +159,7 @@ public class View {
         shrinkTrackHeightButton.setFocusTraversable(false);
         growTrackHeightButton.setFocusTraversable(false);
         sidePaneButton.setFocusTraversable(false);
+        closeSidePaneButton.setFocusTraversable(false);
         // button style
         zoomInButton.setStyle(circularStyle);
         zoomOutButton.setStyle(circularStyle);
@@ -147,12 +169,12 @@ public class View {
         shrinkTrackHeightButton.setStyle(circularStyle);
         growTrackHeightButton.setStyle(circularStyle);
         sidePaneButton.setStyle(circularStyle);
+        closeSidePaneButton.setStyle(circularStyle);
+        closeSidePaneButton.setStyle("-fx-font-size: 12px;");
         // add button
         controlContainer.getChildren().add(zoomInButton);
         controlContainer.getChildren().add(zoomOutButton);
         controlContainer.getChildren().add(clearButton);
-        controlContainer.getChildren().add(processButton);
-        controlContainer.getChildren().add(processBlocksButton);
         controlContainer.getChildren().add(shrinkTrackHeightButton);
         controlContainer.getChildren().add(growTrackHeightButton);
         controlContainer.getChildren().add(sidePaneButton);
@@ -212,6 +234,7 @@ public class View {
         this.shrinkTrackHeightButton.setDisable(false);
         this.growTrackHeightButton.setDisable(false);
         this.sidePaneButton.setDisable(false);
+        this.closeSidePaneButton.setDisable(false);
     }
 
     // sync scrollpane scroll with marker and coordinate ticks
@@ -289,6 +312,7 @@ public class View {
         this.shrinkTrackHeightButton.setDisable(true);
         this.growTrackHeightButton.setDisable(true);
         this.sidePaneButton.setDisable(true);
+        this.closeSidePaneButton.setDisable(true);
     }
 
     public Scene getScene() {
@@ -297,6 +321,33 @@ public class View {
 
     public Stage getPrimaryStage() {
         return this.primaryStage;
+    }
+
+    public void initSidePane(ArrayList<Sample> sampleOrder) {
+        ArrayList<CheckBox> checkboxes = new ArrayList<>();
+        HashMap<String,Boolean> result = new HashMap<>();
+        VBox comparators = new VBox();
+        comparators.getChildren().add(new Label("Check samples to highlight:"));
+        for (Sample sample : sampleOrder) {
+            Label label = new Label(sample.getName());
+            CheckBox checkBox = new CheckBox();
+            HBox hBox = new HBox(10);
+            hBox.getChildren().addAll(label, checkBox);
+            checkboxes.add(checkBox);
+            comparators.getChildren().add(hBox);
+        }
+        sidePane.getChildren().add(comparators);
+//            if (buttonResult.isPresent() && buttonResult.get() == ButtonType.OK) {
+//                int index = 0;
+//                for (CheckBox checkbox : checkboxes) {
+//                    result.put(samples.get(index).getName(),checkbox.isSelected());
+//                    index++;
+//                }
+//            }
+//            else {
+//                return null;
+//            }
+//            return result;
     }
 
     public void initReference(int refLength, String refName) {
@@ -522,37 +573,6 @@ public class View {
         }
     }
 
-    public HashMap<String,Boolean> showConfigPopup(ArrayList<Sample> samples) {
-        Dialog<ButtonType> dialog = new Dialog<>();
-        ArrayList<CheckBox> checkboxes = new ArrayList<>();
-        HashMap<String,Boolean> result = new HashMap<>();
-        VBox comparators = new VBox();
-        comparators.getChildren().add(new Label("Check samples to highlight:"));
-        for (Sample sample : samples) {
-            Label label = new Label(sample.getName());
-            CheckBox checkBox = new CheckBox();
-            HBox hBox = new HBox(10);
-            hBox.getChildren().addAll(label, checkBox);
-            checkboxes.add(checkBox);
-            comparators.getChildren().add(hBox);
-        }
-        dialog.setTitle("Options");
-        dialog.getDialogPane().setContent(comparators);
-        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-        Optional<ButtonType> buttonResult = dialog.showAndWait();
-        if (buttonResult.isPresent() && buttonResult.get() == ButtonType.OK) {
-            int index = 0;
-            for (CheckBox checkbox : checkboxes) {
-                result.put(samples.get(index).getName(),checkbox.isSelected());
-                index++;
-            }
-        }
-        else {
-            return null;
-        }
-        return result;
-    }
-
     public void showPlot(HashMap<Selection, HashMap<String,Color>> results, ArrayList<Sample> sampleOrder, double zoomLevel) {
         clearMosaic();
         ArrayList<Selection> keys = new ArrayList<Selection>(results.keySet());
@@ -639,8 +659,11 @@ public class View {
     public void releaseSelectionListener(EventHandler<MouseEvent> handler) {
         this.releaseSelectionHandler = handler;
     }
-    public void openSidePaneListener(EventHandler<ActionEvent> handler) {
+    public void toggleSidePaneListener(EventHandler<ActionEvent> handler) {
         sidePaneButton.setOnAction(handler);
+    }
+    public void closeSidePaneListener(EventHandler<ActionEvent> handler) {
+        closeSidePaneButton.setOnAction(handler);
     }
     public void viewportWidthChange(EventHandler<ActionEvent> handler) {
         callsPanel.viewportBoundsProperty().addListener((obs, oldBounds, newBounds) -> {
