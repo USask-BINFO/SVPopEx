@@ -22,6 +22,8 @@ public class Model {
     private final int originalTrackHeight = 100;
     private Double baseCallPanelHeight;
     private HashMap<String, Boolean> comparators;
+    private ArrayList<Sample> sampleOrderInView = new ArrayList<>();
+
 
     public void reset() {
         this.samples.clear();
@@ -30,6 +32,9 @@ public class Model {
         this.selections.clear();
         // set zoom back to original
         this.zoomLevel = this.baseLevel;
+        // clear comparators and sample order
+        this.comparators = null;
+        this.sampleOrderInView.clear();
     }
 
     public String loadFile(java.io.File file) throws java.io.IOException {
@@ -128,6 +133,11 @@ public class Model {
     }
 
     public HashMap<Selection, HashMap<String,Color>> processSelections() {
+        /*
+
+        Preconditions: Assumes that sample order has been manipulated before calling, if at all.
+        Postconditions: Does NOT do any reordering
+         */
         HashMap<Selection, HashMap<String,Color>> result = new HashMap<>();
         // if no selections are made, return empty linkedhashmap
         if (this.selections.isEmpty()) {
@@ -144,17 +154,17 @@ public class Model {
                 HashMap<String, ArrayList<String>> equiv = new HashMap<>();
                 HashMap<String, Boolean> locked = new HashMap<>();
                 // for each sample, set equivalence and locked
-                for (int i=0; i<samples.size(); i++) {
+                for (int i=0; i<sampleOrderInView.size(); i++) {
                     // top sample - equivalence is itself and it is locked
                     if (i == 0) {
-                        equiv.put(samples.get(i).getName(), new ArrayList<String>());
-                        equiv.get(samples.get(i).getName()).add(samples.get(i).getName());
-                        locked.put(samples.get(i).getName(), Boolean.TRUE);
+                        equiv.put(sampleOrderInView.get(i).getName(), new ArrayList<String>());
+                        equiv.get(sampleOrderInView.get(i).getName()).add(sampleOrderInView.get(i).getName());
+                        locked.put(sampleOrderInView.get(i).getName(), Boolean.TRUE);
                     }
                     // other samples - equivalence is null (ArrayList is empty) and it is not locked
                     else {
-                        equiv.put(samples.get(i).getName(), new ArrayList<String>());
-                        locked.put(samples.get(i).getName(), Boolean.FALSE);
+                        equiv.put(sampleOrderInView.get(i).getName(), new ArrayList<String>());
+                        locked.put(sampleOrderInView.get(i).getName(), Boolean.FALSE);
                     }
                 }
                 // loop through each SV call
@@ -165,8 +175,8 @@ public class Model {
                     call.getStart() < selectionEnd && call.getEnd() > selectionEnd) {
                         System.out.println(call.toString());
                         // loop through each sample
-                        for (int i=0; i<samples.size(); i++) {
-                            String curName = samples.get(i).getName();
+                        for (int i=0; i<sampleOrderInView.size(); i++) {
+                            String curName = sampleOrderInView.get(i).getName();
                             String curGT = call.getGenotypes().get(curName);
                             // if the sample is locked do nothing
                             if (locked.get(curName) == Boolean.TRUE) {
@@ -178,8 +188,8 @@ public class Model {
                                 if (equiv.get(curName).isEmpty()) {
                                     for (int j=0; j<i; j++) {
                                         // if same genotype, add equivalence for sample
-                                        if (Objects.equals(call.getGenotypes().get(samples.get(j).getName()), curGT)) {
-                                            equiv.get(curName).add(samples.get(j).getName());
+                                        if (Objects.equals(call.getGenotypes().get(sampleOrderInView.get(j).getName()), curGT)) {
+                                            equiv.get(curName).add(sampleOrderInView.get(j).getName());
                                         }
                                     }
                                     // if no equivalence found, add itself and lock
@@ -221,8 +231,8 @@ public class Model {
                     }
                 }
                 result.put(selection, new HashMap<>());
-                for (int i=0; i<samples.size(); i++) {
-                    result.get(selection).put(samples.get(i).getName(), this.sampleColors.get(equiv.get(samples.get(i).getName()).getFirst()));
+                for (int i=0; i<sampleOrderInView.size(); i++) {
+                    result.get(selection).put(sampleOrderInView.get(i).getName(), this.sampleColors.get(equiv.get(sampleOrderInView.get(i).getName()).getFirst()));
                 }
                 for (Map.Entry<String, ArrayList<String>> entry : equiv.entrySet()) {
                     System.out.println(entry.getKey() + " = " + entry.getValue());
@@ -331,8 +341,13 @@ public class Model {
         for (int i=0; i<sampleNames.length; i++) {
             Sample sample = new Sample(sampleNames[i]);
             this.samples.add(sample);
+            this.sampleOrderInView.add(sample);
             this.sampleColors.put(samples.get(i).getName(), this.getRandomColor());
         }
+    }
+
+    public ArrayList<Sample> getSampleOrderInView() {
+        return this.sampleOrderInView;
     }
 
     public void processConfig(HashMap<String, Boolean> comparators) {
@@ -346,7 +361,6 @@ public class Model {
         int upperThreshold = 350;
         // distance from first to second tick because first tick will be at 0
         double tickDist = tickSpacing*zoomLevel;
-        System.out.println(tickDist);
         // increase increment
         if (tickDist < lowerThreshold) {
             if (coordIncrementIndex+1 == increments.size()) {

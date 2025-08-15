@@ -41,6 +41,9 @@ public class Controller {
         view.releaseSelectionListener(e -> {
             this.updateReleaseSelection(e);
         });
+        view.openSidePaneListener(e -> {
+            view.toggleSidePane();
+        });
         view.viewportWidthChange(e -> {
             this.processViewportWidthChange();
         });
@@ -73,10 +76,11 @@ public class Controller {
             this.model.reset();
             this.view.reset();
             model.processFile(fileContent);
+            view.showConfigPopup(model.getSamples());
             view.initReference(model.getRefLength(), model.getRefName());
-            view.initSamples(model.getSamples(), model.getRefLength(), model.getZoomLevel(), model.getBaseFontSize(), model.getOriginalTrackHeight());
+            view.initSamples(model.getSampleOrderInView(), model.getRefLength(), model.getZoomLevel(), model.getBaseFontSize(), model.getOriginalTrackHeight());
             view.showCoords(model.getRefLength(), model.getZoomLevel(), model.getTickSpacing());
-            view.showCalls(model.getSamples(), model.getZoomLevel(), model.getRefLength(), model.getOriginalTrackHeight());
+            view.showCalls(model.getSampleOrderInView(), model.getZoomLevel(), model.getRefLength(), model.getOriginalTrackHeight());
             view.enableControls();
         }
         // user closed or cancelled file
@@ -89,13 +93,13 @@ public class Controller {
     public void updateZoomIn() {
         double level = model.updateZoomLevel(1.3);
         model.updateCoordIncrement(view.getViewportWidth());
-        view.updateZoom(model.getSamples(), level, model.getRefLength(), model.getSelections(), model.getBaseLevel(), model.getTickSpacing(), model.getOriginalTrackHeight());
+        view.updateZoom(model.getSampleOrderInView(), level, model.getRefLength(), model.getSelections(), model.getBaseLevel(), model.getTickSpacing(), model.getOriginalTrackHeight());
     }
 
     public void updateZoomOut() {
         double level = model.updateZoomLevel(0.7);
         model.updateCoordIncrement(view.getViewportWidth());
-        view.updateZoom(model.getSamples(), level, model.getRefLength(), model.getSelections(), model.getBaseLevel(), model.getTickSpacing(), model.getOriginalTrackHeight());
+        view.updateZoom(model.getSampleOrderInView(), level, model.getRefLength(), model.getSelections(), model.getBaseLevel(), model.getTickSpacing(), model.getOriginalTrackHeight());
     }
 
     public void clearSelections() {
@@ -104,7 +108,7 @@ public class Controller {
     }
 
     public void processSelections() {
-        view.showPlot(model.processSelections(), model.getSamples(), model.getZoomLevel());
+        view.showPlot(model.processSelections(), model.getSampleOrderInView(), model.getZoomLevel());
     }
 
     public void processBlockSelections() {
@@ -112,7 +116,7 @@ public class Controller {
             model.processConfig(this.view.showConfigPopup(model.getSamples()));
         }
         model.processBlockSelections();
-        view.showSampleColorStrip(model.getComparators(), model.getSamples(), model.getSampleColors());
+        view.showSampleColorStrip(model.getComparators(), model.getSampleOrderInView(), model.getSampleColors());
     }
 
     public void updateReleaseSelection(MouseEvent e) {
@@ -127,7 +131,7 @@ public class Controller {
         }
         model.updateTrackHeightScale(increment);
         view.updateTrackHeight(model.getTrackHeightScale());
-        view.redrawSampleInfoAfterScale(model.getSamples(), model.getBaseFontSize(), model.getTrackHeightScale(), model.getOriginalTrackHeight());
+        view.redrawSampleInfoAfterScale(model.getSampleOrderInView(), model.getBaseFontSize(), model.getTrackHeightScale(), model.getOriginalTrackHeight());
     }
 
     public void processViewportWidthChange() {

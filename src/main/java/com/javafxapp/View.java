@@ -1,5 +1,6 @@
 package com.javafxapp;
 
+import javafx.animation.TranslateTransition;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
@@ -19,6 +20,7 @@ import javafx.scene.text.Text;
 import javafx.scene.transform.Scale;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 
 import java.util.*;
 
@@ -38,8 +40,12 @@ class Delta {
 }
 public class View {
     private Delta dragCoords = new Delta();
+    VBox sidePane = new VBox();
     private final VBox layout = new VBox();
+    StackPane root = new StackPane(layout, sidePane);
     private final Stage primaryStage;
+    TranslateTransition slideIn = new TranslateTransition(Duration.millis(300), sidePane);
+    TranslateTransition slideOut = new TranslateTransition(Duration.millis(300), sidePane);
     // ---------- menuBar -------------
     private final MenuBar menuBar = new MenuBar();
     private final Menu fileMenu = new Menu("File");
@@ -68,9 +74,9 @@ public class View {
     Button processBlocksButton = new Button("Process Blocks");
     Button shrinkTrackHeightButton = new Button("- Track");
     Button growTrackHeightButton = new Button("+ Track");
+    Button sidePaneButton = new Button("Selection Options");
     // ---------- callsPanel ----------
     Tooltip callInfoTooltip = new Tooltip();
-    private ArrayList<Sample> sampleOrderInView = new ArrayList<Sample>();
     private final HBox callsContentContainer = new HBox();
     private final VBox samplesInfoContainer = new VBox();
     private final VBox samplesContainer = new VBox(0);
@@ -82,6 +88,11 @@ public class View {
 
     public View(Stage primaryStage) {
         this.primaryStage = primaryStage;
+        root.setAlignment(sidePane, Pos.CENTER_RIGHT);
+        sidePane.setMinWidth(250);
+        sidePane.setMaxWidth(250);
+        sidePane.setStyle("-fx-background-color: #2c3e50;");
+        sidePane.setTranslateX(250);
         // ---------- MENU --------------
         fileMenu.getItems().add(importVCFItem);
         menuBar.getMenus().add(fileMenu);
@@ -94,6 +105,7 @@ public class View {
         clearButton.setDisable(true);
         shrinkTrackHeightButton.setDisable(true);
         growTrackHeightButton.setDisable(true);
+        sidePaneButton.setDisable(true);
         zoomInButton.setMinSize(35, 35);
         zoomInButton.setMaxSize(35, 35);
         zoomOutButton.setMinSize(35, 35);
@@ -105,6 +117,8 @@ public class View {
         shrinkTrackHeightButton.setMaxSize(75,35);
         growTrackHeightButton.setMinSize(80,35);
         growTrackHeightButton.setMaxSize(80,35);
+        sidePaneButton.setMinSize(190,35);
+        sidePaneButton.setMaxSize(190,35);
         String circularStyle = """
     -fx-background-radius: 10px;
     -fx-border-radius: 10px;
@@ -123,6 +137,7 @@ public class View {
         processBlocksButton.setFocusTraversable(false);
         shrinkTrackHeightButton.setFocusTraversable(false);
         growTrackHeightButton.setFocusTraversable(false);
+        sidePaneButton.setFocusTraversable(false);
         // button style
         zoomInButton.setStyle(circularStyle);
         zoomOutButton.setStyle(circularStyle);
@@ -131,6 +146,7 @@ public class View {
         processBlocksButton.setStyle(circularStyle);
         shrinkTrackHeightButton.setStyle(circularStyle);
         growTrackHeightButton.setStyle(circularStyle);
+        sidePaneButton.setStyle(circularStyle);
         // add button
         controlContainer.getChildren().add(zoomInButton);
         controlContainer.getChildren().add(zoomOutButton);
@@ -139,6 +155,7 @@ public class View {
         controlContainer.getChildren().add(processBlocksButton);
         controlContainer.getChildren().add(shrinkTrackHeightButton);
         controlContainer.getChildren().add(growTrackHeightButton);
+        controlContainer.getChildren().add(sidePaneButton);
         // ---------- REF PANEL ---------
         referenceContainer.setStyle("-fx-background-color: white;");
         layout.getChildren().addAll(menuBar, controlContainer, referenceContainer, tickContainer, callsContentContainer);
@@ -194,6 +211,7 @@ public class View {
         this.clearButton.setDisable(false);
         this.shrinkTrackHeightButton.setDisable(false);
         this.growTrackHeightButton.setDisable(false);
+        this.sidePaneButton.setDisable(false);
     }
 
     // sync scrollpane scroll with marker and coordinate ticks
@@ -270,10 +288,11 @@ public class View {
         this.clearButton.setDisable(true);
         this.shrinkTrackHeightButton.setDisable(true);
         this.growTrackHeightButton.setDisable(true);
+        this.sidePaneButton.setDisable(true);
     }
 
     public Scene getScene() {
-        return new Scene(layout);
+        return new Scene(root);
     }
 
     public Stage getPrimaryStage() {
@@ -285,9 +304,8 @@ public class View {
         this.l2.setText(String.valueOf(refLength) + " bp");
     }
 
-    public void initSamples(ArrayList<Sample> samples, int refLength, double zoomLevel, double baseFontSize, int originalTrackHeight) {
-        for (int i=0; i<samples.size(); i++) {
-            sampleOrderInView.add(samples.get(i));
+    public void initSamples(ArrayList<Sample> sampleOrder, int refLength, double zoomLevel, double baseFontSize, int originalTrackHeight) {
+        for (int i=0; i<sampleOrder.size(); i++) {
             // create callsWrapper to hold sample calls
             Pane callsWrapper = new Pane();
             callsWrapper.setMinWidth(refLength * zoomLevel);
@@ -315,7 +333,7 @@ public class View {
             labelWrapper.setMinWidth(70);
             labelWrapper.setMaxWidth(70);
             // create sample label
-            Label sampleLabel = new Label(samples.get(i).getName());
+            Label sampleLabel = new Label(sampleOrder.get(i).getName());
             sampleLabel.setFont(Font.font("System", baseFontSize));
             // create infoContainer to hold sample info
             HBox infoContainer = new HBox();
@@ -335,27 +353,24 @@ public class View {
             this.samplesContainer.getChildren().add(callsWrapper);
         }
         this.callsPanel.setPannable(true);   // Optional: enables mouse drag scrolling
-        for (int i=0; i<sampleOrderInView.size(); i++) {
-            System.out.println(sampleOrderInView.get(i).getName());
-        }
     }
 
-    public void showCalls(ArrayList<Sample> samples, double zoomLevel, int refLength, int originalTrackHeight) {
+    public void showCalls(ArrayList<Sample> sampleOrder, double zoomLevel, int refLength, int originalTrackHeight) {
         /**
          *
          */
-        for (int i=0; i<samples.size(); i++) {
+        for (int i=0; i<sampleOrder.size(); i++) {
             Pane currentCalls = (Pane) this.samplesContainer.getChildren().get(i);
             currentCalls.getChildren().clear();
             currentCalls.setMinWidth(refLength * zoomLevel);
             currentCalls.setPrefWidth(refLength * zoomLevel);
             currentCalls.setMaxWidth(refLength * zoomLevel);
             // loop through each call
-            for (int j=0; j<samples.get(i).calls.size(); j++) {
+            for (int j=0; j<sampleOrder.get(i).calls.size(); j++) {
                 // get the current Call and set its id for the call and rectangle
-                Call currentCall = samples.get(i).calls.get(j);
+                Call currentCall = sampleOrder.get(i).calls.get(j);
                 Rectangle callRect = new Rectangle(currentCall.getStart()*zoomLevel, 0, currentCall.getLength()*zoomLevel, originalTrackHeight);
-                String callId = samples.get(i).getName() + "-" + j;
+                String callId = sampleOrder.get(i).getName() + "-" + j;
                 currentCall.setCallRectId(callId);
                 callRect.setId(callId);
                 // styling
@@ -434,8 +449,8 @@ public class View {
         this.callsPanel.getTransforms().add(scale);
     }
 
-    public void redrawSampleInfoAfterScale(ArrayList<Sample> samples, double baseFontSize, double trackHeightScale, int originalTrackHeight) {
-        for (int i=0; i<samples.size(); i++) {
+    public void redrawSampleInfoAfterScale(ArrayList<Sample> sampleOrder, double baseFontSize, double trackHeightScale, int originalTrackHeight) {
+        for (int i=0; i<sampleOrder.size(); i++) {
             VBox container = (VBox) samplesInfoContainer.getChildren().get(i);
             container.setMinHeight(originalTrackHeight * trackHeightScale);
             container.setMaxHeight(originalTrackHeight * trackHeightScale);
@@ -494,9 +509,9 @@ public class View {
         }
     }
 
-    public void showSampleColorStrip(HashMap<String, Boolean> comparators, ArrayList<Sample> samples, HashMap<String, Color> sampleColors) {
+    public void showSampleColorStrip(HashMap<String, Boolean> comparators, ArrayList<Sample> sampleOrder, HashMap<String, Color> sampleColors) {
         int index = 0;
-        for (Sample sample : samples) {
+        for (Sample sample : sampleOrder) {
             // comparing sample, show color strip
             if (comparators.get(sample.getName()) == true) {
                 VBox visualContainer = (VBox) this.samplesInfoContainer.getChildren().get(index);
@@ -538,7 +553,7 @@ public class View {
         return result;
     }
 
-    public void showPlot(HashMap<Selection, HashMap<String,Color>> results, ArrayList<Sample> samples, double zoomLevel) {
+    public void showPlot(HashMap<Selection, HashMap<String,Color>> results, ArrayList<Sample> sampleOrder, double zoomLevel) {
         clearMosaic();
         ArrayList<Selection> keys = new ArrayList<Selection>(results.keySet());
         // for each selection
@@ -547,18 +562,28 @@ public class View {
             double selectionLength = keys.get(i).getLength();
             double calcStart = selectionStart * zoomLevel / keys.get(i).getZoomLevel();
             double calcLength = selectionLength * zoomLevel / keys.get(i).getZoomLevel();
-            for (int j=0; j<samples.size(); j++) {
+            for (int j=0; j<sampleOrder.size(); j++) {
                 Rectangle rect = new Rectangle(calcStart, j*100, calcLength, 100);
                 rect.getStyleClass().add("mosaic");
                 rect.setOpacity(0.6);
-                rect.setFill(results.get(keys.get(i)).get(samples.get(j).getName()));
+                rect.setFill(results.get(keys.get(i)).get(sampleOrder.get(j).getName()));
                 this.selectionWrapper.getChildren().add(rect);
             }
         }
     }
 
-    public void updateZoom(ArrayList<Sample> samples, double zoomLevel, int refLength, ArrayList<Selection> selections, double baseLevel, int tickSpacing, int originalTrackHeight) {
-        this.showCalls(samples, zoomLevel, refLength, originalTrackHeight);
+    public void toggleSidePane() {
+        if (this.sidePane.getTranslateX() > 0) {
+            slideIn.setToX(0);
+            slideIn.play();
+        } else {
+            slideOut.setToX(250);
+            slideOut.play();
+        }
+    }
+
+    public void updateZoom(ArrayList<Sample> sampleOrder, double zoomLevel, int refLength, ArrayList<Selection> selections, double baseLevel, int tickSpacing, int originalTrackHeight) {
+        this.showCalls(sampleOrder, zoomLevel, refLength, originalTrackHeight);
         this.showCoords(refLength, zoomLevel, tickSpacing);
         this.updateSelections(selections, zoomLevel, baseLevel);
         // update marker width
@@ -613,6 +638,9 @@ public class View {
     }
     public void releaseSelectionListener(EventHandler<MouseEvent> handler) {
         this.releaseSelectionHandler = handler;
+    }
+    public void openSidePaneListener(EventHandler<ActionEvent> handler) {
+        sidePaneButton.setOnAction(handler);
     }
     public void viewportWidthChange(EventHandler<ActionEvent> handler) {
         callsPanel.viewportBoundsProperty().addListener((obs, oldBounds, newBounds) -> {
