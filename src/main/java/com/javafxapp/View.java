@@ -2,7 +2,6 @@ package com.javafxapp;
 
 import javafx.animation.TranslateTransition;
 import javafx.event.ActionEvent;
-import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -18,7 +17,6 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.scene.transform.Scale;
-import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
@@ -34,13 +32,10 @@ import java.util.*;
 // Button -> ...Button
 // Pane -> ...Wrapper
 // EventHandler -> ...Handler
-class Delta {
-    double x;
-    double y;
-}
+
 public class View {
+    ArrayList<Sample> sampleOrder = new ArrayList<Sample>();
     // ----------- root and side pane ---------------
-    private Delta dragCoords = new Delta();
     VBox sidePane = new VBox(20);
     Separator separator = new Separator();
     Button closeSidePaneButton = new Button("\u00D7");
@@ -337,14 +332,14 @@ public class View {
             hBox.getChildren().addAll(label, checkBox);
             checkboxes.add(checkBox);
             comparators.getChildren().add(hBox);
-            int finalIndex = index;
+            int OGIndex = index;
             checkBox.setOnAction(event -> {
                 if (checkBox.isSelected()) {
-                    sendSampleToTop(sample, checkboxes);
+                    moveSample(sample, OGIndex, checkboxes, "TOP");
                     toggleSampleColorStrip(sample, sampleColors);
                 }
                 else {
-                    sendSampleToOGLocation(sample, finalIndex, checkboxes);
+                    moveSample(sample, OGIndex, checkboxes, "BOTTOM");
                     toggleSampleColorStrip(sample, sampleColors);
 
                 }
@@ -373,7 +368,11 @@ public class View {
     }
 
     public void initSamples(ArrayList<Sample> samples, int refLength, double zoomLevel, double baseFontSize, int originalTrackHeight) {
+        /*
+        Post-conditions: Samples added to sampleOrder ArrayList
+         */
         for (Sample sample : samples) {
+            sampleOrder.add(sample);
             // create callsWrapper to hold sample calls
             Pane callsWrapper = new Pane();
             callsWrapper.setMinWidth(refLength * zoomLevel);
@@ -614,38 +613,16 @@ public class View {
         }
     }
 
-    public void sendSampleToTop(Sample sample, ArrayList<CheckBox> checkBoxes) {
+    public void moveSample(Sample sample, int OGIndex, ArrayList<CheckBox> checkBoxes, String setting) {
         int numChecked = 0;
+        int pastChecked = 0;
+        int newIndex;
+
         // loop through the checkboxes to see how many are currently checked (pinned to top)
         for (int i=0; i<checkBoxes.size(); i++) {
             if (checkBoxes.get(i).isSelected()) {
                 numChecked++;
-            }
-            else {
-
-            }
-        }
-        // minus 1 because of the checkbox just clicked for this sample
-        int newIndex = numChecked - 1;
-        // get current nodes
-        Pane calls = (Pane) this.samplesContainer.lookup("#" + sample.getName());
-        VBox container = (VBox) this.samplesInfoContainer.lookup("#" + sample.getName());
-        // remove
-        this.samplesContainer.getChildren().remove(calls);
-        this.samplesInfoContainer.getChildren().remove(container);
-        // insert at new location
-        this.samplesContainer.getChildren().add(newIndex, calls);
-        this.samplesInfoContainer.getChildren().add(newIndex, container);
-    }
-
-    public void sendSampleToOGLocation(Sample sample, int index, ArrayList<CheckBox> checkBoxes) {
-        int numChecked = 0;
-        int pastChecked = 0;
-        // loop through the checkboxes to see how many are currently still checked (pinned to top)
-        for (int i=0; i<checkBoxes.size(); i++) {
-            if (checkBoxes.get(i).isSelected()) {
-                numChecked++;
-                if (i > index) {
+                if (i > OGIndex) {
                     pastChecked++;
                 }
             }
@@ -653,28 +630,41 @@ public class View {
 
             }
         }
-        //
-        int newIndex;
-        if (index == 0) {
-            // past all checked samples
-            newIndex = numChecked;
-        }
-        else if (index == checkBoxes.size()-1) {
-            // end
-            newIndex = index;
+
+        // move sample based on setting
+        if (Objects.equals(setting, "TOP")) {
+            // minus 1 because of the checkbox just clicked for this sample
+            newIndex = numChecked - 1;
         }
         else {
-            newIndex = index + pastChecked;
+            if (OGIndex == 0) {
+                // past all checked samples
+                newIndex = numChecked;
+            }
+            else if (OGIndex == checkBoxes.size()-1) {
+                // end
+                newIndex = OGIndex;
+            }
+            else {
+                newIndex = OGIndex + pastChecked;
+            }
         }
+
         // get current nodes
         Pane calls = (Pane) this.samplesContainer.lookup("#" + sample.getName());
         VBox container = (VBox) this.samplesInfoContainer.lookup("#" + sample.getName());
         // remove
         this.samplesContainer.getChildren().remove(calls);
         this.samplesInfoContainer.getChildren().remove(container);
+        this.sampleOrder.remove(sample);
         // insert at new location
         this.samplesContainer.getChildren().add(newIndex, calls);
         this.samplesInfoContainer.getChildren().add(newIndex, container);
+        this.sampleOrder.add(newIndex, sample);
+    }
+
+    public ArrayList<Sample> getSampleOrderInView() {
+        return this.sampleOrder;
     }
 
     public void toggleSidePane() {

@@ -50,7 +50,6 @@ public class Controller {
         view.viewportWidthChange(e -> {
             this.processViewportWidthChange();
         });
-
     }
 
     public void importFile() {
