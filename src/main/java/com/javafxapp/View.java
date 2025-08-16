@@ -1,7 +1,7 @@
 package com.javafxapp;
 
+import javafx.animation.TranslateTransition;
 import javafx.event.ActionEvent;
-import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -17,12 +17,10 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.scene.transform.Scale;
-import javafx.stage.Screen;
 import javafx.stage.Stage;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.Objects;
-import java.util.Set;
+import javafx.util.Duration;
+
+import java.util.*;
 
 // naming conventions
 // Stage -> ...Stage
@@ -34,14 +32,19 @@ import java.util.Set;
 // Button -> ...Button
 // Pane -> ...Wrapper
 // EventHandler -> ...Handler
-class Delta {
-    double x;
-    double y;
-}
+
 public class View {
-    private Delta dragCoords = new Delta();
+    ArrayList<Sample> sampleOrder = new ArrayList<Sample>();
+    // ----------- root and side pane ---------------
+    VBox sidePane = new VBox(20);
+    Separator separator = new Separator();
+    Button closeSidePaneButton = new Button("\u00D7");
+    HBox closeButtonContainer = new HBox(closeSidePaneButton);
     private final VBox layout = new VBox();
+    StackPane root = new StackPane(layout, sidePane);
     private final Stage primaryStage;
+    TranslateTransition slideIn = new TranslateTransition(Duration.millis(300), sidePane);
+    TranslateTransition slideOut = new TranslateTransition(Duration.millis(300), sidePane);
     // ---------- menuBar -------------
     private final MenuBar menuBar = new MenuBar();
     private final Menu fileMenu = new Menu("File");
@@ -67,11 +70,12 @@ public class View {
     Button zoomOutButton = new Button("-");
     Button clearButton = new Button("Clear");
     Button processButton = new Button("Process");
+    Button processBlocksButton = new Button("Process Blocks");
     Button shrinkTrackHeightButton = new Button("- Track");
     Button growTrackHeightButton = new Button("+ Track");
+    Button sidePaneButton = new Button("Selection Options");
     // ---------- callsPanel ----------
     Tooltip callInfoTooltip = new Tooltip();
-    private ArrayList<Sample> sampleOrderInView = new ArrayList<Sample>();
     private final HBox callsContentContainer = new HBox();
     private final VBox samplesInfoContainer = new VBox();
     private final VBox samplesContainer = new VBox(0);
@@ -82,7 +86,26 @@ public class View {
 
 
     public View(Stage primaryStage) {
+        // ---------- ROOT AND SIDE PANE ---------
         this.primaryStage = primaryStage;
+        root.setAlignment(sidePane, Pos.CENTER_RIGHT);
+        sidePane.setMinWidth(300);
+        sidePane.setMaxWidth(300);
+        sidePane.setStyle("-fx-background-color: #d8d5cf;");
+        sidePane.setTranslateX(300);
+        sidePane.setAlignment(Pos.TOP_CENTER);
+        // close button
+        sidePane.getChildren().add(closeButtonContainer);
+        closeButtonContainer.setAlignment(Pos.TOP_RIGHT);
+        // title
+        Label title = new Label("Selection Options");
+        title.setStyle("-fx-font-size: 24px;");
+        sidePane.getChildren().add(title);
+        // process button
+        sidePane.getChildren().add(processButton);
+        sidePane.getChildren().add(separator);
+
+
         // ---------- MENU --------------
         fileMenu.getItems().add(importVCFItem);
         menuBar.getMenus().add(fileMenu);
@@ -91,19 +114,27 @@ public class View {
         zoomInButton.setDisable(true);
         zoomOutButton.setDisable(true);
         processButton.setDisable(true);
+        processBlocksButton.setDisable(true);
         clearButton.setDisable(true);
         shrinkTrackHeightButton.setDisable(true);
         growTrackHeightButton.setDisable(true);
+        sidePaneButton.setDisable(true);
+        closeSidePaneButton.setDisable(true);
         zoomInButton.setMinSize(35, 35);
         zoomInButton.setMaxSize(35, 35);
         zoomOutButton.setMinSize(35, 35);
         zoomOutButton.setMaxSize(35, 35);
         clearButton.setMinSize(50,35);
         processButton.setMinSize(50,35);
+        processBlocksButton.setMinSize(75,35);
         shrinkTrackHeightButton.setMinSize(75,35);
         shrinkTrackHeightButton.setMaxSize(75,35);
         growTrackHeightButton.setMinSize(80,35);
         growTrackHeightButton.setMaxSize(80,35);
+        sidePaneButton.setMinSize(190,35);
+        sidePaneButton.setMaxSize(190,35);
+        closeSidePaneButton.setMinSize(25,25);
+        closeSidePaneButton.setMaxSize(25,25);
         String circularStyle = """
     -fx-background-radius: 10px;
     -fx-border-radius: 10px;
@@ -119,22 +150,29 @@ public class View {
         zoomOutButton.setFocusTraversable(false);
         clearButton.setFocusTraversable(false);
         processButton.setFocusTraversable(false);
+        processBlocksButton.setFocusTraversable(false);
         shrinkTrackHeightButton.setFocusTraversable(false);
         growTrackHeightButton.setFocusTraversable(false);
+        sidePaneButton.setFocusTraversable(false);
+        closeSidePaneButton.setFocusTraversable(false);
         // button style
         zoomInButton.setStyle(circularStyle);
         zoomOutButton.setStyle(circularStyle);
         clearButton.setStyle(circularStyle);
         processButton.setStyle(circularStyle);
+        processBlocksButton.setStyle(circularStyle);
         shrinkTrackHeightButton.setStyle(circularStyle);
         growTrackHeightButton.setStyle(circularStyle);
+        sidePaneButton.setStyle(circularStyle);
+        closeSidePaneButton.setStyle(circularStyle);
+        closeSidePaneButton.setStyle("-fx-font-size: 12px;");
         // add button
         controlContainer.getChildren().add(zoomInButton);
         controlContainer.getChildren().add(zoomOutButton);
         controlContainer.getChildren().add(clearButton);
-        controlContainer.getChildren().add(processButton);
         controlContainer.getChildren().add(shrinkTrackHeightButton);
         controlContainer.getChildren().add(growTrackHeightButton);
+        controlContainer.getChildren().add(sidePaneButton);
         // ---------- REF PANEL ---------
         referenceContainer.setStyle("-fx-background-color: white;");
         layout.getChildren().addAll(menuBar, controlContainer, referenceContainer, tickContainer, callsContentContainer);
@@ -186,9 +224,12 @@ public class View {
         this.zoomInButton.setDisable(false);
         this.zoomOutButton.setDisable(false);
         this.processButton.setDisable(false);
+        this.processBlocksButton.setDisable(false);
         this.clearButton.setDisable(false);
         this.shrinkTrackHeightButton.setDisable(false);
         this.growTrackHeightButton.setDisable(false);
+        this.sidePaneButton.setDisable(false);
+        this.closeSidePaneButton.setDisable(false);
     }
 
     // sync scrollpane scroll with marker and coordinate ticks
@@ -261,17 +302,64 @@ public class View {
         this.zoomInButton.setDisable(true);
         this.zoomOutButton.setDisable(true);
         this.processButton.setDisable(true);
+        this.processBlocksButton.setDisable(true);
         this.clearButton.setDisable(true);
         this.shrinkTrackHeightButton.setDisable(true);
         this.growTrackHeightButton.setDisable(true);
+        this.sidePaneButton.setDisable(true);
+        this.closeSidePaneButton.setDisable(true);
     }
 
     public Scene getScene() {
-        return new Scene(layout);
+        return new Scene(root);
     }
 
     public Stage getPrimaryStage() {
         return this.primaryStage;
+    }
+
+    public void initSidePane(ArrayList<Sample> samples, HashMap<String, Color> sampleColors) {
+        ArrayList<CheckBox> checkboxes = new ArrayList<>();
+        HashMap<String,Boolean> result = new HashMap<>();
+        VBox comparators = new VBox();
+        comparators.setPadding(new Insets(0, 0, 0, 20));
+        comparators.getChildren().add(new Label("Pin and Highlight:"));
+        int index = 0;
+        for (Sample sample : samples) {
+            Label label = new Label(sample.getName());
+            CheckBox checkBox = new CheckBox();
+            HBox hBox = new HBox(10);
+            hBox.getChildren().addAll(label, checkBox);
+            checkboxes.add(checkBox);
+            comparators.getChildren().add(hBox);
+            int OGIndex = index;
+            checkBox.setOnAction(event -> {
+                if (checkBox.isSelected()) {
+                    moveSample(sample, OGIndex, checkboxes, "TOP");
+                    toggleSampleColorStrip(sample, sampleColors);
+                }
+                else {
+                    moveSample(sample, OGIndex, checkboxes, "BOTTOM");
+                    toggleSampleColorStrip(sample, sampleColors);
+
+                }
+            });
+            index++;
+        }
+        sidePane.getChildren().add(comparators);
+        // process blocks button
+        sidePane.getChildren().add(processBlocksButton);
+//            if (buttonResult.isPresent() && buttonResult.get() == ButtonType.OK) {
+//                int index = 0;
+//                for (CheckBox checkbox : checkboxes) {
+//                    result.put(samples.get(index).getName(),checkbox.isSelected());
+//                    index++;
+//                }
+//            }
+//            else {
+//                return null;
+//            }
+//            return result;
     }
 
     public void initReference(int refLength, String refName) {
@@ -280,8 +368,11 @@ public class View {
     }
 
     public void initSamples(ArrayList<Sample> samples, int refLength, double zoomLevel, double baseFontSize, int originalTrackHeight) {
-        for (int i=0; i<samples.size(); i++) {
-            sampleOrderInView.add(samples.get(i));
+        /*
+        Post-conditions: Samples added to sampleOrder ArrayList
+         */
+        for (Sample sample : samples) {
+            sampleOrder.add(sample);
             // create callsWrapper to hold sample calls
             Pane callsWrapper = new Pane();
             callsWrapper.setMinWidth(refLength * zoomLevel);
@@ -304,56 +395,53 @@ public class View {
             // set changes on drag
             dragWrapper.setOnMouseEntered(e -> dragWrapper.setCursor(Cursor.HAND));
             dragWrapper.setOnMouseExited(e -> dragWrapper.setCursor(Cursor.DEFAULT));
-            dragWrapper.setOnMousePressed(e -> {
-                this.labelPressed(e, dragWrapper);
-            });
-            dragWrapper.setOnMouseDragged(e -> {
-                this.labelDragged(e, dragWrapper);
-            });
-            dragWrapper.setOnMouseReleased(e -> {
-                this.labelReleased(e);
-            });
             // create labelWrapper Pane to hold sample name
             StackPane labelWrapper = new StackPane();
             labelWrapper.setMinWidth(70);
             labelWrapper.setMaxWidth(70);
             // create sample label
-            Label sampleLabel = new Label(samples.get(i).getName());
+            Label sampleLabel = new Label(sample.getName());
             sampleLabel.setFont(Font.font("System", baseFontSize));
             // create infoContainer to hold sample info
-            HBox infoContainer = new HBox();
+            HBox labelContainer = new HBox();
+            // create visualContainer to hold sample info and color rectangle
+            VBox infoContainer = new VBox();
             infoContainer.setMinHeight(originalTrackHeight);
             infoContainer.setMaxHeight(originalTrackHeight);
+            Rectangle colorRect = new Rectangle(40, 3, Color.TRANSPARENT);
+            infoContainer.getChildren().addAll(labelContainer, colorRect);
+            infoContainer.setAlignment(Pos.CENTER);
             // add drag lines, and sample label to infoContainer
             labelWrapper.getChildren().add(sampleLabel);
-            infoContainer.getChildren().add(dragWrapper);
-            infoContainer.getChildren().add(labelWrapper);
+            labelContainer.getChildren().add(dragWrapper);
+            labelContainer.getChildren().add(labelWrapper);
             this.samplesInfoContainer.getChildren().add(infoContainer);
             // add sampContainer to samplesContainer
             this.samplesContainer.getChildren().add(callsWrapper);
+            // set IDs
+            infoContainer.setId(sample.getName());
+            callsWrapper.setId(sample.getName());
         }
         this.callsPanel.setPannable(true);   // Optional: enables mouse drag scrolling
-        for (int i=0; i<sampleOrderInView.size(); i++) {
-            System.out.println(sampleOrderInView.get(i).getName());
-        }
     }
 
     public void showCalls(ArrayList<Sample> samples, double zoomLevel, int refLength, int originalTrackHeight) {
         /**
-         *
+         * Pre-conditions/assumptions: Gets call pane for each sample by looking up the ID
          */
-        for (int i=0; i<samples.size(); i++) {
-            Pane currentCalls = (Pane) this.samplesContainer.getChildren().get(i);
+        // loops through each sample and gets the sample pane to update, access order does not matter
+        for (Sample sample : samples) {
+            Pane currentCalls = (Pane) this.samplesContainer.lookup("#" + sample.getName());
             currentCalls.getChildren().clear();
             currentCalls.setMinWidth(refLength * zoomLevel);
             currentCalls.setPrefWidth(refLength * zoomLevel);
             currentCalls.setMaxWidth(refLength * zoomLevel);
             // loop through each call
-            for (int j=0; j<samples.get(i).calls.size(); j++) {
+            for (int j=0; j<sample.calls.size(); j++) {
                 // get the current Call and set its id for the call and rectangle
-                Call currentCall = samples.get(i).calls.get(j);
+                Call currentCall = sample.calls.get(j);
                 Rectangle callRect = new Rectangle(currentCall.getStart()*zoomLevel, 0, currentCall.getLength()*zoomLevel, originalTrackHeight);
-                String callId = samples.get(i).getName() + "-" + j;
+                String callId = sample.getName() + "-" + j;
                 currentCall.setCallRectId(callId);
                 callRect.setId(callId);
                 // styling
@@ -433,10 +521,14 @@ public class View {
     }
 
     public void redrawSampleInfoAfterScale(ArrayList<Sample> samples, double baseFontSize, double trackHeightScale, int originalTrackHeight) {
-        for (int i=0; i<samples.size(); i++) {
-            HBox infoContainer = (HBox) samplesInfoContainer.getChildren().get(i);
-            infoContainer.setMinHeight(originalTrackHeight * trackHeightScale);
-            infoContainer.setMaxHeight(originalTrackHeight * trackHeightScale);
+        /**
+         * Pre-conditions/assumptions: Gets info pane for each sample by looking up the ID
+         */
+        for (Sample sample : samples) {
+            VBox container = (VBox) samplesInfoContainer.lookup("#" + sample.getName());
+            container.setMinHeight(originalTrackHeight * trackHeightScale);
+            container.setMaxHeight(originalTrackHeight * trackHeightScale);
+            HBox infoContainer = (HBox) container.getChildren().get(0);
             Pane labelWrapper = (Pane) infoContainer.getChildren().get(1);
             Label sampleLabel = (Label) labelWrapper.getChildren().getFirst();
             sampleLabel.setFont(Font.font(sampleLabel.getFont().getFamily(), baseFontSize));
@@ -491,7 +583,18 @@ public class View {
         }
     }
 
-    public void showPlot(LinkedHashMap<Selection, LinkedHashMap<String,Color>> results, ArrayList<Sample> samples, double zoomLevel) {
+    public void toggleSampleColorStrip(Sample sample, HashMap<String, Color> sampleColors) {
+        VBox visualContainer = (VBox) this.samplesInfoContainer.lookup("#" + sample.getName());
+        Rectangle rectangle = (Rectangle) visualContainer.getChildren().get(1);
+        if (rectangle.getFill() == sampleColors.get(sample.getName())) {
+            rectangle.setFill(Color.TRANSPARENT);
+        }
+        else {
+            rectangle.setFill(sampleColors.get(sample.getName()));
+        }
+    }
+
+    public void showPlot(HashMap<Selection, HashMap<String,Color>> results, ArrayList<Sample> samples, double zoomLevel) {
         clearMosaic();
         ArrayList<Selection> keys = new ArrayList<Selection>(results.keySet());
         // for each selection
@@ -507,6 +610,70 @@ public class View {
                 rect.setFill(results.get(keys.get(i)).get(samples.get(j).getName()));
                 this.selectionWrapper.getChildren().add(rect);
             }
+        }
+    }
+
+    public void moveSample(Sample sample, int OGIndex, ArrayList<CheckBox> checkBoxes, String setting) {
+        int numChecked = 0;
+        int pastChecked = 0;
+        int newIndex;
+
+        // loop through the checkboxes to see how many are currently checked (pinned to top)
+        for (int i=0; i<checkBoxes.size(); i++) {
+            if (checkBoxes.get(i).isSelected()) {
+                numChecked++;
+                if (i > OGIndex) {
+                    pastChecked++;
+                }
+            }
+            else {
+
+            }
+        }
+
+        // move sample based on setting
+        if (Objects.equals(setting, "TOP")) {
+            // minus 1 because of the checkbox just clicked for this sample
+            newIndex = numChecked - 1;
+        }
+        else {
+            if (OGIndex == 0) {
+                // past all checked samples
+                newIndex = numChecked;
+            }
+            else if (OGIndex == checkBoxes.size()-1) {
+                // end
+                newIndex = OGIndex;
+            }
+            else {
+                newIndex = OGIndex + pastChecked;
+            }
+        }
+
+        // get current nodes
+        Pane calls = (Pane) this.samplesContainer.lookup("#" + sample.getName());
+        VBox container = (VBox) this.samplesInfoContainer.lookup("#" + sample.getName());
+        // remove
+        this.samplesContainer.getChildren().remove(calls);
+        this.samplesInfoContainer.getChildren().remove(container);
+        this.sampleOrder.remove(sample);
+        // insert at new location
+        this.samplesContainer.getChildren().add(newIndex, calls);
+        this.samplesInfoContainer.getChildren().add(newIndex, container);
+        this.sampleOrder.add(newIndex, sample);
+    }
+
+    public ArrayList<Sample> getSampleOrderInView() {
+        return this.sampleOrder;
+    }
+
+    public void toggleSidePane() {
+        if (this.sidePane.getTranslateX() > 0) {
+            slideIn.setToX(0);
+            slideIn.play();
+        } else {
+            slideOut.setToX(300);
+            slideOut.play();
         }
     }
 
@@ -555,6 +722,9 @@ public class View {
     public void processSelectionsListener(EventHandler<ActionEvent> handler) {
         processButton.setOnAction(handler);
     }
+    public void processBlocksSelectionsListener(EventHandler<ActionEvent> handler) {
+        processBlocksButton.setOnAction(handler);
+    }
     public void shrinkTrackHeightListener(EventHandler<ActionEvent> handler) {
         shrinkTrackHeightButton.setOnAction(handler);
     }
@@ -563,6 +733,12 @@ public class View {
     }
     public void releaseSelectionListener(EventHandler<MouseEvent> handler) {
         this.releaseSelectionHandler = handler;
+    }
+    public void toggleSidePaneListener(EventHandler<ActionEvent> handler) {
+        sidePaneButton.setOnAction(handler);
+    }
+    public void closeSidePaneListener(EventHandler<ActionEvent> handler) {
+        closeSidePaneButton.setOnAction(handler);
     }
     public void viewportWidthChange(EventHandler<ActionEvent> handler) {
         callsPanel.viewportBoundsProperty().addListener((obs, oldBounds, newBounds) -> {

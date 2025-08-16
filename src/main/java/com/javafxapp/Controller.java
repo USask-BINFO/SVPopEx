@@ -1,6 +1,7 @@
 package com.javafxapp;
 
 import java.io.File;
+import java.util.ArrayList;
 
 import javafx.scene.Node;
 import javafx.scene.input.MouseEvent;
@@ -28,6 +29,9 @@ public class Controller {
         view.processSelectionsListener(e -> {
             this.processSelections();
         });
+        view.processBlocksSelectionsListener(e -> {
+            this.processBlockSelections();
+        });
         view.shrinkTrackHeightListener(e -> {
             this.updateTrackHeight(-0.1);
         });
@@ -37,10 +41,15 @@ public class Controller {
         view.releaseSelectionListener(e -> {
             this.updateReleaseSelection(e);
         });
+        view.toggleSidePaneListener(e -> {
+            view.toggleSidePane();
+        });
+        view.closeSidePaneListener(e -> {
+            view.toggleSidePane();
+        });
         view.viewportWidthChange(e -> {
             this.processViewportWidthChange();
         });
-
     }
 
     public void importFile() {
@@ -69,11 +78,13 @@ public class Controller {
             this.model.reset();
             this.view.reset();
             model.processFile(fileContent);
+            view.initSidePane(model.getSamples(), model.getSampleColors());
             view.initReference(model.getRefLength(), model.getRefName());
             view.initSamples(model.getSamples(), model.getRefLength(), model.getZoomLevel(), model.getBaseFontSize(), model.getOriginalTrackHeight());
             view.showCoords(model.getRefLength(), model.getZoomLevel(), model.getTickSpacing());
             view.showCalls(model.getSamples(), model.getZoomLevel(), model.getRefLength(), model.getOriginalTrackHeight());
             view.enableControls();
+
         }
         // user closed or cancelled file
         else {
@@ -101,6 +112,13 @@ public class Controller {
 
     public void processSelections() {
         view.showPlot(model.processSelections(), model.getSamples(), model.getZoomLevel());
+    }
+
+    public void processBlockSelections() {
+        if (model.getComparators() == null) {
+        }
+        model.processBlockSelections();
+        //view.toggleSampleColorStrip(model.getComparators(), model.getSamples(), model.getSampleColors());
     }
 
     public void updateReleaseSelection(MouseEvent e) {
