@@ -1,10 +1,12 @@
 package com.javafxapp;
 
-import java.sql.Array;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
+
+import javafx.scene.control.CheckBox;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
 
 public class Model {
     private String refName;
@@ -21,7 +23,6 @@ public class Model {
     private final double baseFontSize = 12;
     private final int originalTrackHeight = 100;
     private Double baseCallPanelHeight;
-    private HashMap<String, Boolean> comparators;
 
 
     public void reset() {
@@ -31,8 +32,7 @@ public class Model {
         this.selections.clear();
         // set zoom back to original
         this.zoomLevel = this.baseLevel;
-        // clear comparators and sample order
-        this.comparators = null;
+
     }
 
     public String loadFile(java.io.File file) throws java.io.IOException {
@@ -67,10 +67,6 @@ public class Model {
 
     public HashMap<String, Color> getSampleColors() {
         return this.sampleColors;
-    }
-
-    public HashMap<String, Boolean> getComparators() {
-        return this.comparators;
     }
 
     public double getBaseCallPanelHeight() {
@@ -108,25 +104,79 @@ public class Model {
         }
     }
 
-    public HashMap<Block, Color> processBlockSelections() {
-        HashMap<Block, Color> result = new HashMap<>();
-        // if no selections are made, return empty linkedhashmap
-        if (this.selections.isEmpty() || this.comparators == null) {
+    public HashMap<Rectangle,Color> processPinnedSelections(ArrayList<Sample> sampleOrder, ArrayList<CheckBox> checkboxes) {
+        ArrayList<Sample> checkedSamples = new ArrayList<>();
+        HashMap<Rectangle, Color> result = new HashMap<>();
+        for (int i=0; i<checkboxes.size(); i++) {
+            if (checkboxes.get(i).isSelected()) {
+                checkedSamples.add(this.samples.get(i));
+            }
+        }
+        // if no selections are made or no samples are checked, return empty hashmap
+        if (this.selections.isEmpty() || checkedSamples.isEmpty()) {
             return result;
         }
-//        // if selections are made, process
-//        else {
-//            int index = 0;
-//            for (Boolean comparator : comparators) {
-//                if (comparator == true) {
-//                }
-//                else {
-//                    // do nothing
-//                }
-//            }
-//            Selection selection = selections.getLast();
+        // if selections are made, process
+        else {
+            for (int i=0; i<sampleOrder.size(); i++) {
+                System.out.println(sampleOrder.get(i).getName());
+            }
+            ArrayList<String> seenCallIds = new ArrayList<>();
+            for (Selection selection : selections) {
+                double selectionStart = selection.getGenomicStart();
+                double selectionEnd = selection.getGenomicEnd();
+                // loop through samples
+                for (Sample checkedSample : checkedSamples) {
+                    // loop through sample calls
+                    for (Call call : checkedSample.calls) {
+                        double calcStart = call.getStart() * zoomLevel;
+                        double calcLength = call.getLength() * zoomLevel;
+                        // if entire call is in selection area, then loop through genotypes
+                        if (call.getStart() > selectionStart && call.getEnd() < selectionEnd) {
+                            // if this call has not been processed
+                            if (!seenCallIds.contains(call.getId())) {
+                                // add call id to seen
+                                seenCallIds.add(call.getId());
+                                Boolean pastCurrent = false;
+                                // loop through samples and check the genotype if applicable
+                                for (int i=0; i<sampleOrder.size(); i++) {
+                                    // dealing with a sample past the current checked sample
+                                    if (pastCurrent) {
+                                        if (Objects.equals(call.genotypes.get(sampleOrder.get(i).getName()), "1/1") || Objects.equals(call.genotypes.get(sampleOrder.get(i).getName()), "0/1")) {
+                                            Rectangle newRect = new Rectangle(calcStart, i*100, calcLength, 100);
+                                            result.put(newRect, sampleColors.get(checkedSample.getName()));
+                                        }
+                                    }
+                                    // if current sample is the current checked sample
+                                    else if (sampleOrder.get(i) == checkedSample) {
+                                        // change atCurrent to true
+                                        pastCurrent = true;
+                                        // create rectangle for itself
+                                        Rectangle newRect = new Rectangle(calcStart, i*100, calcLength, 100);
+                                        result.put(newRect, sampleColors.get(checkedSample.getName()));
+                                    }
+                                    // sample is before the current checked sample, do nothing because these are already processed
+                                    else {
+                                        // do nothing
+                                    }
 
-        //}
+                                }
+
+                            }
+                            // call has already been processed, do nothing
+                            else {
+                                // do nothing
+                            }
+                        }
+                        // call outside of selection area
+                        else {
+                            // do nothing
+                        }
+                    }
+
+                }
+            }
+        }
         return result;
     }
 
@@ -169,8 +219,8 @@ public class Model {
                 for (Call call : calls) {
                     // include the call if it is within the selection region (doesn't have to be completely within)
                     if (call.getStart() > selectionStart && call.getEnd() < selectionEnd ||
-                    call.getStart() < selectionStart && call.getEnd() > selectionStart ||
-                    call.getStart() < selectionEnd && call.getEnd() > selectionEnd) {
+                            call.getStart() < selectionStart && call.getEnd() > selectionStart ||
+                            call.getStart() < selectionEnd && call.getEnd() > selectionEnd) {
                         System.out.println(call.toString());
                         // loop through each sample
                         for (int i=0; i<samples.size(); i++) {
@@ -305,7 +355,7 @@ public class Model {
                     System.err.println("Error: Could not find type or length in expected VCF format for call. Ignoring call.");
                 }
                 else {
-                    Call currentCall = new Call(infoMatcher.group(1), Integer.parseInt(infoMatcher.group(2)), Integer.parseInt(fields[1]), genotypes);
+                    Call currentCall = new Call(infoMatcher.group(1), Integer.parseInt(infoMatcher.group(2)), Integer.parseInt(fields[1]), fields[2], genotypes);
                     calls.add(currentCall);
                     for (Sample sample : this.samples) {
                         String genotypeRegex = "(./.):";
@@ -341,10 +391,6 @@ public class Model {
             this.samples.add(sample);
             this.sampleColors.put(samples.get(i).getName(), this.getRandomColor());
         }
-    }
-
-    public void processConfig(HashMap<String, Boolean> comparators) {
-        this.comparators = comparators;
     }
 
     public void updateCoordIncrement(double viewportWidth) {
