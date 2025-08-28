@@ -238,6 +238,7 @@ public class View {
             this.syncScroll(newVal);
         });
         this.selectionContainer.getChildren().add(selectionWrapper);
+        this.callsPanel.setFitToHeight(true);
     }
 
     public void enableControls() {
@@ -399,23 +400,6 @@ public class View {
             callsWrapper.setMinWidth(refLength * zoomLevel);
             callsWrapper.setPrefWidth(refLength * zoomLevel);
             callsWrapper.setMaxWidth(refLength * zoomLevel);
-            // create dragWrapper to hold drag lines
-            StackPane dragWrapper = new StackPane();
-            dragWrapper.setMinWidth(20);
-            dragWrapper.setMaxWidth(20);
-            // create drag lines
-            VBox lines = new VBox(2); // 5 is spacing between lines
-            lines.setAlignment(Pos.CENTER);
-            for (int l=0; l<3; l++) {
-                Line line = new Line(0, 0, 5, 0); // x1, y1, x2, y2
-                line.setStrokeWidth(1);
-                line.setStroke(Color.web("#888888")); // visible stroke color
-                lines.getChildren().add(line);
-            }
-            dragWrapper.getChildren().add(lines);
-            // set changes on drag
-            dragWrapper.setOnMouseEntered(e -> dragWrapper.setCursor(Cursor.HAND));
-            dragWrapper.setOnMouseExited(e -> dragWrapper.setCursor(Cursor.DEFAULT));
             // create labelWrapper Pane to hold sample name
             StackPane labelWrapper = new StackPane();
             labelWrapper.setMinWidth(70);
@@ -432,9 +416,8 @@ public class View {
             Rectangle colorRect = new Rectangle(40, 3, Color.TRANSPARENT);
             infoContainer.getChildren().addAll(labelContainer, colorRect);
             infoContainer.setAlignment(Pos.CENTER);
-            // add drag lines, and sample label to infoContainer
+            // add sample label to infoContainer
             labelWrapper.getChildren().add(sampleLabel);
-            labelContainer.getChildren().add(dragWrapper);
             labelContainer.getChildren().add(labelWrapper);
             this.samplesInfoContainer.getChildren().add(infoContainer);
             // add sampContainer to samplesContainer
@@ -461,7 +444,7 @@ public class View {
             for (int j=0; j<sample.calls.size(); j++) {
                 // get the current Call and set its id for the call and rectangle
                 Call currentCall = sample.calls.get(j);
-                Rectangle callRect = new Rectangle(currentCall.getStart()*zoomLevel, 0, currentCall.getLength()*zoomLevel, originalTrackHeight);
+                Rectangle callRect = new Rectangle(currentCall.getStart()*zoomLevel, 0, currentCall.getLength()*zoomLevel, originalTrackHeight-4);
                 String callId = sample.getName() + "-" + j;
                 callRect.setId(callId);
                 // styling
