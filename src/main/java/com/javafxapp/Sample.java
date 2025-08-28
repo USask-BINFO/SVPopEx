@@ -17,4 +17,5 @@ public class Sample {
     public void addCall(Call call) {
         this.calls.add(call);
     }
+
 }
