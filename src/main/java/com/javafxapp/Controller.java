@@ -115,9 +115,7 @@ public class Controller {
     }
 
     public void processBlockSelections() {
-        if (model.getComparators() == null) {
-        }
-        model.processBlockSelections();
+        view.showPinPlot(model.processPinnedSelections(view.getSampleOrderInView(), view.getPinCheckboxes()));
         //view.toggleSampleColorStrip(model.getComparators(), model.getSamples(), model.getSampleColors());
     }
 
@@ -140,4 +138,3 @@ public class Controller {
         view.updateMarkerOnViewportScaleOrZoom(model.getRefLength(), model.getZoomLevel());
     }
 }
-
