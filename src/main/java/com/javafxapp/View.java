@@ -37,9 +37,11 @@ public class View {
     ArrayList<Sample> sampleOrder = new ArrayList<Sample>();
     // ----------- root and side pane ---------------
     VBox sidePane = new VBox(20);
-    Separator separator = new Separator();
+    ArrayList<CheckBox> pinCheckboxes = new ArrayList<>();
+    VBox comparators = new VBox();
     Button closeSidePaneButton = new Button("\u00D7");
     HBox closeButtonContainer = new HBox(closeSidePaneButton);
+    Label regionSelectLabel = new Label("Provide a Region to Select");
     private final VBox layout = new VBox();
     StackPane root = new StackPane(layout, sidePane);
     private final Stage primaryStage;
@@ -69,8 +71,8 @@ public class View {
     Button zoomInButton = new Button("+");
     Button zoomOutButton = new Button("-");
     Button clearButton = new Button("Clear");
-    Button processButton = new Button("Process");
-    Button processBlocksButton = new Button("Process Blocks");
+    Button processButton = new Button("Display Haplotypes");
+    Button processBlocksButton = new Button("Display Variants in Unpinned");
     Button shrinkTrackHeightButton = new Button("- Track");
     Button growTrackHeightButton = new Button("+ Track");
     Button sidePaneButton = new Button("Selection Options");
@@ -99,11 +101,29 @@ public class View {
         closeButtonContainer.setAlignment(Pos.TOP_RIGHT);
         // title
         Label title = new Label("Selection Options");
-        title.setStyle("-fx-font-size: 24px;");
+        String style = """
+               -fx-font-size: 20px;
+               -fx-text-fill: #555555;
+               -fx-font-weight: bold;
+               """;
+        title.setStyle(style);
+        regionSelectLabel.setStyle("""
+                -fx-text-fill: #555555;
+               -fx-font-weight: bold;
+               """);
+
         sidePane.getChildren().add(title);
-        // process button
+        // region
+        sidePane.getChildren().add(regionSelectLabel);
+        Separator separator1 = new Separator();
+        sidePane.getChildren().add(separator1);
+        // pin checkboxes
+        sidePane.getChildren().add(comparators);
+        Separator separator2 = new Separator();
+        sidePane.getChildren().add(separator2);
+        // plots
+        sidePane.getChildren().add(processBlocksButton);
         sidePane.getChildren().add(processButton);
-        sidePane.getChildren().add(separator);
 
 
         // ---------- MENU --------------
@@ -319,36 +339,37 @@ public class View {
     }
 
     public void initSidePane(ArrayList<Sample> samples, HashMap<String, Color> sampleColors) {
-        ArrayList<CheckBox> checkboxes = new ArrayList<>();
         HashMap<String,Boolean> result = new HashMap<>();
-        VBox comparators = new VBox();
         comparators.setPadding(new Insets(0, 0, 0, 20));
-        comparators.getChildren().add(new Label("Pin and Highlight:"));
+        Label pinLabel = new Label("Pin Samples to Top:");
+        String style = """
+                -fx-text-fill: #555555;
+                -fx-font-weight: bold;
+                """;
+        pinLabel.setStyle(style);
+        comparators.getChildren().add(pinLabel);
         int index = 0;
         for (Sample sample : samples) {
             Label label = new Label(sample.getName());
             CheckBox checkBox = new CheckBox();
             HBox hBox = new HBox(10);
             hBox.getChildren().addAll(label, checkBox);
-            checkboxes.add(checkBox);
+            pinCheckboxes.add(checkBox);
             comparators.getChildren().add(hBox);
             int OGIndex = index;
             checkBox.setOnAction(event -> {
                 if (checkBox.isSelected()) {
-                    moveSample(sample, OGIndex, checkboxes, "TOP");
+                    moveSample(sample, OGIndex, "TOP");
                     toggleSampleColorStrip(sample, sampleColors);
                 }
                 else {
-                    moveSample(sample, OGIndex, checkboxes, "BOTTOM");
+                    moveSample(sample, OGIndex, "BOTTOM");
                     toggleSampleColorStrip(sample, sampleColors);
 
                 }
             });
             index++;
         }
-        sidePane.getChildren().add(comparators);
-        // process blocks button
-        sidePane.getChildren().add(processBlocksButton);
 //            if (buttonResult.isPresent() && buttonResult.get() == ButtonType.OK) {
 //                int index = 0;
 //                for (CheckBox checkbox : checkboxes) {
@@ -442,7 +463,6 @@ public class View {
                 Call currentCall = sample.calls.get(j);
                 Rectangle callRect = new Rectangle(currentCall.getStart()*zoomLevel, 0, currentCall.getLength()*zoomLevel, originalTrackHeight);
                 String callId = sample.getName() + "-" + j;
-                currentCall.setCallRectId(callId);
                 callRect.setId(callId);
                 // styling
                 callRect.setOpacity(1);
@@ -594,6 +614,15 @@ public class View {
         }
     }
 
+    public void showPinPlot(HashMap<Rectangle,Color> results) {
+        Set<Rectangle> keys = results.keySet();
+        for (Rectangle rectangle : keys) {
+            rectangle.setOpacity(0.6);
+            rectangle.setFill(results.get(rectangle));
+            this.selectionWrapper.getChildren().add(rectangle);
+        }
+    }
+
     public void showPlot(HashMap<Selection, HashMap<String,Color>> results, ArrayList<Sample> samples, double zoomLevel) {
         clearMosaic();
         ArrayList<Selection> keys = new ArrayList<Selection>(results.keySet());
@@ -613,14 +642,20 @@ public class View {
         }
     }
 
-    public void moveSample(Sample sample, int OGIndex, ArrayList<CheckBox> checkBoxes, String setting) {
+    public ArrayList<CheckBox> getPinCheckboxes() {
+        return this.pinCheckboxes;
+    }
+
+
+    public void moveSample(Sample sample, int OGIndex, String setting) {
         int numChecked = 0;
+        // past refers to below here
         int pastChecked = 0;
         int newIndex;
 
         // loop through the checkboxes to see how many are currently checked (pinned to top)
-        for (int i=0; i<checkBoxes.size(); i++) {
-            if (checkBoxes.get(i).isSelected()) {
+        for (int i=0; i<pinCheckboxes.size(); i++) {
+            if (pinCheckboxes.get(i).isSelected()) {
                 numChecked++;
                 if (i > OGIndex) {
                     pastChecked++;
@@ -641,7 +676,7 @@ public class View {
                 // past all checked samples
                 newIndex = numChecked;
             }
-            else if (OGIndex == checkBoxes.size()-1) {
+            else if (OGIndex == pinCheckboxes.size()-1) {
                 // end
                 newIndex = OGIndex;
             }
@@ -748,5 +783,3 @@ public class View {
         });
     }
 }
-
-
