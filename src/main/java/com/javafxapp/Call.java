@@ -10,9 +10,9 @@ public class Call {
     private int length;
     private int start;
     private int end;
-    private String callRectId;
+    private String id;
     HashMap<String,String> genotypes = new HashMap<>();
-    public Call(String type, int length, int start, HashMap<String,String> genotypes) {
+    public Call(String type, int length, int start, String id, HashMap<String,String> genotypes) {
         this.type = type;
         if (Objects.equals(type, "DEL")) {
             this.length = Math.abs(length);
@@ -21,6 +21,7 @@ public class Call {
             this.length = length;
         }
         this.start = start;
+        this.id = id;
         this.genotypes = genotypes;
         this.end = start + this.length;
     }
@@ -48,12 +49,8 @@ public class Call {
         return this.end;
     }
 
-    public void setCallRectId(String id) {
-        this.callRectId = id;
-    }
-
-    public String getCallRectId() {
-        return this.callRectId;
+    public String getId() {
+        return this.id;
     }
 }
 
