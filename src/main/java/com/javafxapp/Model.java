@@ -23,6 +23,8 @@ public class Model {
     private final double baseFontSize = 12;
     private final int originalTrackHeight = 100;
     private Double baseCallPanelHeight;
+    // AF is shown by default
+    private int numAnnotationsShown = 1;
 
 
     public void reset() {
@@ -59,6 +61,10 @@ public class Model {
         else {
             return true;
         }
+    }
+
+    public int getNumAnnotationsShown() {
+        return this.numAnnotationsShown;
     }
 
     public void setBaseCallPanelHeight(double height) {
@@ -127,6 +133,7 @@ public class Model {
                 double selectionEnd = selection.getGenomicEnd();
                 // loop through samples
                 for (Sample checkedSample : checkedSamples) {
+                    System.out.println("___________" + checkedSample.getName());
                     // loop through sample calls
                     for (Call call : checkedSample.calls) {
                         double calcStart = call.getStart() * zoomLevel;
@@ -180,14 +187,13 @@ public class Model {
         return result;
     }
 
-    public HashMap<Selection, HashMap<String,Color>> processSelections() {
+    public HashMap<Rectangle,Color> processHaplotypeSelections(ArrayList<Sample> sampleOrder) {
         /*
-
-        Preconditions: Assumes that sample order has been manipulated before calling, if at all.
+        Preconditions: Assumes that sample order may have been manipulated by pinning
         Postconditions: Does NOT do any reordering
          */
-        HashMap<Selection, HashMap<String,Color>> result = new HashMap<>();
-        // if no selections are made, return empty linkedhashmap
+        HashMap<Rectangle,Color> result = new HashMap<>();
+        // if no selections are made, return empty hashmap
         if (this.selections.isEmpty()) {
             return result;
         }
@@ -202,18 +208,20 @@ public class Model {
                 HashMap<String, ArrayList<String>> equiv = new HashMap<>();
                 HashMap<String, Boolean> locked = new HashMap<>();
                 // for each sample, set equivalence and locked
-                for (int i=0; i<samples.size(); i++) {
+                int index = 0;
+                for (Sample sample : sampleOrder) {
                     // top sample - equivalence is itself and it is locked
-                    if (i == 0) {
-                        equiv.put(samples.get(i).getName(), new ArrayList<String>());
-                        equiv.get(samples.get(i).getName()).add(samples.get(i).getName());
-                        locked.put(samples.get(i).getName(), Boolean.TRUE);
+                    if (index == 0) {
+                        equiv.put(sample.getName(), new ArrayList<>());
+                        equiv.get(sample.getName()).add(sample.getName());
+                        locked.put(sample.getName(), Boolean.TRUE);
                     }
                     // other samples - equivalence is null (ArrayList is empty) and it is not locked
                     else {
-                        equiv.put(samples.get(i).getName(), new ArrayList<String>());
-                        locked.put(samples.get(i).getName(), Boolean.FALSE);
+                        equiv.put(sample.getName(), new ArrayList<>());
+                        locked.put(sample.getName(), Boolean.FALSE);
                     }
+                    index++;
                 }
                 // loop through each SV call
                 for (Call call : calls) {
@@ -221,10 +229,10 @@ public class Model {
                     if (call.getStart() > selectionStart && call.getEnd() < selectionEnd ||
                             call.getStart() < selectionStart && call.getEnd() > selectionStart ||
                             call.getStart() < selectionEnd && call.getEnd() > selectionEnd) {
-                        System.out.println(call.toString());
-                        // loop through each sample
-                        for (int i=0; i<samples.size(); i++) {
-                            String curName = samples.get(i).getName();
+                        System.out.println(call);
+                        // loop through each sample in view order
+                        for (int i=0; i<sampleOrder.size(); i++) {
+                            String curName = sampleOrder.get(i).getName();
                             String curGT = call.getGenotypes().get(curName);
                             // if the sample is locked do nothing
                             if (locked.get(curName) == Boolean.TRUE) {
@@ -236,8 +244,8 @@ public class Model {
                                 if (equiv.get(curName).isEmpty()) {
                                     for (int j=0; j<i; j++) {
                                         // if same genotype, add equivalence for sample
-                                        if (Objects.equals(call.getGenotypes().get(samples.get(j).getName()), curGT)) {
-                                            equiv.get(curName).add(samples.get(j).getName());
+                                        if (Objects.equals(call.getGenotypes().get(sampleOrder.get(j).getName()), curGT)) {
+                                            equiv.get(curName).add(sampleOrder.get(j).getName());
                                         }
                                     }
                                     // if no equivalence found, add itself and lock
@@ -278,9 +286,14 @@ public class Model {
                         }
                     }
                 }
-                result.put(selection, new HashMap<>());
-                for (int i=0; i<samples.size(); i++) {
-                    result.get(selection).put(samples.get(i).getName(), this.sampleColors.get(equiv.get(samples.get(i).getName()).getFirst()));
+                double calcStart = selection.getStart() * zoomLevel / selection.getZoomLevel();
+                double calcLength = selection.getLength() * zoomLevel / selection.getZoomLevel();
+                int curIndex = numAnnotationsShown;
+                for (Sample sample : sampleOrder) {
+                    Rectangle newRect = new Rectangle(calcStart, curIndex*100, calcLength, 100);
+                    Color color = this.sampleColors.get(equiv.get(sample.getName()).getFirst());
+                    result.put(newRect, color);
+                    curIndex++;
                 }
                 for (Map.Entry<String, ArrayList<String>> entry : equiv.entrySet()) {
                     System.out.println(entry.getKey() + " = " + entry.getValue());

@@ -78,7 +78,7 @@ public class Controller {
             this.model.reset();
             this.view.reset();
             model.processFile(fileContent);
-            view.initSidePane(model.getSamples(), model.getSampleColors());
+            view.initSidePane(model.getSamples(), model.getSampleColors(), model::getNumAnnotationsShown);
             view.initReference(model.getRefLength(), model.getRefName());
             view.initSamples(model.getSamples(), model.getRefLength(), model.getZoomLevel(), model.getBaseFontSize(), model.getOriginalTrackHeight());
             view.showCoords(model.getRefLength(), model.getZoomLevel(), model.getTickSpacing());
@@ -111,12 +111,11 @@ public class Controller {
     }
 
     public void processSelections() {
-        view.showPlot(model.processSelections(), model.getSamples(), model.getZoomLevel());
+        view.showPlot(model.processHaplotypeSelections(view.getSampleOrderInView()));
     }
 
     public void processBlockSelections() {
-        view.showPinPlot(model.processPinnedSelections(view.getSampleOrderInView(), view.getPinCheckboxes()));
-        //view.toggleSampleColorStrip(model.getComparators(), model.getSamples(), model.getSampleColors());
+        view.showPlot(model.processPinnedSelections(view.getSampleOrderInView(), view.getPinCheckboxes()));
     }
 
     public void updateReleaseSelection(MouseEvent e) {
