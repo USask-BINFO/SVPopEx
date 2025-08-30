@@ -12,6 +12,9 @@ import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.CycleMethod;
+import javafx.scene.paint.LinearGradient;
+import javafx.scene.paint.Stop;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
@@ -373,17 +376,6 @@ public class View {
             });
             index++;
         }
-//            if (buttonResult.isPresent() && buttonResult.get() == ButtonType.OK) {
-//                int index = 0;
-//                for (CheckBox checkbox : checkboxes) {
-//                    result.put(samples.get(index).getName(),checkbox.isSelected());
-//                    index++;
-//                }
-//            }
-//            else {
-//                return null;
-//            }
-//            return result;
     }
 
     public void initReference(int refLength, String refName) {
@@ -396,7 +388,7 @@ public class View {
         Post-conditions: Samples added to sampleOrder ArrayList
          */
         // add additional track for allele frequency
-        this.createNewAnnotationTrack(refLength, zoomLevel, "AF", baseFontSize, 100);
+        this.createNewAnnotationTrack(refLength, zoomLevel, "AF", baseFontSize, 100, "AF");
         for (Sample sample : samples) {
             sampleOrder.add(sample);
             this.createNewCallTrack(refLength, zoomLevel, sample.getName(), baseFontSize, originalTrackHeight);
@@ -404,7 +396,11 @@ public class View {
         this.callsPanel.setPannable(true);   // Optional: enables mouse drag scrolling
     }
 
-    public void createNewAnnotationTrack(int refLength, double zoomLevel, String trackName, double baseFontSize, int height) {
+    public void createNewAnnotationTrack(int refLength, double zoomLevel, String trackName, double baseFontSize, int height, String key) {
+        // types
+        // GENEREPEAT
+        // AF
+        // PILEUP
         Pane callsWrapper = new Pane();
         callsWrapper.setMinWidth(refLength * zoomLevel);
         callsWrapper.setPrefWidth(refLength * zoomLevel);
@@ -412,6 +408,34 @@ public class View {
         // force height of track (or else it will collapse if there is no content)
         callsWrapper.setMinHeight(height);
         callsWrapper.setMaxHeight(height);
+        if (Objects.equals(key, "AF")) {
+            Line topLine = new Line();
+            Line bottomLine = new Line();
+
+            // Make them dotted (dashed)
+            topLine.getStrokeDashArray().addAll(5.0, 5.0);
+            bottomLine.getStrokeDashArray().addAll(5.0, 5.0);
+
+            // Set color
+            topLine.setStroke(Color.BLACK);
+            bottomLine.setStroke(Color.BLACK);
+            LinearGradient lg = new LinearGradient(
+                    0, 0, 0, 1,      // startX, startY, endX, endY
+                    true,            // proportional
+                    CycleMethod.NO_CYCLE,
+                    new Stop(0.0, Color.RED),    // red from 0%...
+                    new Stop(0.05, Color.RED),   // ...to 5%
+                    new Stop(0.06, Color.GREEN),  // green at center
+                    new Stop(0.5, Color.GREEN),  // green at center
+                    new Stop(0.95, Color.RED),   // red starts again at 95%
+                    new Stop(1.0, Color.RED)     // red to bottom
+            );
+            BackgroundFill bgFill = new BackgroundFill(lg, CornerRadii.EMPTY, Insets.EMPTY);
+            callsWrapper.setBackground(new Background(bgFill));
+        }
+        else {
+            // do nothing
+        }
         // create labelWrapper Pane to hold sample name
         StackPane labelWrapper = new StackPane();
         labelWrapper.setMinWidth(this.sampleSpaceWidth);

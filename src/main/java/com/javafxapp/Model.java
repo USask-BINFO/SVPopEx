@@ -133,6 +133,7 @@ public class Model {
                 double selectionEnd = selection.getGenomicEnd();
                 // loop through samples
                 for (Sample checkedSample : checkedSamples) {
+                    System.out.println("___________" + checkedSample.getName());
                     // loop through sample calls
                     for (Call call : checkedSample.calls) {
                         double calcStart = call.getStart() * zoomLevel;
