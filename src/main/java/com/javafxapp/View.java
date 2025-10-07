@@ -46,7 +46,7 @@ public class View {
     Button closeSidePaneButton = new Button("\u00D7");
     HBox closeButtonContainer = new HBox(closeSidePaneButton);
     Label regionSelectLabel = new Label("Provide a Region to Select");
-    private final VBox layout = new VBox();
+    private final VBox layout = new VBox(3);
     StackPane root = new StackPane(layout, sidePane);
     private final Stage primaryStage;
     TranslateTransition slideIn = new TranslateTransition(Duration.millis(300), sidePane);
@@ -71,6 +71,10 @@ public class View {
     private final Pane ticksWrapper = new Pane();
     private EventHandler<MouseEvent> releaseSelectionHandler;
     private final int sampleSpaceWidth = 90;
+    // ----------- dropdownChromContainer --------
+    private final HBox dropdownChromContainer = new HBox(10);
+    TextField regionField = new TextField();
+    ComboBox<String> chromComboBox = new ComboBox<>();
     // ----------- controlContainer ---------
     private final HBox controlContainer = new HBox();
     Region controlContainerSpacer = new Region();
@@ -139,6 +143,18 @@ public class View {
         // ---------- MENU --------------
         fileMenu.getItems().add(importVCFItem);
         menuBar.getMenus().add(fileMenu);
+        // ---------- DROPDOWN CHROM CONTAINER ----
+        dropdownChromContainer.setAlignment(Pos.CENTER);
+        regionField.setPromptText("Enter region:");
+        chromComboBox.getItems().add("Test");
+        dropdownChromContainer.getChildren().addAll(chromComboBox, regionField);
+        // initally disable dropdown and text field
+        regionField.setDisable(true);
+        chromComboBox.setDisable(true);
+        regionField.setMinWidth(180);
+        regionField.setMaxWidth(180);
+        chromComboBox.setMinWidth(180);
+        chromComboBox.setMaxWidth(180);
         // ---------- CONTROL PANEL -----
         // push buttons right
         HBox.setHgrow(controlContainerSpacer, Priority.ALWAYS);
@@ -152,26 +168,26 @@ public class View {
         growTrackHeightButton.setDisable(true);
         sidePaneButton.setDisable(true);
         closeSidePaneButton.setDisable(true);
-        zoomInButton.setMinSize(35, 35);
-        zoomInButton.setMaxSize(35, 35);
-        zoomOutButton.setMinSize(35, 35);
-        zoomOutButton.setMaxSize(35, 35);
-        clearButton.setMinSize(50,35);
-        processButton.setMinSize(50,35);
-        processBlocksButton.setMinSize(75,35);
-        shrinkTrackHeightButton.setMinSize(75,35);
-        shrinkTrackHeightButton.setMaxSize(75,35);
-        growTrackHeightButton.setMinSize(80,35);
-        growTrackHeightButton.setMaxSize(80,35);
-        sidePaneButton.setMinSize(190,35);
-        sidePaneButton.setMaxSize(190,35);
+        zoomInButton.setMinSize(35, 25);
+        zoomInButton.setMaxSize(35, 25);
+        zoomOutButton.setMinSize(35, 25);
+        zoomOutButton.setMaxSize(35, 25);
+        clearButton.setMinSize(50,25);
+        processButton.setMinSize(50,25);
+        processBlocksButton.setMinSize(75,25);
+        shrinkTrackHeightButton.setMinSize(75,25);
+        shrinkTrackHeightButton.setMaxSize(75,25);
+        growTrackHeightButton.setMinSize(80,25);
+        growTrackHeightButton.setMaxSize(80,25);
+        sidePaneButton.setMinSize(120,25);
+        sidePaneButton.setMaxSize(120,25);
         closeSidePaneButton.setMinSize(25,25);
         closeSidePaneButton.setMaxSize(25,25);
         String circularStyle = """
     -fx-background-radius: 10px;
     -fx-border-radius: 10px;
     -fx-text-fill: #555555;
-    -fx-font-size: 16px;
+    -fx-font-size: 11px;
     -fx-font-weight: bold;
     -fx-cursor: hand;
     -fx-focus-color: transparent;
@@ -208,7 +224,7 @@ public class View {
         controlContainer.getChildren().add(sidePaneButton);
         // ---------- REF PANEL ---------
         referenceContainer.setStyle("-fx-background-color: white;");
-        layout.getChildren().addAll(menuBar, controlContainer, referenceContainer, tickContainer, callsContentContainer);
+        layout.getChildren().addAll(menuBar, dropdownChromContainer, controlContainer, referenceContainer, tickContainer, callsContentContainer);
         // reference rectangle
         this.referenceRect.setPrefHeight(50);
         referenceRect.setBackground(new Background(new BackgroundFill(Color.LIGHTGRAY, CornerRadii.EMPTY, Insets.EMPTY)));
@@ -267,6 +283,8 @@ public class View {
         this.growTrackHeightButton.setDisable(false);
         this.sidePaneButton.setDisable(false);
         this.closeSidePaneButton.setDisable(false);
+        this.regionField.setDisable(false);
+        this.chromComboBox.setDisable(false);
         double bottomOfTickContainerY = tickContainer.getLayoutY() + tickContainer.getLayoutBounds().getHeight();
         sidePane.setTranslateY(bottomOfTickContainerY);
     }
@@ -444,7 +462,7 @@ public class View {
                     new Stop(1.0, Color.RED)     // red to bottom
             );
             BackgroundFill bgFill = new BackgroundFill(lg, CornerRadii.EMPTY, Insets.EMPTY);
-            callsWrapper.setBackground(new Background(bgFill));
+            //callsWrapper.setBackground(new Background(bgFill));
         }
         else {
             // do nothing
