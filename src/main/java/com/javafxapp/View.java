@@ -73,6 +73,7 @@ public class View {
     private final int sampleSpaceWidth = 90;
     // ----------- controlContainer ---------
     private final HBox controlContainer = new HBox();
+    Region controlContainerSpacer = new Region();
     Button zoomInButton = new Button("+");
     Button zoomOutButton = new Button("-");
     Button clearButton = new Button("Clear");
@@ -135,6 +136,8 @@ public class View {
         fileMenu.getItems().add(importVCFItem);
         menuBar.getMenus().add(fileMenu);
         // ---------- CONTROL PANEL -----
+        // push buttons right
+        HBox.setHgrow(controlContainerSpacer, Priority.ALWAYS);
         // initially set buttons to disabled until file is loaded
         zoomInButton.setDisable(true);
         zoomOutButton.setDisable(true);
@@ -192,6 +195,7 @@ public class View {
         closeSidePaneButton.setStyle(circularStyle);
         closeSidePaneButton.setStyle("-fx-font-size: 12px;");
         // add button
+        controlContainer.getChildren().add(controlContainerSpacer);
         controlContainer.getChildren().add(zoomInButton);
         controlContainer.getChildren().add(zoomOutButton);
         controlContainer.getChildren().add(clearButton);
