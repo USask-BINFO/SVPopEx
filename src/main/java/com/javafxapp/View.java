@@ -99,7 +99,11 @@ public class View {
         root.setAlignment(sidePane, Pos.CENTER_RIGHT);
         sidePane.setMinWidth(300);
         sidePane.setMaxWidth(300);
-        sidePane.setStyle("-fx-background-color: #d8d5cf;");
+        sidePane.setStyle("-fx-background-color: #e0e0e0;"
+        + "-fx-background-radius: 5px;"
+        + "-fx-border-color: #c0c0c0;"
+        + "-fx-border-radius: 5px;"
+        + "-fx-border-width: 1;");
         sidePane.setTranslateX(300);
         sidePane.setAlignment(Pos.TOP_CENTER);
         // close button
@@ -250,6 +254,9 @@ public class View {
         this.callsPanel.setFitToHeight(true);
     }
 
+    /**
+     * Enable all buttons in controlContainer and sidePane. Side Pane translation also done here after layout is complete
+     **/
     public void enableControls() {
         this.zoomInButton.setDisable(false);
         this.zoomOutButton.setDisable(false);
@@ -260,6 +267,8 @@ public class View {
         this.growTrackHeightButton.setDisable(false);
         this.sidePaneButton.setDisable(false);
         this.closeSidePaneButton.setDisable(false);
+        double bottomOfTickContainerY = tickContainer.getLayoutY() + tickContainer.getLayoutBounds().getHeight();
+        sidePane.setTranslateY(bottomOfTickContainerY);
     }
 
     // sync scrollpane scroll with marker and coordinate ticks
