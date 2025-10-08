@@ -9,8 +9,8 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 
 public class Model {
-    private String refName;
-    private int refLength;
+    private LinkedHashMap<String, Integer> refContigs = new LinkedHashMap<>();
+    private int refTotalLength;
     private ArrayList<Sample> samples = new ArrayList<>();
     HashMap<String, Color> sampleColors = new HashMap<>();
     private ArrayList<Call> calls = new ArrayList<>();
@@ -79,20 +79,12 @@ public class Model {
         return this.baseCallPanelHeight;
     }
 
-    public String getRefName() {
-        return this.refName;
+    public LinkedHashMap<String,Integer> getRefContigs() {
+        return this.refContigs;
     }
 
-    public void setRefName(String name) {
-        this.refName = name;
-    }
-
-    public int getRefLength() {
-        return this.refLength;
-    }
-
-    public void setRefLength(int length) {
-        this.refLength = length;
+    public int getRefTotalLength() {
+        return this.refTotalLength;
     }
 
     public double getBaseFontSize() {
@@ -345,9 +337,8 @@ public class Model {
                 // assign reference length if match is found, otherwise exit
                 if (matcher.find()) {
                     // assign name
-                    this.setRefName(matcher.group(1));
-                    // assign length
-                    this.setRefLength(Integer.parseInt(matcher.group(2)));
+                    this.refContigs.put(matcher.group(1), Integer.parseInt(matcher.group(2)));
+                    this.refTotalLength += Integer.parseInt(matcher.group(2));
                 }
             }
             // header line with sample info
