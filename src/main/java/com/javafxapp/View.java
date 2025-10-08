@@ -58,12 +58,12 @@ public class View {
     // ------- referenceContainer ----------
     private final VBox referenceContainer = new VBox(5);
     private Rectangle marker = new Rectangle(0,0,0,50);
-    private final Pane referenceRect = new Pane();
+    private final Pane referenceWrapper = new Pane();
     private final Pane markerWrapper = new Pane();
     private Label l1 = new Label("");
     private Label l2 = new Label("");
     VBox labelsBox = new VBox(10, l1, l2);
-    StackPane rectangleWithLabels = new StackPane(referenceRect, labelsBox);
+    StackPane rectangleWithLabels = new StackPane(referenceWrapper, labelsBox);
     StackPane rectWithMarker = new StackPane(rectangleWithLabels, markerWrapper);
     // ---------- tickContainer ----------
     private final HBox tickContainer = new HBox();
@@ -146,7 +146,6 @@ public class View {
         // ---------- DROPDOWN CHROM CONTAINER ----
         dropdownChromContainer.setAlignment(Pos.CENTER);
         regionField.setPromptText("Enter region:");
-        chromComboBox.getItems().add("Test");
         dropdownChromContainer.getChildren().addAll(chromComboBox, regionField);
         // initally disable dropdown and text field
         regionField.setDisable(true);
@@ -224,23 +223,12 @@ public class View {
         controlContainer.getChildren().add(sidePaneButton);
         // ---------- REF PANEL ---------
         referenceContainer.setStyle("-fx-background-color: white;");
-        layout.getChildren().addAll(menuBar, dropdownChromContainer, controlContainer, referenceContainer, tickContainer, callsContentContainer);
         // reference rectangle
-        this.referenceRect.setPrefHeight(50);
-        referenceRect.setBackground(new Background(new BackgroundFill(Color.LIGHTGRAY, CornerRadii.EMPTY, Insets.EMPTY)));
-        referenceRect.setBorder(new Border(new BorderStroke(
-                Color.BLACK,
-                BorderStrokeStyle.SOLID,
-                CornerRadii.EMPTY,
-                new BorderWidths(1)
-        )));
-        labelsBox.setStyle("-fx-alignment: center;");
+        this.referenceWrapper.setPrefHeight(50);
         this.referenceContainer.getChildren().add(rectWithMarker);
         // marker
         markerWrapper.getChildren().add(marker);
-        marker.setFill(Color.ORANGERED);
-        marker.setOpacity(0.5);
-        marker.setOnMouseDragged(event -> updateHighLevelView(event));
+        layout.getChildren().addAll(menuBar, dropdownChromContainer, controlContainer, referenceContainer, tickContainer, callsContentContainer);
         // ---------- TICK PANEL ---------
         spaceWrapper.setMinWidth(this.sampleSpaceWidth);
         spaceWrapper.setPrefWidth(this.sampleSpaceWidth);
@@ -409,9 +397,36 @@ public class View {
         }
     }
 
-    public void initReference(int refLength, String refName) {
-        this.l1.setText(refName);
-        this.l2.setText(String.valueOf(refLength) + " bp");
+    public void initReference(LinkedHashMap<String, Integer> refContigs, int totalRefLength) {
+        referenceWrapper.setBackground(new Background(new BackgroundFill(Color.WHITE, CornerRadii.EMPTY, Insets.EMPTY)));
+//        referenceWrapper.setBorder(new Border(new BorderStroke(
+//                Color.BLACK,
+//                BorderStrokeStyle.SOLID,
+//                CornerRadii.EMPTY,
+//                new BorderWidths(1)
+//        )));
+        labelsBox.setStyle("-fx-alignment: center;");
+        marker.setFill(Color.ORANGERED);
+        marker.setOpacity(0.5);
+        marker.setOnMouseDragged(event -> updateHighLevelView(event));
+        // fill chrom combo box
+        double currentX = 0;
+        for (Map.Entry<String, Integer> refContig : refContigs.entrySet()) {
+            chromComboBox.getItems().add(refContig.getKey());
+            double percent = ((float) refContig.getValue() / totalRefLength);
+            Rectangle rect = new Rectangle();
+            rect.setX(currentX);
+            rect.setStroke(Color.DARKGRAY);
+            rect.setFill(Color.WHITE);
+            rect.setArcWidth(14);
+            rect.setArcHeight(14);
+            rect.setHeight(referenceWrapper.getHeight());
+            rect.setWidth(referenceWrapper.getWidth() * percent);
+            referenceWrapper.getChildren().add(rect);
+            currentX += rect.getWidth();
+        }
+//        this.l1.setText(refName);
+//        this.l2.setText(String.valueOf(refLength) + " bp");
     }
 
     public void initSamples(ArrayList<Sample> samples, int refLength, double zoomLevel, double baseFontSize, int originalTrackHeight) {
@@ -433,9 +448,7 @@ public class View {
         // AF
         // PILEUP
         Pane callsWrapper = new Pane();
-        callsWrapper.setMinWidth(refLength * zoomLevel);
         callsWrapper.setPrefWidth(refLength * zoomLevel);
-        callsWrapper.setMaxWidth(refLength * zoomLevel);
         // force height of track (or else it will collapse if there is no content)
         callsWrapper.setMinHeight(height);
         callsWrapper.setMaxHeight(height);
@@ -493,9 +506,7 @@ public class View {
     public void createNewCallTrack(int refLength, double zoomLevel, String sampleName, double baseFontSize, int height) {
         // create callsWrapper to hold sample calls
         Pane callsWrapper = new Pane();
-        callsWrapper.setMinWidth(refLength * zoomLevel);
         callsWrapper.setPrefWidth(refLength * zoomLevel);
-        callsWrapper.setMaxWidth(refLength * zoomLevel);
         // force height of track (or else it will collapse if there is no content)
         callsWrapper.setMinHeight(height);
         callsWrapper.setMaxHeight(height);
@@ -530,10 +541,12 @@ public class View {
         /**
          * Pre-conditions/assumptions: Gets call pane for each sample by looking up the ID
          */
+        this.samplePanel.setMinWidth(refLength * zoomLevel);
+        this.samplePanel.setMaxWidth(refLength * zoomLevel);
+
         // loops through each sample and gets the sample pane to update, access order does not matter
         for (Sample sample : samples) {
             Pane currentCalls = (Pane) this.samplesContainer.lookup("#" + sample.getName());
-            System.out.println(currentCalls.getId());
             currentCalls.getChildren().clear();
             currentCalls.setMinWidth(refLength * zoomLevel);
             currentCalls.setPrefWidth(refLength * zoomLevel);
@@ -603,6 +616,7 @@ public class View {
         callsPanel.layout();
         double viewportWidth = callsPanel.getViewportBounds().getWidth();
         double proportionVisible = viewportWidth / contentWidth;
+        System.out.println(proportionVisible);
         double markerWidth = markerWrapper.getWidth() * proportionVisible;
         marker.setWidth(markerWidth);
     }
@@ -775,11 +789,24 @@ public class View {
     }
 
     public void updateZoom(ArrayList<Sample> samples, double zoomLevel, int refLength, ArrayList<Selection> selections, double baseLevel, int tickSpacing, int originalTrackHeight) {
-        this.showCalls(samples, zoomLevel, refLength, originalTrackHeight);
-        this.showCoords(refLength, zoomLevel, tickSpacing);
-        this.updateSelections(selections, zoomLevel, baseLevel);
-        // update marker width
-        updateMarkerOnViewportScaleOrZoom(refLength, zoomLevel);
+        double contentWidth = refLength * zoomLevel;
+        double viewportWidth = callsPanel.getViewportBounds().getWidth();
+        double proportionVisible = viewportWidth / contentWidth;
+        if (proportionVisible >= 1) {
+            // Create and show an information alert
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Information");
+            alert.setHeaderText(null);  // Optional: no header text
+            alert.setContentText("This is a popup alert message!");
+            alert.showAndWait();
+        }
+        else {
+            this.showCalls(samples, zoomLevel, refLength, originalTrackHeight);
+            this.showCoords(refLength, zoomLevel, tickSpacing);
+            this.updateSelections(selections, zoomLevel, baseLevel);
+            // update marker width
+            updateMarkerOnViewportScaleOrZoom(refLength, zoomLevel);
+        }
     }
 
     public void updateHighLevelView(MouseEvent event) {
@@ -795,8 +822,6 @@ public class View {
         double clampedX = Math.max(0, Math.min(localX, markerWrapper.getWidth() - marker.getWidth()));
 
         marker.setLayoutX(clampedX);
-
-        // Optionally, print percentage across the width
         double percent = clampedX / markerWrapper.getWidth();
 
         System.out.printf("Marker at X: %.2f (%.1f%%)%n", clampedX, percent * 100);
