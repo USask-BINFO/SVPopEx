@@ -448,9 +448,7 @@ public class View {
         // AF
         // PILEUP
         Pane callsWrapper = new Pane();
-        callsWrapper.setMinWidth(refLength * zoomLevel);
         callsWrapper.setPrefWidth(refLength * zoomLevel);
-        callsWrapper.setMaxWidth(refLength * zoomLevel);
         // force height of track (or else it will collapse if there is no content)
         callsWrapper.setMinHeight(height);
         callsWrapper.setMaxHeight(height);
@@ -508,9 +506,7 @@ public class View {
     public void createNewCallTrack(int refLength, double zoomLevel, String sampleName, double baseFontSize, int height) {
         // create callsWrapper to hold sample calls
         Pane callsWrapper = new Pane();
-        callsWrapper.setMinWidth(refLength * zoomLevel);
         callsWrapper.setPrefWidth(refLength * zoomLevel);
-        callsWrapper.setMaxWidth(refLength * zoomLevel);
         // force height of track (or else it will collapse if there is no content)
         callsWrapper.setMinHeight(height);
         callsWrapper.setMaxHeight(height);
@@ -545,10 +541,14 @@ public class View {
         /**
          * Pre-conditions/assumptions: Gets call pane for each sample by looking up the ID
          */
+        this.samplePanel.setMinWidth(refLength * zoomLevel);
+        this.samplePanel.setMaxWidth(refLength * zoomLevel);
+
         // loops through each sample and gets the sample pane to update, access order does not matter
         for (Sample sample : samples) {
             Pane currentCalls = (Pane) this.samplesContainer.lookup("#" + sample.getName());
             System.out.println(currentCalls.getId());
+            currentCalls.setStyle("-fx-background-color: blue;");
             currentCalls.getChildren().clear();
             currentCalls.setMinWidth(refLength * zoomLevel);
             currentCalls.setPrefWidth(refLength * zoomLevel);
