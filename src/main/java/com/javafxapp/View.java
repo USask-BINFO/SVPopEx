@@ -547,8 +547,6 @@ public class View {
         // loops through each sample and gets the sample pane to update, access order does not matter
         for (Sample sample : samples) {
             Pane currentCalls = (Pane) this.samplesContainer.lookup("#" + sample.getName());
-            System.out.println(currentCalls.getId());
-            currentCalls.setStyle("-fx-background-color: blue;");
             currentCalls.getChildren().clear();
             currentCalls.setMinWidth(refLength * zoomLevel);
             currentCalls.setPrefWidth(refLength * zoomLevel);
@@ -618,6 +616,7 @@ public class View {
         callsPanel.layout();
         double viewportWidth = callsPanel.getViewportBounds().getWidth();
         double proportionVisible = viewportWidth / contentWidth;
+        System.out.println(proportionVisible);
         double markerWidth = markerWrapper.getWidth() * proportionVisible;
         marker.setWidth(markerWidth);
     }
@@ -790,11 +789,24 @@ public class View {
     }
 
     public void updateZoom(ArrayList<Sample> samples, double zoomLevel, int refLength, ArrayList<Selection> selections, double baseLevel, int tickSpacing, int originalTrackHeight) {
-        this.showCalls(samples, zoomLevel, refLength, originalTrackHeight);
-        this.showCoords(refLength, zoomLevel, tickSpacing);
-        this.updateSelections(selections, zoomLevel, baseLevel);
-        // update marker width
-        updateMarkerOnViewportScaleOrZoom(refLength, zoomLevel);
+        double contentWidth = refLength * zoomLevel;
+        double viewportWidth = callsPanel.getViewportBounds().getWidth();
+        double proportionVisible = viewportWidth / contentWidth;
+        if (proportionVisible >= 1) {
+            // Create and show an information alert
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Information");
+            alert.setHeaderText(null);  // Optional: no header text
+            alert.setContentText("This is a popup alert message!");
+            alert.showAndWait();
+        }
+        else {
+            this.showCalls(samples, zoomLevel, refLength, originalTrackHeight);
+            this.showCoords(refLength, zoomLevel, tickSpacing);
+            this.updateSelections(selections, zoomLevel, baseLevel);
+            // update marker width
+            updateMarkerOnViewportScaleOrZoom(refLength, zoomLevel);
+        }
     }
 
     public void updateHighLevelView(MouseEvent event) {
