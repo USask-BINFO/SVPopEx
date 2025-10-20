@@ -366,9 +366,10 @@ public class Model {
                     System.err.println("Error: Could not find type or length in expected VCF format for call. Ignoring call.");
                 }
                 else {
-                    Call currentCall = new Call(infoMatcher.group(1), Integer.parseInt(infoMatcher.group(2)), fields[0], Integer.parseInt(fields[1]), fields[2], genotypes);
+                    int absoluteStart = getAbsoluteStart(refContigs, fields[0], Integer.parseInt(fields[1])) + Integer.parseInt(fields[1]);
+                    Call currentCall = new Call(infoMatcher.group(1), Integer.parseInt(infoMatcher.group(2)), fields[0], Integer.parseInt(fields[1]), absoluteStart, fields[2], genotypes);
                     calls.add(currentCall);
-                    System.out.println(currentCall.toString());
+                    System.out.println(currentCall);
                     for (Sample sample : this.samples) {
                         String genotypeRegex = "(./.):";
                         Pattern genotypePattern = Pattern.compile(genotypeRegex);
@@ -403,6 +404,22 @@ public class Model {
             this.samples.add(sample);
             this.sampleColors.put(samples.get(i).getName(), this.getRandomColor());
         }
+    }
+
+    public int getAbsoluteStart(LinkedHashMap<String,Integer> contigs, String currentContig, int start) {
+        int sum = 0;
+        for (String key : contigs.keySet()) {
+            // if found the current contig, add start value to sum and break
+            if (Objects.equals(key, currentContig)) {
+                sum += start;
+                break;
+            }
+            // otherwise add entire contig length to sum
+            else {
+                sum += contigs.get(key);
+            }
+        }
+        return sum;
     }
 
     public void updateCoordIncrement(double viewportWidth) {

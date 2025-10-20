@@ -571,7 +571,7 @@ public class View {
             for (int j=0; j<sample.calls.size(); j++) {
                 // get the current Call and set its id for the call and rectangle
                 Call currentCall = sample.calls.get(j);
-                Rectangle callRect = new Rectangle(currentCall.getStart()*zoomLevel, 1, currentCall.getLength()*zoomLevel, originalTrackHeight-2);
+                Rectangle callRect = new Rectangle(currentCall.getAbsoluteStart()*zoomLevel, 1, currentCall.getLength()*zoomLevel, originalTrackHeight-2);
                 String callId = sample.getName() + "-" + j;
                 callRect.setId(callId);
                 // styling

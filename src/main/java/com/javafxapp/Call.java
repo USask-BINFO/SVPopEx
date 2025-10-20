@@ -10,10 +10,11 @@ public class Call {
     private int length;
     private String chromosome;
     private int start;
+    private int absoluteStart;
     private int end;
     private String id;
     HashMap<String,String> genotypes = new HashMap<>();
-    public Call(String type, int length, String chromosome, int start, String id, HashMap<String,String> genotypes) {
+    public Call(String type, int length, String chromosome, int start, int absoluteStart, String id, HashMap<String,String> genotypes) {
         this.type = type;
         if (Objects.equals(type, "DEL")) {
             this.length = Math.abs(length);
@@ -23,12 +24,13 @@ public class Call {
         }
         this.chromosome = chromosome;
         this.start = start;
+        this.absoluteStart = absoluteStart;
         this.id = id;
         this.genotypes = genotypes;
         this.end = start + this.length;
     }
     public String toString() {
-        return "TYPE " + this.type + " LENGTH " + this.length + "CHROMOSOME " + this.chromosome + " START " + this.start + " END " + this.end + " GENOTYPES " + genotypes.toString();
+        return "TYPE " + this.type + " LENGTH " + this.length + "CHROMOSOME " + this.chromosome + " START " + this.start + "ABSOLUTESTART " + this.absoluteStart + " END " + this.end + " GENOTYPES " + genotypes.toString();
     }
 
     public HashMap<String,String> getGenotypes() {
@@ -45,6 +47,10 @@ public class Call {
 
     public String getChromosome() {
         return this.chromosome;
+    }
+
+    public int getAbsoluteStart() {
+        return this.absoluteStart;
     }
 
     public int getStart() {
