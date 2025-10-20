@@ -17,8 +17,8 @@ public class Model {
     private ArrayList<Selection> selections = new ArrayList<>();
     private double zoomLevel = 0.2;
     private double baseLevel = 0.2;
-    private ArrayList<Integer> increments = new ArrayList<>(Arrays.asList(100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000, 500000, 1000000, 2000000, 5000000, 10000000, 20000000, 50000000, 100000000));
-    private int coordIncrementIndex = 3;
+    private ArrayList<Integer> increments = new ArrayList<>(Arrays.asList(100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000, 500000, 1000000, 2000000, 5000000, 10000000, 20000000, 50000000));
+    private int coordIncrementIndex;
     private double trackHeightScale = 1;
     private final double baseFontSize = 12;
     private final int originalTrackHeight = 100;
@@ -64,9 +64,25 @@ public class Model {
         }
     }
 
-    public void initZoom(double baseLevel) {
+    public void initZoom(double baseLevel, double viewportWidth) {
         this.baseLevel = baseLevel;
         this.zoomLevel = baseLevel;
+        double genomicProportion = getGenomicProportion(viewportWidth);
+        System.out.println("GENOMIC PROPORTION " + genomicProportion);
+        if (genomicProportion < 50000000) {
+            this.coordIncrementIndex = 0;
+            updateCoordIncrement(viewportWidth);
+            System.out.println(this.coordIncrementIndex);
+        }
+        else {
+            this.coordIncrementIndex = -1;
+        }
+    }
+
+    public double getGenomicProportion(double viewportWidth) {
+        double contentWidth = refTotalLength * zoomLevel;
+        double proportionVisible = viewportWidth / contentWidth;
+        return proportionVisible * refTotalLength;
     }
 
     public int getNumAnnotationsShown() {
@@ -423,36 +439,39 @@ public class Model {
     }
 
     public void updateCoordIncrement(double viewportWidth) {
-        int tickSpacing = increments.get(coordIncrementIndex);
-        //double rawStep = viewportWidth/
-        int lowerThreshold = 150;
-        int upperThreshold = 350;
-        // distance from first to second tick because first tick will be at 0
-        double tickDist = tickSpacing*zoomLevel;
-        // increase increment
-        if (tickDist < lowerThreshold) {
-            if (coordIncrementIndex+1 == increments.size()) {
-                // do nothing, already at largest
-            }
-            else {
-                coordIncrementIndex++;
-            }
-        }
-        // lower increment
-        else if (tickDist > upperThreshold) {
-            if (coordIncrementIndex == 0) {
-                // do nothing, already at lowest
-            }
-            else {
-                coordIncrementIndex--;
-            }
+        double genomicProportion = getGenomicProportion(viewportWidth);
+        System.out.println(genomicProportion);
+        System.out.println(viewportWidth);
+        if (genomicProportion < 50000000) {
+            double ideal = genomicProportion / 7;
+            this.coordIncrementIndex = getClosestIntegerValue(ideal, increments);
         }
         else {
-            // do nothing, tick increments stay the same
+            this.coordIncrementIndex = -1;
         }
     }
 
+    public int getClosestIntegerValue(double idealSpacing, ArrayList<Integer> definedIncrements) {
+        int closestIndex = 0;
+        double minDiff = Math.abs(definedIncrements.getFirst() - idealSpacing);
+
+        for (int i = 1; i < definedIncrements.size(); i++) {
+            double diff = Math.abs(definedIncrements.get(i) - idealSpacing);
+            if (diff < minDiff) {
+                minDiff = diff;
+                closestIndex = i;
+            }
+        }
+
+        return closestIndex;
+    }
+
     public int getTickSpacing() {
-        return increments.get(coordIncrementIndex);
+        if (this.coordIncrementIndex == -1) {
+            return -1;
+        }
+        else {
+            return increments.get(coordIncrementIndex);
+        }
     }
 }

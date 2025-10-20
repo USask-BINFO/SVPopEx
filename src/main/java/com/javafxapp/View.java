@@ -609,42 +609,71 @@ public class View {
         }
     }
 
-    public double initZoomAndCoords(int refLength, int tickSpacing) {
+    public double initZoomAndCoords(int refLength, int tickSpacing, LinkedHashMap<String, Integer> refContigs) {
         this.ticksWrapper.getChildren().clear();
         // calculate zoom level such that whole genome is in view
         double zoomLevel = callsPanel.getViewportBounds().getWidth() / refLength;
         System.out.println("THE BASE LEVEL IS:" + zoomLevel);
-        // display ticks
-        for (int x = 0; x <= refLength; x += tickSpacing) {
+        // display refContigs ticks
+        int xval = 1;
+        for (Map.Entry<String, Integer> refContig : refContigs.entrySet()) {
             // coordinate
-            Text text = new Text(String.valueOf(x));
+            System.out.println("XVAL FOR " + refContig.getKey() + " AND XVAL " + xval);
+            Text text = new Text(String.valueOf(refContig.getKey()));
             double textWidth = text.getLayoutBounds().getWidth();
-            text.setX((x*zoomLevel) - textWidth / 2);
-            text.setY(20);
+            text.setX((xval*zoomLevel) - textWidth / 2);
+            text.setY(25);
             // tick
-            Line tick = new Line(x*zoomLevel, 0, x*zoomLevel, 5);
+            Line tick = new Line(xval*zoomLevel, 0, xval*zoomLevel, 12);
             // add to pane
             this.ticksWrapper.getChildren().add(tick);
             this.ticksWrapper.getChildren().add(text);
+            xval += refContig.getValue();
         }
         updateMarkerOnViewportScaleOrZoom(refLength, zoomLevel);
         return zoomLevel;
     }
 
-    public void updateCoords(int refLength, double zoomLevel, int tickSpacing) {
+    public void updateCoords(int refLength, double zoomLevel, int tickSpacing, LinkedHashMap<String, Integer> refContigs) {
         this.ticksWrapper.getChildren().clear();
-        // display ticks
-        for (int x = 0; x <= refLength; x += tickSpacing) {
+        int xval = 1;
+        for (Map.Entry<String, Integer> refContig : refContigs.entrySet()) {
             // coordinate
-            Text text = new Text(String.valueOf(x));
+            Text text = new Text(String.valueOf(refContig.getKey()));
             double textWidth = text.getLayoutBounds().getWidth();
-            text.setX((x*zoomLevel) - textWidth / 2);
-            text.setY(20);
+            text.setX((xval*zoomLevel) - textWidth / 2);
+            text.setY(25);
             // tick
-            Line tick = new Line(x*zoomLevel, 0, x*zoomLevel, 5);
+            Line tick = new Line(xval*zoomLevel, 0, xval*zoomLevel, 12);
             // add to pane
             this.ticksWrapper.getChildren().add(tick);
             this.ticksWrapper.getChildren().add(text);
+            xval += refContig.getValue();
+        }
+        if (tickSpacing == -1) {
+            // do nothing, too zoomed out
+        }
+        else {
+            // display ticks
+            int prev = 0;
+            for (Map.Entry<String, Integer> refContig : refContigs.entrySet()) {
+                for (int x = 0; x <= refContig.getValue(); x += tickSpacing) {
+                    System.out.println(refContig.getKey());
+                    int loc = x + prev;
+                    System.out.println("PREV " + prev);
+                    // coordinate
+                    Text text = new Text(String.valueOf(x));
+                    double textWidth = text.getLayoutBounds().getWidth();
+                    text.setX((loc * zoomLevel) - textWidth / 2);
+                    text.setY(20);
+                    // tick
+                    Line tick = new Line(loc * zoomLevel, 0, loc * zoomLevel, 5);
+                    // add to pane
+                    this.ticksWrapper.getChildren().add(tick);
+                    this.ticksWrapper.getChildren().add(text);
+                }
+                prev += refContig.getValue();
+            }
         }
     }
 
@@ -673,6 +702,10 @@ public class View {
         this.callsPanel.getTransforms().add(scale);
     }
 
+    public double getViewportWidth() {
+        return this.callsPanel.getViewportBounds().getWidth();
+    }
+
     public void redrawSampleInfoAfterScale(ArrayList<Sample> samples, double baseFontSize, double trackHeightScale, int originalTrackHeight) {
         /**
          * Pre-conditions/assumptions: Gets info pane for each sample by looking up the ID
@@ -686,10 +719,6 @@ public class View {
             Label sampleLabel = (Label) labelWrapper.getChildren().getFirst();
             sampleLabel.setFont(Font.font(sampleLabel.getFont().getFamily(), baseFontSize));
         }
-    }
-
-    public double getViewportWidth() {
-        return callsPanel.getViewportBounds().getWidth();
     }
 
     public Rectangle getSelectionRectangle() {
@@ -826,7 +855,7 @@ public class View {
         }
     }
 
-    public void updateZoom(ArrayList<Sample> samples, double zoomLevel, int refLength, ArrayList<Selection> selections, double baseLevel, int tickSpacing, int originalTrackHeight) {
+    public void updateZoom(ArrayList<Sample> samples, double zoomLevel, int refLength, ArrayList<Selection> selections, double baseLevel, int tickSpacing, int originalTrackHeight, LinkedHashMap<String, Integer> refContigs) {
         System.out.println(this.callsPanel.getContent().getLayoutBounds().getWidth());
         System.out.println(this.ticksWrapper.getWidth());
         double contentWidth = refLength * zoomLevel;
@@ -842,7 +871,7 @@ public class View {
         }
         else {
             this.showCalls(samples, zoomLevel, refLength, originalTrackHeight);
-            this.updateCoords(refLength, zoomLevel, tickSpacing);
+            this.updateCoords(refLength, zoomLevel, tickSpacing, refContigs);
             this.updateSelections(selections, zoomLevel, baseLevel);
             // update marker width
             updateMarkerOnViewportScaleOrZoom(refLength, zoomLevel);
