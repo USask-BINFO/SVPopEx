@@ -78,10 +78,10 @@ public class Controller {
             this.model.reset();
             this.view.reset();
             model.processFile(fileContent);
+            model.initZoom(view.initZoomAndCoords(model.getRefTotalLength(), model.getTickSpacing()));
             view.initSidePane(model.getSamples(), model.getSampleColors(), model::getNumAnnotationsShown);
             view.initReference(model.getRefContigs(), model.getRefTotalLength());
             view.initSamples(model.getSamples(), model.getRefTotalLength(), model.getZoomLevel(), model.getBaseFontSize(), model.getOriginalTrackHeight());
-            view.showCoords(model.getRefTotalLength(), model.getZoomLevel(), model.getTickSpacing());
             view.showCalls(model.getSamples(), model.getZoomLevel(), model.getRefTotalLength(), model.getOriginalTrackHeight());
             view.enableControls();
 

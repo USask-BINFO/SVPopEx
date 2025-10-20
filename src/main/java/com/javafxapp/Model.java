@@ -16,7 +16,7 @@ public class Model {
     private ArrayList<Call> calls = new ArrayList<>();
     private ArrayList<Selection> selections = new ArrayList<>();
     private double zoomLevel = 0.2;
-    private final double baseLevel = 0.2;
+    private double baseLevel = 0.2;
     private ArrayList<Integer> increments = new ArrayList<>(Arrays.asList(100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000, 500000, 1000000, 2000000, 5000000, 10000000, 20000000, 50000000, 100000000));
     private int coordIncrementIndex = 3;
     private double trackHeightScale = 1;
@@ -42,6 +42,7 @@ public class Model {
     }
 
     public double getZoomLevel() {
+        System.out.println("CURRENT ZOOM LEVEL IS " + this.zoomLevel);
         return this.zoomLevel;
     }
 
@@ -61,6 +62,11 @@ public class Model {
         else {
             return true;
         }
+    }
+
+    public void initZoom(double baseLevel) {
+        this.baseLevel = baseLevel;
+        this.zoomLevel = baseLevel;
     }
 
     public int getNumAnnotationsShown() {
@@ -328,10 +334,11 @@ public class Model {
 
     public void processFile(String fileContent) {
         String[] lines = fileContent.split("\\r?\\n");  // Splits on \n or \r\n
+        int startCoordinate = 1;
         for (String line : lines) {
             // comment line
             if (line.startsWith("##")) {
-                String regex = "ID=(.+),length=(\\d+)>";
+                String regex = "contig=<ID=(.+),length=(\\d+)>";
                 Pattern pattern = Pattern.compile(regex);
                 Matcher matcher = pattern.matcher(line);
                 // assign reference length if match is found, otherwise exit
@@ -359,8 +366,9 @@ public class Model {
                     System.err.println("Error: Could not find type or length in expected VCF format for call. Ignoring call.");
                 }
                 else {
-                    Call currentCall = new Call(infoMatcher.group(1), Integer.parseInt(infoMatcher.group(2)), Integer.parseInt(fields[1]), fields[2], genotypes);
+                    Call currentCall = new Call(infoMatcher.group(1), Integer.parseInt(infoMatcher.group(2)), fields[0], Integer.parseInt(fields[1]), fields[2], genotypes);
                     calls.add(currentCall);
+                    System.out.println(currentCall.toString());
                     for (Sample sample : this.samples) {
                         String genotypeRegex = "(./.):";
                         Pattern genotypePattern = Pattern.compile(genotypeRegex);

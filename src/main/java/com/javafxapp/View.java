@@ -22,6 +22,7 @@ import javafx.scene.text.Text;
 import javafx.scene.transform.Scale;
 import javafx.stage.Stage;
 import javafx.util.Duration;
+import javafx.stage.Screen;
 
 import java.util.*;
 import java.util.function.Supplier;
@@ -250,6 +251,9 @@ public class View {
         this.callsContentContainer.getChildren().add(samplesInfoContainer);
         this.callsContentContainer.getChildren().add(callsPanel);
         this.callsPanel.setStyle("-fx-focus-color: transparent; -fx-faint-focus-color: transparent;");
+        this.callsPanel.setMinWidth(Screen.getPrimary().getBounds().getWidth() - sampleSpaceWidth);
+        this.callsPanel.setPrefWidth(Screen.getPrimary().getBounds().getWidth() - sampleSpaceWidth);
+        this.callsPanel.setMaxWidth(Screen.getPrimary().getBounds().getWidth() - sampleSpaceWidth);
         selectionWrapper.setPickOnBounds(false);
         this.callsPanel.hvalueProperty().addListener((obs, oldVal, newVal) -> {
             this.syncScroll(newVal);
@@ -411,9 +415,16 @@ public class View {
         marker.setOnMouseDragged(event -> updateHighLevelView(event));
         // fill chrom combo box
         double currentX = 0;
+        // add <ALL> as a chrom dropdown option and set as default
+        chromComboBox.getItems().add("<ALL>");
+        chromComboBox.setValue("<ALL>");
+        // add each chromosome from VCF
         for (Map.Entry<String, Integer> refContig : refContigs.entrySet()) {
+            // add to chromComboBox dropdown
             chromComboBox.getItems().add(refContig.getKey());
+            // get percentage of total reference
             double percent = ((float) refContig.getValue() / totalRefLength);
+            // add rectangle to referenceWrapper
             Rectangle rect = new Rectangle();
             rect.setX(currentX);
             rect.setStroke(Color.DARKGRAY);
@@ -425,6 +436,11 @@ public class View {
             referenceWrapper.getChildren().add(rect);
             currentX += rect.getWidth();
         }
+        // handle chromComboBox selection
+        chromComboBox.setOnAction(e -> {
+            String selected = chromComboBox.getValue();
+            System.out.println("SELECTED: " + selected);
+        });
 //        this.l1.setText(refName);
 //        this.l2.setText(String.valueOf(refLength) + " bp");
     }
@@ -594,8 +610,12 @@ public class View {
         }
     }
 
-    public void showCoords(int refLength, double zoomLevel, int tickSpacing) {
+    public double initZoomAndCoords(int refLength, int tickSpacing) {
         this.ticksWrapper.getChildren().clear();
+        // calculate zoom level such that whole genome is in view
+        double zoomLevel = callsPanel.getViewportBounds().getWidth() / refLength;
+        System.out.println("THE BASE LEVEL IS:" + zoomLevel);
+        // display ticks
         for (int x = 0; x <= refLength; x += tickSpacing) {
             // coordinate
             Text text = new Text(String.valueOf(x));
@@ -608,6 +628,8 @@ public class View {
             this.ticksWrapper.getChildren().add(tick);
             this.ticksWrapper.getChildren().add(text);
         }
+        updateMarkerOnViewportScaleOrZoom(refLength, zoomLevel);
+        return zoomLevel;
     }
 
     public void updateMarkerOnViewportScaleOrZoom(int refLength, double zoomLevel) {
@@ -616,7 +638,7 @@ public class View {
         callsPanel.layout();
         double viewportWidth = callsPanel.getViewportBounds().getWidth();
         double proportionVisible = viewportWidth / contentWidth;
-        System.out.println(proportionVisible);
+        System.out.println("PROPORTION VISIBLE" + proportionVisible);
         double markerWidth = markerWrapper.getWidth() * proportionVisible;
         marker.setWidth(markerWidth);
     }
@@ -802,7 +824,7 @@ public class View {
         }
         else {
             this.showCalls(samples, zoomLevel, refLength, originalTrackHeight);
-            this.showCoords(refLength, zoomLevel, tickSpacing);
+            this.initZoomAndCoords(refLength, tickSpacing);
             this.updateSelections(selections, zoomLevel, baseLevel);
             // update marker width
             updateMarkerOnViewportScaleOrZoom(refLength, zoomLevel);

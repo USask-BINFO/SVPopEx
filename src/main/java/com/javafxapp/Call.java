@@ -8,11 +8,12 @@ import java.util.regex.Pattern;
 public class Call {
     private String type;
     private int length;
+    private String chromosome;
     private int start;
     private int end;
     private String id;
     HashMap<String,String> genotypes = new HashMap<>();
-    public Call(String type, int length, int start, String id, HashMap<String,String> genotypes) {
+    public Call(String type, int length, String chromosome, int start, String id, HashMap<String,String> genotypes) {
         this.type = type;
         if (Objects.equals(type, "DEL")) {
             this.length = Math.abs(length);
@@ -20,13 +21,14 @@ public class Call {
         else {
             this.length = length;
         }
+        this.chromosome = chromosome;
         this.start = start;
         this.id = id;
         this.genotypes = genotypes;
         this.end = start + this.length;
     }
     public String toString() {
-        return "TYPE " + this.type + " LENGTH " + this.length + " START " + this.start + " END " + this.end + " GENOTYPES " + genotypes.toString();
+        return "TYPE " + this.type + " LENGTH " + this.length + "CHROMOSOME " + this.chromosome + " START " + this.start + " END " + this.end + " GENOTYPES " + genotypes.toString();
     }
 
     public HashMap<String,String> getGenotypes() {
@@ -39,6 +41,10 @@ public class Call {
 
     public int getLength() {
         return this.length;
+    }
+
+    public String getChromosome() {
+        return this.chromosome;
     }
 
     public int getStart() {
