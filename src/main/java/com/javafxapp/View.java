@@ -1,8 +1,10 @@
 package com.javafxapp;
 
 import javafx.animation.TranslateTransition;
+import javafx.beans.binding.Bindings;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
@@ -403,14 +405,11 @@ public class View {
 
     public void initReference(LinkedHashMap<String, Integer> refContigs, int totalRefLength) {
         referenceWrapper.setBackground(new Background(new BackgroundFill(Color.WHITE, CornerRadii.EMPTY, Insets.EMPTY)));
-//        referenceWrapper.setBorder(new Border(new BorderStroke(
-//                Color.BLACK,
-//                BorderStrokeStyle.SOLID,
-//                CornerRadii.EMPTY,
-//                new BorderWidths(1)
-//        )));
         labelsBox.setStyle("-fx-alignment: center;");
-        marker.setFill(Color.ORANGERED);
+        // view box styling
+        marker.setFill(Color.TRANSPARENT);
+        marker.setStroke(Color.ORANGERED);
+        marker.setStrokeWidth(3);
         marker.setOpacity(0.5);
         marker.setOnMouseDragged(event -> updateHighLevelView(event));
         // fill chrom combo box
@@ -632,6 +631,23 @@ public class View {
         return zoomLevel;
     }
 
+    public void updateCoords(int refLength, double zoomLevel, int tickSpacing) {
+        this.ticksWrapper.getChildren().clear();
+        // display ticks
+        for (int x = 0; x <= refLength; x += tickSpacing) {
+            // coordinate
+            Text text = new Text(String.valueOf(x));
+            double textWidth = text.getLayoutBounds().getWidth();
+            text.setX((x*zoomLevel) - textWidth / 2);
+            text.setY(20);
+            // tick
+            Line tick = new Line(x*zoomLevel, 0, x*zoomLevel, 5);
+            // add to pane
+            this.ticksWrapper.getChildren().add(tick);
+            this.ticksWrapper.getChildren().add(text);
+        }
+    }
+
     public void updateMarkerOnViewportScaleOrZoom(int refLength, double zoomLevel) {
         // set width
         double contentWidth = refLength * zoomLevel;
@@ -811,6 +827,8 @@ public class View {
     }
 
     public void updateZoom(ArrayList<Sample> samples, double zoomLevel, int refLength, ArrayList<Selection> selections, double baseLevel, int tickSpacing, int originalTrackHeight) {
+        System.out.println(this.callsPanel.getContent().getLayoutBounds().getWidth());
+        System.out.println(this.ticksWrapper.getWidth());
         double contentWidth = refLength * zoomLevel;
         double viewportWidth = callsPanel.getViewportBounds().getWidth();
         double proportionVisible = viewportWidth / contentWidth;
@@ -824,7 +842,7 @@ public class View {
         }
         else {
             this.showCalls(samples, zoomLevel, refLength, originalTrackHeight);
-            this.initZoomAndCoords(refLength, tickSpacing);
+            this.updateCoords(refLength, zoomLevel, tickSpacing);
             this.updateSelections(selections, zoomLevel, baseLevel);
             // update marker width
             updateMarkerOnViewportScaleOrZoom(refLength, zoomLevel);
