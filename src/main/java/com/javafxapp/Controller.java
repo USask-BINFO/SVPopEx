@@ -78,10 +78,13 @@ public class Controller {
             this.model.reset();
             this.view.reset();
             model.processFile(fileContent);
+            // get initial zoom level
+            double zoomLevel = view.initZoomAndCoords(model.getRefTotalLength(), model.getTickSpacing(), model.getRefContigs());
+            model.initZoom(zoomLevel, view.getViewportWidth());
+            view.updateCoords(model.getRefTotalLength(), model.getZoomLevel(), model.getTickSpacing(), model.getRefContigs());
             view.initSidePane(model.getSamples(), model.getSampleColors(), model::getNumAnnotationsShown);
             view.initReference(model.getRefContigs(), model.getRefTotalLength());
             view.initSamples(model.getSamples(), model.getRefTotalLength(), model.getZoomLevel(), model.getBaseFontSize(), model.getOriginalTrackHeight());
-            view.showCoords(model.getRefTotalLength(), model.getZoomLevel(), model.getTickSpacing());
             view.showCalls(model.getSamples(), model.getZoomLevel(), model.getRefTotalLength(), model.getOriginalTrackHeight());
             view.enableControls();
 
@@ -96,13 +99,13 @@ public class Controller {
     public void updateZoomIn() {
         double level = model.updateZoomLevel(1.3);
         model.updateCoordIncrement(view.getViewportWidth());
-        view.updateZoom(model.getSamples(), level, model.getRefTotalLength(), model.getSelections(), model.getBaseLevel(), model.getTickSpacing(), model.getOriginalTrackHeight());
+        view.updateZoom(model.getSamples(), level, model.getRefTotalLength(), model.getSelections(), model.getBaseLevel(), model.getTickSpacing(), model.getOriginalTrackHeight(), model.getRefContigs());
     }
 
     public void updateZoomOut() {
         double level = model.updateZoomLevel(0.7);
         model.updateCoordIncrement(view.getViewportWidth());
-        view.updateZoom(model.getSamples(), level, model.getRefTotalLength(), model.getSelections(), model.getBaseLevel(), model.getTickSpacing(), model.getOriginalTrackHeight());
+        view.updateZoom(model.getSamples(), level, model.getRefTotalLength(), model.getSelections(), model.getBaseLevel(), model.getTickSpacing(), model.getOriginalTrackHeight(), model.getRefContigs());
     }
 
     public void clearSelections() {
