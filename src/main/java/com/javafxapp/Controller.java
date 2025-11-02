@@ -80,7 +80,7 @@ public class Controller {
             model.processFile(fileContent);
             model.initZoom(view.initZoomAndCoords(model.getRefTotalLength(), model.getTickSpacing()));
             view.initSidePane(model.getSamples(), model.getSampleColors(), model::getNumAnnotationsShown);
-            view.initReference(model.getRefContigs(), model.getRefTotalLength());
+            view.initReference(model.getRefChromosomes(), model.getRefTotalLength());
             view.initSamples(model.getSamples(), model.getRefTotalLength(), model.getZoomLevel(), model.getBaseFontSize(), model.getOriginalTrackHeight());
             view.showCalls(model.getSamples(), model.getZoomLevel(), model.getRefTotalLength(), model.getOriginalTrackHeight());
             view.enableControls();

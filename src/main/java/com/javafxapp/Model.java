@@ -9,7 +9,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 
 public class Model {
-    private LinkedHashMap<String, Integer> refContigs = new LinkedHashMap<>();
+    private LinkedHashMap<String,Chromosome> refChromosomes = new LinkedHashMap<>();
     private int refTotalLength;
     private ArrayList<Sample> samples = new ArrayList<>();
     HashMap<String, Color> sampleColors = new HashMap<>();
@@ -85,8 +85,8 @@ public class Model {
         return this.baseCallPanelHeight;
     }
 
-    public LinkedHashMap<String,Integer> getRefContigs() {
-        return this.refContigs;
+    public LinkedHashMap<String,Chromosome> getRefChromosomes() {
+        return this.refChromosomes;
     }
 
     public int getRefTotalLength() {
@@ -344,7 +344,7 @@ public class Model {
                 // assign reference length if match is found, otherwise exit
                 if (matcher.find()) {
                     // assign name
-                    this.refContigs.put(matcher.group(1), Integer.parseInt(matcher.group(2)));
+                    this.refChromosomes.put(matcher.group(1), new Chromosome(matcher.group(1), Integer.parseInt(matcher.group(2)), this.refTotalLength+1));
                     this.refTotalLength += Integer.parseInt(matcher.group(2));
                 }
             }
@@ -355,6 +355,8 @@ public class Model {
             }
             // call line
             else {
+                // add <ALL> to refChromosomes now that all header lines have been processed and total ref length is known
+                this.refChromosomes.put("<ALL>", new Chromosome("<ALL>", this.refTotalLength, 1));
                 int startCol = 9;
                 String[] fields = line.split("\t");
                 HashMap<String,String> genotypes = new HashMap<>();
@@ -366,7 +368,7 @@ public class Model {
                     System.err.println("Error: Could not find type or length in expected VCF format for call. Ignoring call.");
                 }
                 else {
-                    int absoluteStart = getAbsoluteStart(refContigs, fields[0], Integer.parseInt(fields[1])) + Integer.parseInt(fields[1]);
+                    int absoluteStart = refChromosomes.get(fields[0]).getAbsoluteStart() + Integer.parseInt(fields[1]);
                     Call currentCall = new Call(infoMatcher.group(1), Integer.parseInt(infoMatcher.group(2)), fields[0], Integer.parseInt(fields[1]), absoluteStart, fields[2], genotypes);
                     calls.add(currentCall);
                     System.out.println(currentCall);
@@ -404,22 +406,6 @@ public class Model {
             this.samples.add(sample);
             this.sampleColors.put(samples.get(i).getName(), this.getRandomColor());
         }
-    }
-
-    public int getAbsoluteStart(LinkedHashMap<String,Integer> contigs, String currentContig, int start) {
-        int sum = 0;
-        for (String key : contigs.keySet()) {
-            // if found the current contig, add start value to sum and break
-            if (Objects.equals(key, currentContig)) {
-                sum += start;
-                break;
-            }
-            // otherwise add entire contig length to sum
-            else {
-                sum += contigs.get(key);
-            }
-        }
-        return sum;
     }
 
     public void updateCoordIncrement(double viewportWidth) {
