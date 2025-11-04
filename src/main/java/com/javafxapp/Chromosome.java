@@ -24,4 +24,8 @@ public class Chromosome {
     public int getLength() {
         return this.length;
     }
+
+    public String getName() {
+        return this.name;
+    }
 }

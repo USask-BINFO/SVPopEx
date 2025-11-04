@@ -408,7 +408,7 @@ public class View {
         this.callsPanel.setPannable(true);   // Optional: enables mouse drag scrolling
     }
 
-    public void showCalls(Chromosome region, ArrayList<Sample> samples, double zoomLevel, int refLength, int originalTrackHeight) {
+    public void showCalls(String region, ArrayList<Sample> samples, double zoomLevel, int refLength, int originalTrackHeight) {
         /**
          * Pre-conditions/assumptions: Gets call pane for each sample by looking up the ID
          */
@@ -423,9 +423,9 @@ public class View {
             currentCalls.setPrefWidth(refLength * zoomLevel);
             currentCalls.setMaxWidth(refLength * zoomLevel);
             // loop through each call
-            for (int j=0; j<sample.calls.size(); j++) {
+            for (int j=0; j<sample.getRegionCalls(region).size(); j++) {
                 // get the current Call and set its id for the call and rectangle
-                Call currentCall = sample.calls.get(j);
+                Call currentCall = sample.getRegionCalls(region).get(j);
                 Rectangle callRect = new Rectangle(currentCall.getAbsoluteStart()*zoomLevel, 1, currentCall.getLength()*zoomLevel, originalTrackHeight-2);
                 String callId = sample.getName() + "-" + j;
                 callRect.setId(callId);
@@ -488,7 +488,7 @@ public class View {
     }
 
     public void showRegion(Chromosome region, double zoomLevel, int totalRefLength, int originalTrackHeight) {
-        showCalls(region, sampleOrder, zoomLevel, totalRefLength, originalTrackHeight);
+        showCalls(region.getName(), sampleOrder, zoomLevel, totalRefLength, originalTrackHeight);
         //updateMarkerOnViewportScaleOrZoom(refLength, zoomLevel);
     }
 
@@ -846,7 +846,7 @@ public class View {
             alert.showAndWait();
         }
         else {
-            this.showCalls(region, samples, zoomLevel, refLength, originalTrackHeight);
+            this.showCalls(region.getName(), samples, zoomLevel, refLength, originalTrackHeight);
             this.initZoomAndCoordsWG(refLength, tickSpacing);
             this.updateSelections(selections, zoomLevel);
             // update marker width

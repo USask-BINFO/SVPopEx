@@ -138,7 +138,7 @@ public class Model {
                 for (Sample checkedSample : checkedSamples) {
                     System.out.println("___________" + checkedSample.getName());
                     // loop through sample calls
-                    for (Call call : checkedSample.calls) {
+                    for (Call call : checkedSample.getCalls()) {
                         double calcStart = call.getStart() * zoomLevel;
                         double calcLength = call.getLength() * zoomLevel;
                         // if entire call is in selection area, then loop through genotypes
@@ -355,13 +355,13 @@ public class Model {
             }
             // header line with sample info
             else if (line.startsWith("#")) {
+                // add <ALL> to refChromosomes now that all header lines have been processed and total ref length is known
+                this.refChromosomes.put("<ALL>", new Chromosome("<ALL>", this.refTotalLength, 1));
                 String[] header = line.split("\t");
-                createSamples(Arrays.copyOfRange(header, 9, header.length));
+                createSamples(Arrays.copyOfRange(header, 9, header.length), this.refChromosomes);
             }
             // call line
             else {
-                // add <ALL> to refChromosomes now that all header lines have been processed and total ref length is known
-                this.refChromosomes.put("<ALL>", new Chromosome("<ALL>", this.refTotalLength, 1));
                 int startCol = 9;
                 String[] fields = line.split("\t");
                 HashMap<String,String> genotypes = new HashMap<>();
@@ -392,7 +392,10 @@ public class Model {
                                 genotypes.put(sample.getName(), genotypeMatcher.group(1));
                                 // if has the variant, add
                                 if (Objects.equals(genotypeMatcher.group(1), "0/1") || Objects.equals(genotypeMatcher.group(1), "1/1")) {
-                                    sample.addCall(currentCall);
+                                    // add call for chromosome (in VCF)
+                                    sample.addCall(fields[0], currentCall);
+                                    // add call to <ALL>
+                                    sample.addCall("<ALL>", currentCall);
                                 }
                             }
                         } else {
@@ -405,9 +408,9 @@ public class Model {
         }
     }
 
-    public void createSamples(String[] sampleNames) {
+    public void createSamples(String[] sampleNames, LinkedHashMap<String, Chromosome> regions) {
         for (int i=0; i<sampleNames.length; i++) {
-            Sample sample = new Sample(sampleNames[i]);
+            Sample sample = new Sample(sampleNames[i], regions);
             this.samples.add(sample);
             this.sampleColors.put(samples.get(i).getName(), this.getRandomColor());
         }
