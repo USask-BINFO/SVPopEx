@@ -88,7 +88,7 @@ public class Controller {
             view.initSidePane(model.getSamples(), model.getSampleColors(), model::getNumAnnotationsShown);
             view.initReference(model.getRefChromosomes(), model.getRefTotalLength());
             view.initSamples(model.getSamples(), model.getRefTotalLength(), model.getZoomLevel(), model.getBaseFontSize(), model.getOriginalTrackHeight());
-            view.showCalls("<ALL>", model.getSamples(), model.getZoomLevel(), model.getRefTotalLength(), model.getOriginalTrackHeight());
+            view.showCalls(model.getRefChromosomes().get("<ALL>"), model.getSamples(), model.getZoomLevel(), model.getOriginalTrackHeight());
             view.enableControls();
         }
         // user closed or cancelled file
@@ -140,6 +140,8 @@ public class Controller {
 
     public void showRegion(String selectedChrom) {
         Chromosome region = model.getRefChromosomes().get(selectedChrom);
+        model.setCurrentRegion(region);
+        System.out.println("CURRENT REGION IS " + model.getCurrentRegion().getName());
         model.updateZoomLevelByRegion(region, view.getViewportWidth());
         view.showRegion(region, model.getZoomLevel(), model.getRefTotalLength(), model.getOriginalTrackHeight());
     }
