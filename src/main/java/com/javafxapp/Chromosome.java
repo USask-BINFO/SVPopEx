@@ -4,6 +4,8 @@ public class Chromosome {
     private String name;
     private int length;
     private int absoluteStart;
+    private double pixelWidth;
+    private double pixelAbsoluteOffset;
 
     /**
      *
@@ -27,5 +29,21 @@ public class Chromosome {
 
     public String getName() {
         return this.name;
+    }
+
+    public void setPixelWidth(double pixelWidth) {
+        this.pixelWidth = pixelWidth;
+    }
+
+    public double getPixelWidth() {
+        return this.pixelWidth;
+    }
+
+    public void setPixelAbsoluteOffset(double pixelAbsoluteOffset) {
+        this.pixelAbsoluteOffset = pixelAbsoluteOffset;
+    }
+
+    public double getPixelAbsoluteOffset() {
+        return this.pixelAbsoluteOffset;
     }
 }

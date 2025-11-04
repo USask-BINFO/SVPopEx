@@ -369,6 +369,7 @@ public class View {
         chromComboBox.getItems().add("<ALL>");
         chromComboBox.setValue("<ALL>");
         // add each chromosome from VCF to create chromosome representation
+        double totalWidth = 0;
         for (Map.Entry<String, Chromosome> refContig : refContigs.entrySet()) {
             if (Objects.equals(refContig.getKey(), "<ALL>")) {
                 // do nothing
@@ -386,11 +387,18 @@ public class View {
                 rect.setArcWidth(14);
                 rect.setArcHeight(14);
                 rect.setHeight(referenceWrapper.getHeight());
-                rect.setWidth(referenceWrapper.getWidth() * percent);
+                double chromWidth = referenceWrapper.getWidth() * percent;
+                rect.setWidth(chromWidth);
+                refContig.getValue().setPixelAbsoluteOffset(currentX);
+                refContig.getValue().setPixelWidth(chromWidth);
+                totalWidth += chromWidth;
                 referenceWrapper.getChildren().add(rect);
                 currentX += rect.getWidth();
             }
         }
+        // add pixel offsets for <ALL>
+        refContigs.get("<ALL>").setPixelAbsoluteOffset(0);
+        refContigs.get("<ALL>").setPixelWidth(totalWidth);
 //        this.l1.setText(refName);
 //        this.l2.setText(String.valueOf(refLength) + " bp");
     }
@@ -473,7 +481,7 @@ public class View {
         }
     }
 
-    public double initZoomAndCoordsWG(int refLength, int tickSpacing) {
+    public double initZoomAndCoordsWG(Chromosome region, int refLength, int tickSpacing) {
         this.ticksWrapper.getChildren().clear();
         // calculate zoom level such that whole genome is in view
         double zoomLevel = callsPanel.getViewportBounds().getWidth() / refLength;
@@ -491,13 +499,13 @@ public class View {
 //            this.ticksWrapper.getChildren().add(tick);
 //            this.ticksWrapper.getChildren().add(text);
 //        }
-        updateMarkerOnViewportScaleOrZoom(refLength, zoomLevel);
+        updateMarkerOnViewportScaleOrZoom(region, refLength, zoomLevel);
         return zoomLevel;
     }
 
     public void showRegion(Chromosome region, double zoomLevel, int totalRefLength, int originalTrackHeight) {
         showCalls(region, sampleOrder, zoomLevel, originalTrackHeight);
-        //updateMarkerOnViewportScaleOrZoom(refLength, zoomLevel);
+        updateMarkerOnViewportScaleOrZoom(region, totalRefLength, zoomLevel);
     }
 
     // *************************************************************** TRACK CREATION FUNCTIONS ************************************************************************
@@ -663,7 +671,7 @@ public class View {
         }
     }
 
-    public void updateMarkerOnViewportScaleOrZoom(int refLength, double zoomLevel) {
+    public void updateMarkerOnViewportScaleOrZoom(Chromosome region, int refLength, double zoomLevel) {
         // set width
         double contentWidth = refLength * zoomLevel;
         callsPanel.layout();
@@ -672,6 +680,8 @@ public class View {
         System.out.println("PROPORTION VISIBLE" + proportionVisible);
         double markerWidth = markerWrapper.getWidth() * proportionVisible;
         marker.setWidth(markerWidth);
+        // set offset
+        marker.setLayoutX(region.getPixelAbsoluteOffset());
     }
 
     public double getBaseCallPanelHeight() {
@@ -855,10 +865,10 @@ public class View {
         }
         else {
             this.showCalls(region, samples, zoomLevel, originalTrackHeight);
-            this.initZoomAndCoordsWG(refLength, tickSpacing);
+            this.initZoomAndCoordsWG(region, refLength, tickSpacing);
             this.updateSelections(selections, zoomLevel);
             // update marker width
-            updateMarkerOnViewportScaleOrZoom(refLength, zoomLevel);
+            updateMarkerOnViewportScaleOrZoom(region, refLength, zoomLevel);
         }
     }
 
