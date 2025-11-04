@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import javafx.scene.Node;
 import javafx.scene.input.MouseEvent;
 import javafx.stage.FileChooser;
+import javafx.event.ActionEvent;
 
 
 public class Controller {
@@ -47,6 +48,10 @@ public class Controller {
         view.closeSidePaneListener(e -> {
             view.toggleSidePane();
         });
+        view.chromComboBoxListener(e -> {
+            String selectedChrom = view.chromComboBox.getValue();
+            this.showRegion(selectedChrom);
+        });
         view.viewportWidthChange(e -> {
             this.processViewportWidthChange();
         });
@@ -78,13 +83,13 @@ public class Controller {
             this.model.reset();
             this.view.reset();
             model.processFile(fileContent);
-            model.initZoom(view.initZoomAndCoords(model.getRefTotalLength(), model.getTickSpacing()));
+            model.setZoom(view.initZoomAndCoordsWG(model.getRefTotalLength(), model.getTickSpacing()));
+            model.setCurrentRegion(model.getRefChromosomes().get("<ALL>"));
             view.initSidePane(model.getSamples(), model.getSampleColors(), model::getNumAnnotationsShown);
             view.initReference(model.getRefChromosomes(), model.getRefTotalLength());
             view.initSamples(model.getSamples(), model.getRefTotalLength(), model.getZoomLevel(), model.getBaseFontSize(), model.getOriginalTrackHeight());
-            view.showCalls(model.getSamples(), model.getZoomLevel(), model.getRefTotalLength(), model.getOriginalTrackHeight());
+            view.showCalls(model.getRefChromosomes().get("<ALL>"), model.getSamples(), model.getZoomLevel(), model.getRefTotalLength(), model.getOriginalTrackHeight());
             view.enableControls();
-
         }
         // user closed or cancelled file
         else {
@@ -94,15 +99,15 @@ public class Controller {
     }
 
     public void updateZoomIn() {
-        double level = model.updateZoomLevel(1.3);
+        double level = model.updateZoomLevelByFactor(1.3);
         model.updateCoordIncrement(view.getViewportWidth());
-        view.updateZoom(model.getSamples(), level, model.getRefTotalLength(), model.getSelections(), model.getBaseLevel(), model.getTickSpacing(), model.getOriginalTrackHeight());
+        view.updateZoom(model.getCurrentRegion(), model.getSamples(), level, model.getRefTotalLength(), model.getSelections(), model.getTickSpacing(), model.getOriginalTrackHeight());
     }
 
     public void updateZoomOut() {
-        double level = model.updateZoomLevel(0.7);
+        double level = model.updateZoomLevelByFactor(0.7);
         model.updateCoordIncrement(view.getViewportWidth());
-        view.updateZoom(model.getSamples(), level, model.getRefTotalLength(), model.getSelections(), model.getBaseLevel(), model.getTickSpacing(), model.getOriginalTrackHeight());
+        view.updateZoom(model.getCurrentRegion(), model.getSamples(), level, model.getRefTotalLength(), model.getSelections(), model.getTickSpacing(), model.getOriginalTrackHeight());
     }
 
     public void clearSelections() {
@@ -131,6 +136,12 @@ public class Controller {
         model.updateTrackHeightScale(increment);
         view.updateTrackHeight(model.getTrackHeightScale());
         view.redrawSampleInfoAfterScale(model.getSamples(), model.getBaseFontSize(), model.getTrackHeightScale(), model.getOriginalTrackHeight());
+    }
+
+    public void showRegion(String selectedChrom) {
+        Chromosome region = model.getRefChromosomes().get(selectedChrom);
+        model.updateZoomLevelByRegion(region, view.getViewportWidth());
+        view.showRegion(region, model.getZoomLevel(), model.getRefTotalLength(), model.getOriginalTrackHeight());
     }
 
     public void processViewportWidthChange() {

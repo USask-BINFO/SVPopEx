@@ -344,6 +344,13 @@ public class View {
         }
     }
 
+    /**
+     *
+     * @param refContigs
+     * @param totalRefLength
+     *
+     * Post Conditions: chromComboBox default set to < ALL >
+     */
     public void initReference(LinkedHashMap<String, Chromosome> refContigs, int totalRefLength) {
         referenceWrapper.setBackground(new Background(new BackgroundFill(Color.WHITE, CornerRadii.EMPTY, Insets.EMPTY)));
 //        referenceWrapper.setBorder(new Border(new BorderStroke(
@@ -384,12 +391,6 @@ public class View {
                 currentX += rect.getWidth();
             }
         }
-        // handle chromComboBox selection
-        chromComboBox.setOnAction(e -> {
-            String selected = chromComboBox.getValue();
-            showRegion(refContigs.get(chromComboBox.getValue()), totalRefLength);
-            System.out.println("SELECTED: " + selected);
-        });
 //        this.l1.setText(refName);
 //        this.l2.setText(String.valueOf(refLength) + " bp");
     }
@@ -407,7 +408,7 @@ public class View {
         this.callsPanel.setPannable(true);   // Optional: enables mouse drag scrolling
     }
 
-    public void showCalls(ArrayList<Sample> samples, double zoomLevel, int refLength, int originalTrackHeight) {
+    public void showCalls(Chromosome region, ArrayList<Sample> samples, double zoomLevel, int refLength, int originalTrackHeight) {
         /**
          * Pre-conditions/assumptions: Gets call pane for each sample by looking up the ID
          */
@@ -464,7 +465,7 @@ public class View {
         }
     }
 
-    public double initZoomAndCoords(int refLength, int tickSpacing) {
+    public double initZoomAndCoordsWG(int refLength, int tickSpacing) {
         this.ticksWrapper.getChildren().clear();
         // calculate zoom level such that whole genome is in view
         double zoomLevel = callsPanel.getViewportBounds().getWidth() / refLength;
@@ -486,23 +487,9 @@ public class View {
         return zoomLevel;
     }
 
-    public void showRegion(Chromosome region, int totalRefLength) {
-        double zoomLevel = callsPanel.getViewportBounds().getWidth() / region.getLength();
-        System.out.println("ZOOM LEVEL " + zoomLevel);
-        double regionStart = region.getAbsoluteStart() * zoomLevel;
-        double regionEnd = (region.getAbsoluteStart() + region.getLength()) * zoomLevel;
-        //this.callsPanel.setHvalue(proportion);
-        double proportion = (double) region.getLength() / totalRefLength;
-        double regionArea = proportion * callsPanel.getViewportBounds().getWidth();
-        System.out.println("REGION AREA " + regionArea);
-        System.out.println("PROPORTION " + proportion);
-        double viewportWidth = this.callsPanel.getViewportBounds().getWidth();
-        double regionWidth = regionEnd - regionStart;
-        System.out.println("REGION WIDTH " + regionWidth);
-        double scale = viewportWidth / regionWidth;
-        this.callsPanel.setScaleX(scale);
-        this.callsPanel.setScaleY(scale);
-        this.callsPanel.setTranslateX(-regionStart * scale);
+    public void showRegion(Chromosome region, double zoomLevel, int totalRefLength, int originalTrackHeight) {
+        showCalls(region, sampleOrder, zoomLevel, totalRefLength, originalTrackHeight);
+        //updateMarkerOnViewportScaleOrZoom(refLength, zoomLevel);
     }
 
     // *************************************************************** TRACK CREATION FUNCTIONS ************************************************************************
@@ -728,7 +715,7 @@ public class View {
         this.ticksWrapper.getChildren().removeIf(node -> node instanceof Rectangle);
     }
 
-    public void updateSelections(ArrayList<Selection> selections, double zoomLevel, double baseLevel) {
+    public void updateSelections(ArrayList<Selection> selections, double zoomLevel) {
         this.selectionWrapper.getChildren().clear();
         this.ticksWrapper.getChildren().removeIf(node -> node instanceof Rectangle);
         // add back each selection considering the zoom
@@ -846,7 +833,7 @@ public class View {
         }
     }
 
-    public void updateZoom(ArrayList<Sample> samples, double zoomLevel, int refLength, ArrayList<Selection> selections, double baseLevel, int tickSpacing, int originalTrackHeight) {
+    public void updateZoom(Chromosome region, ArrayList<Sample> samples, double zoomLevel, int refLength, ArrayList<Selection> selections, int tickSpacing, int originalTrackHeight) {
         double contentWidth = refLength * zoomLevel;
         double viewportWidth = callsPanel.getViewportBounds().getWidth();
         double proportionVisible = viewportWidth / contentWidth;
@@ -859,9 +846,9 @@ public class View {
             alert.showAndWait();
         }
         else {
-            this.showCalls(samples, zoomLevel, refLength, originalTrackHeight);
-            this.initZoomAndCoords(refLength, tickSpacing);
-            this.updateSelections(selections, zoomLevel, baseLevel);
+            this.showCalls(region, samples, zoomLevel, refLength, originalTrackHeight);
+            this.initZoomAndCoordsWG(refLength, tickSpacing);
+            this.updateSelections(selections, zoomLevel);
             // update marker width
             updateMarkerOnViewportScaleOrZoom(refLength, zoomLevel);
         }
@@ -920,6 +907,11 @@ public class View {
     public void closeSidePaneListener(EventHandler<ActionEvent> handler) {
         closeSidePaneButton.setOnAction(handler);
     }
+
+    public void chromComboBoxListener(EventHandler<ActionEvent> handler) {
+        chromComboBox.setOnAction(handler);
+    }
+
     public void viewportWidthChange(EventHandler<ActionEvent> handler) {
         callsPanel.viewportBoundsProperty().addListener((obs, oldBounds, newBounds) -> {
             if (oldBounds == null || newBounds == null || oldBounds.getWidth() != newBounds.getWidth()) {

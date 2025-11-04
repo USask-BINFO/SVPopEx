@@ -9,6 +9,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 
 public class Model {
+    private Chromosome currentRegion = null;
     private LinkedHashMap<String,Chromosome> refChromosomes = new LinkedHashMap<>();
     private int refTotalLength;
     private ArrayList<Sample> samples = new ArrayList<>();
@@ -16,7 +17,6 @@ public class Model {
     private ArrayList<Call> calls = new ArrayList<>();
     private ArrayList<Selection> selections = new ArrayList<>();
     private double zoomLevel = 0.2;
-    private double baseLevel = 0.2;
     private ArrayList<Integer> increments = new ArrayList<>(Arrays.asList(100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000, 500000, 1000000, 2000000, 5000000, 10000000, 20000000, 50000000, 100000000));
     private int coordIncrementIndex = 3;
     private double trackHeightScale = 1;
@@ -32,9 +32,15 @@ public class Model {
         this.sampleColors.clear();
         this.calls.clear();
         this.selections.clear();
-        // set zoom back to original
-        this.zoomLevel = this.baseLevel;
+        setCurrentRegion(null);
+    }
 
+    public Chromosome getCurrentRegion() {
+        return this.currentRegion;
+    }
+
+    public void setCurrentRegion(Chromosome region) {
+        this.currentRegion = region;
     }
 
     public String loadFile(java.io.File file) throws java.io.IOException {
@@ -46,11 +52,7 @@ public class Model {
         return this.zoomLevel;
     }
 
-    public double getBaseLevel() {
-        return this.baseLevel;
-    }
-
-    public double updateZoomLevel(double factor) {
+    public double updateZoomLevelByFactor(double factor) {
         this.zoomLevel *= factor;
         return this.zoomLevel;
     }
@@ -64,9 +66,12 @@ public class Model {
         }
     }
 
-    public void initZoom(double baseLevel) {
-        this.baseLevel = baseLevel;
-        this.zoomLevel = baseLevel;
+    public void setZoom(double level) {
+        this.zoomLevel = level;
+    }
+
+    public void updateZoomLevelByRegion(Chromosome region, double viewportWidth) {
+       this.zoomLevel = viewportWidth / region.getLength();
     }
 
     public int getNumAnnotationsShown() {
