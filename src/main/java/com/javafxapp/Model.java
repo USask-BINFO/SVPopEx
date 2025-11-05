@@ -5,6 +5,7 @@ import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.ScrollBar;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 
@@ -52,8 +53,19 @@ public class Model {
         return this.zoomLevel;
     }
 
-    public double updateZoomLevelByFactor(double factor) {
-        this.zoomLevel *= factor;
+    public double updateZoomLevelByFactor(double factor, Chromosome region, double viewportWidth, double verticalSBWidth) {
+        double testZoomLevel = this.zoomLevel * factor;
+        // test what the content width would be
+        double contentWidth = region.getLength() * testZoomLevel;
+        double proportionVisible = viewportWidth / contentWidth;
+        double selectedZoom;
+        if (proportionVisible > 1) {
+            selectedZoom = (viewportWidth + verticalSBWidth) / region.getLength();
+        }
+        else {
+            selectedZoom = testZoomLevel;
+        }
+        this.zoomLevel = selectedZoom;
         return this.zoomLevel;
     }
 

@@ -508,6 +508,16 @@ public class View {
         updateMarkerOnViewportScaleOrZoom(region, totalRefLength, zoomLevel);
     }
 
+    public double getVerticalSBWidth() {
+        ScrollBar vBar = (ScrollBar) this.callsPanel.lookup(".scroll-bar:vertical");
+        if (vBar == null || !vBar.isVisible()) {
+            return 0;
+        }
+        else {
+            return vBar.getWidth();
+        }
+    }
+
     // *************************************************************** TRACK CREATION FUNCTIONS ************************************************************************
 
     public void createNewAnnotationTrack(int refLength, double zoomLevel, String trackName, double baseFontSize, int height, String key) {
@@ -673,13 +683,11 @@ public class View {
 
     public void updateMarkerOnViewportScaleOrZoom(Chromosome region, int refLength, double zoomLevel) {
         // set width
-        double contentWidth = refLength * zoomLevel;
+        double contentWidth = region.getLength() * zoomLevel;
         callsPanel.layout();
         double viewportWidth = callsPanel.getViewportBounds().getWidth();
         double proportionVisible = viewportWidth / contentWidth;
-        System.out.println("PROPORTION VISIBLE" + proportionVisible);
-        double markerWidth = markerWrapper.getWidth() * proportionVisible;
-        marker.setWidth(markerWidth);
+        marker.setWidth(region.getPixelWidth() * proportionVisible);
         // set offset
         marker.setLayoutX(region.getPixelAbsoluteOffset());
     }
@@ -852,24 +860,17 @@ public class View {
     }
 
     public void updateZoom(Chromosome region, ArrayList<Sample> samples, double zoomLevel, int refLength, ArrayList<Selection> selections, int tickSpacing, int originalTrackHeight) {
-        double contentWidth = refLength * zoomLevel;
-        double viewportWidth = callsPanel.getViewportBounds().getWidth();
-        double proportionVisible = viewportWidth / contentWidth;
-        if (proportionVisible >= 1) {
-            // Create and show an information alert
-            Alert alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setTitle("Information");
-            alert.setHeaderText(null);  // Optional: no header text
-            alert.setContentText("This is a popup alert message!");
-            alert.showAndWait();
-        }
-        else {
-            this.showCalls(region, samples, zoomLevel, originalTrackHeight);
-            this.initZoomAndCoordsWG(region, refLength, tickSpacing);
-            this.updateSelections(selections, zoomLevel);
-            // update marker width
-            updateMarkerOnViewportScaleOrZoom(region, refLength, zoomLevel);
-        }
+//            // Create and show an information alert
+//            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+//            alert.setTitle("Information");
+//            alert.setHeaderText(null);  // Optional: no header text
+//            alert.setContentText("Cannot zoom out further!");
+//            alert.showAndWait();
+        this.showCalls(region, samples, zoomLevel, originalTrackHeight);
+        //this.initZoomAndCoordsWG(region, refLength, tickSpacing);
+        this.updateSelections(selections, zoomLevel);
+        // update marker width
+        updateMarkerOnViewportScaleOrZoom(region, refLength, zoomLevel);
     }
 
     public void updateHighLevelView(MouseEvent event) {

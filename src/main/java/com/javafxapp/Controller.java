@@ -99,13 +99,15 @@ public class Controller {
     }
 
     public void updateZoomIn() {
-        double level = model.updateZoomLevelByFactor(1.3);
+        System.out.println("***************** IN *********************");
+        double level = model.updateZoomLevelByFactor(1.3, model.getCurrentRegion(), view.getViewportWidth(), view.getVerticalSBWidth());
         model.updateCoordIncrement(view.getViewportWidth());
         view.updateZoom(model.getCurrentRegion(), model.getSamples(), level, model.getRefTotalLength(), model.getSelections(), model.getTickSpacing(), model.getOriginalTrackHeight());
     }
 
     public void updateZoomOut() {
-        double level = model.updateZoomLevelByFactor(0.7);
+        System.out.println("***************** OUT *********************");
+        double level = model.updateZoomLevelByFactor(0.7, model.getCurrentRegion(), view.getViewportWidth(), view.getVerticalSBWidth());
         model.updateCoordIncrement(view.getViewportWidth());
         view.updateZoom(model.getCurrentRegion(), model.getSamples(), level, model.getRefTotalLength(), model.getSelections(), model.getTickSpacing(), model.getOriginalTrackHeight());
     }
