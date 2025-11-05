@@ -4,7 +4,6 @@ import javafx.animation.TranslateTransition;
 import javafx.beans.value.ChangeListener;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
-import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
@@ -354,11 +353,14 @@ public class View {
      */
     public void initReference(LinkedHashMap<String, Chromosome> refContigs, int totalRefLength) {
         referenceWrapper.setBackground(new Background(new BackgroundFill(Color.WHITE, CornerRadii.EMPTY, Insets.EMPTY)));
+//        referenceWrapper.setBorder(new Border(new BorderStroke(
+//                Color.BLACK,
+//                BorderStrokeStyle.SOLID,
+//                CornerRadii.EMPTY,
+//                new BorderWidths(1)
+//        )));
         labelsBox.setStyle("-fx-alignment: center;");
-        // view box styling
-        marker.setFill(Color.TRANSPARENT);
-        marker.setStroke(Color.ORANGERED);
-        marker.setStrokeWidth(3);
+        marker.setFill(Color.ORANGERED);
         marker.setOpacity(0.5);
         // fill chrom combo box
         double currentX = 0;
@@ -708,10 +710,6 @@ public class View {
         this.callsPanel.getTransforms().add(scale);
     }
 
-    public double getViewportWidth() {
-        return this.callsPanel.getViewportBounds().getWidth();
-    }
-
     public void redrawSampleInfoAfterScale(ArrayList<Sample> samples, double baseFontSize, double trackHeightScale, int originalTrackHeight) {
         /**
          * Pre-conditions/assumptions: Gets info pane for each sample by looking up the ID
@@ -725,6 +723,10 @@ public class View {
             Label sampleLabel = (Label) labelWrapper.getChildren().getFirst();
             sampleLabel.setFont(Font.font(sampleLabel.getFont().getFamily(), baseFontSize));
         }
+    }
+
+    public double getViewportWidth() {
+        return callsPanel.getViewportBounds().getWidth();
     }
 
     public Rectangle getSelectionRectangle() {
