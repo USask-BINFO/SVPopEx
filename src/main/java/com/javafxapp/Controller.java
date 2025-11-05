@@ -2,10 +2,12 @@ package com.javafxapp;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Objects;
 
 import javafx.scene.Node;
 import javafx.scene.input.MouseEvent;
 import javafx.stage.FileChooser;
+import javafx.event.ActionEvent;
 
 
 public class Controller {
@@ -47,8 +49,9 @@ public class Controller {
         view.closeSidePaneListener(e -> {
             view.toggleSidePane();
         });
-        view.viewportWidthChange(e -> {
-            this.processViewportWidthChange();
+        view.chromComboBoxListener(e -> {
+            String selectedChrom = view.chromComboBox.getValue();
+            this.showRegion(selectedChrom);
         });
     }
 
@@ -78,16 +81,22 @@ public class Controller {
             this.model.reset();
             this.view.reset();
             model.processFile(fileContent);
-            // get initial zoom level
-            double zoomLevel = view.initZoomAndCoords(model.getRefTotalLength(), model.getTickSpacing(), model.getRefContigs());
-            model.initZoom(zoomLevel, view.getViewportWidth());
-            view.updateCoords(model.getRefTotalLength(), model.getZoomLevel(), model.getTickSpacing(), model.getRefContigs());
+            model.setCurrentRegion(model.getRefChromosomes().get("<ALL>"));
+            view.initReference(model.getRefChromosomes(), model.getRefTotalLength());
+            model.setZoom(view.initZoomAndCoordsWG(model.getCurrentRegion(), model.getRefTotalLength(), model.getTickSpacing()));
             view.initSidePane(model.getSamples(), model.getSampleColors(), model::getNumAnnotationsShown);
-            view.initReference(model.getRefContigs(), model.getRefTotalLength());
             view.initSamples(model.getSamples(), model.getRefTotalLength(), model.getZoomLevel(), model.getBaseFontSize(), model.getOriginalTrackHeight());
-            view.showCalls(model.getSamples(), model.getZoomLevel(), model.getRefTotalLength(), model.getOriginalTrackHeight());
+            view.showCalls(model.getRefChromosomes().get("<ALL>"), model.getSamples(), model.getZoomLevel(), model.getOriginalTrackHeight());
             view.enableControls();
-
+            view.viewportWidthChange(e -> {
+                this.processViewportWidthChange();
+            });
+            view.scrollChange((obs,oldVal, newVal) -> {
+               this.processScrollChange(newVal.doubleValue());
+            });
+            view.markerDragged(e -> {
+                this.processMarkerDragged(e);
+            });
         }
         // user closed or cancelled file
         else {
@@ -97,15 +106,27 @@ public class Controller {
     }
 
     public void updateZoomIn() {
-        double level = model.updateZoomLevel(1.3);
-        model.updateCoordIncrement(view.getViewportWidth());
-        view.updateZoom(model.getSamples(), level, model.getRefTotalLength(), model.getSelections(), model.getBaseLevel(), model.getTickSpacing(), model.getOriginalTrackHeight(), model.getRefContigs());
+        System.out.println("***************** IN *********************");
+        if (Objects.equals(model.getCurrentRegion().getName(), "<ALL>")) {
+            // not meant to zoom in on <ALL> region so do nothing
+        }
+        else {
+            double level = model.updateZoomLevelByFactor(1.3, model.getCurrentRegion(), view.getViewportWidth(), view.getVerticalSBWidth());
+            model.updateCoordIncrement(view.getViewportWidth());
+            view.updateZoom(model.getCurrentRegion(), model.getSamples(), level, model.getRefTotalLength(), model.getSelections(), model.getTickSpacing(), model.getOriginalTrackHeight());
+        }
     }
 
     public void updateZoomOut() {
-        double level = model.updateZoomLevel(0.7);
-        model.updateCoordIncrement(view.getViewportWidth());
-        view.updateZoom(model.getSamples(), level, model.getRefTotalLength(), model.getSelections(), model.getBaseLevel(), model.getTickSpacing(), model.getOriginalTrackHeight(), model.getRefContigs());
+        System.out.println("***************** OUT *********************");
+        if (Objects.equals(model.getCurrentRegion().getName(), "<ALL>")) {
+            // not meant to zoom out on <ALL> region so do nothing
+        }
+        else {
+            double level = model.updateZoomLevelByFactor(0.7, model.getCurrentRegion(), view.getViewportWidth(), view.getVerticalSBWidth());
+            model.updateCoordIncrement(view.getViewportWidth());
+            view.updateZoom(model.getCurrentRegion(), model.getSamples(), level, model.getRefTotalLength(), model.getSelections(), model.getTickSpacing(), model.getOriginalTrackHeight());
+        }
     }
 
     public void clearSelections() {
@@ -136,7 +157,23 @@ public class Controller {
         view.redrawSampleInfoAfterScale(model.getSamples(), model.getBaseFontSize(), model.getTrackHeightScale(), model.getOriginalTrackHeight());
     }
 
+    public void showRegion(String selectedChrom) {
+        Chromosome region = model.getRefChromosomes().get(selectedChrom);
+        model.setCurrentRegion(region);
+        System.out.println("CURRENT REGION IS " + model.getCurrentRegion().getName());
+        model.updateZoomLevelByRegion(region, view.getViewportWidth());
+        view.showRegion(region, model.getZoomLevel(), model.getRefTotalLength(), model.getOriginalTrackHeight());
+    }
+
     public void processViewportWidthChange() {
-        view.updateMarkerOnViewportScaleOrZoom(model.getRefTotalLength(), model.getZoomLevel());
+        view.updateMarkerOnViewportScaleOrZoom(model.getCurrentRegion(), model.getRefTotalLength(), model.getZoomLevel());
+    }
+
+    public void processScrollChange(double newVal) {
+        view.syncScroll(newVal, model.getCurrentRegion());
+    }
+
+    public void processMarkerDragged(MouseEvent e) {
+        view.updateMarkerOnDrag(e, model.getCurrentRegion());
     }
 }

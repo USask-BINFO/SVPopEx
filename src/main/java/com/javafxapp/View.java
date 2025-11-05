@@ -1,7 +1,7 @@
 package com.javafxapp;
 
 import javafx.animation.TranslateTransition;
-import javafx.beans.binding.Bindings;
+import javafx.beans.value.ChangeListener;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
@@ -231,6 +231,8 @@ public class View {
         this.referenceContainer.getChildren().add(rectWithMarker);
         // marker
         markerWrapper.getChildren().add(marker);
+        marker.setOnMouseEntered(e -> marker.setCursor(Cursor.HAND));
+        marker.setOnMouseExited(e -> marker.setCursor(Cursor.DEFAULT));
         layout.getChildren().addAll(menuBar, dropdownChromContainer, controlContainer, referenceContainer, tickContainer, callsContentContainer);
         // ---------- TICK PANEL ---------
         spaceWrapper.setMinWidth(this.sampleSpaceWidth);
@@ -257,15 +259,13 @@ public class View {
         this.callsPanel.setPrefWidth(Screen.getPrimary().getBounds().getWidth() - sampleSpaceWidth);
         this.callsPanel.setMaxWidth(Screen.getPrimary().getBounds().getWidth() - sampleSpaceWidth);
         selectionWrapper.setPickOnBounds(false);
-        this.callsPanel.hvalueProperty().addListener((obs, oldVal, newVal) -> {
-            this.syncScroll(newVal);
-        });
         this.selectionContainer.getChildren().add(selectionWrapper);
         this.callsPanel.setFitToHeight(true);
     }
 
+    // *************************************************************** MAIN CONTROL FUNCTIONS ************************************************************************
     /**
-     * Enable all buttons in controlContainer and sidePane. Side Pane translation also done here after layout is complete
+     * Enables all buttons in controlContainer and sidePane. Side Pane translation also done here after layout is complete
      **/
     public void enableControls() {
         this.zoomInButton.setDisable(false);
@@ -283,69 +283,9 @@ public class View {
         sidePane.setTranslateY(bottomOfTickContainerY);
     }
 
-    // sync scrollpane scroll with marker and coordinate ticks
-    public void syncScroll(Number newVal) {
-        // oldVal = old scroll position (between 0 and 1)
-        // newVal = new scroll position (between 0 and 1)
-        // getContent() gets node scrollpane is scrolling, getboundsinlocal gets actual width and height of node, so maxX is the maximum distance that can be scrolled
-        double maxX = callsPanel.getContent().getBoundsInLocal().getWidth()
-                - callsPanel.getViewportBounds().getWidth();
-        double translateX = -newVal.doubleValue() * maxX;
-        ticksWrapper.setTranslateX(translateX);
-        double max = markerWrapper.getWidth() - marker.getWidth();
-        double scrollX = newVal.doubleValue() * max;
-        marker.setLayoutX(scrollX);
-    }
-
-    public void ticksPressed(MouseEvent e) {
-        double startX = e.getX();
-        Rectangle tickRect = new Rectangle(startX, 0, 0, ticksWrapper.getHeight());
-        tickRect.setId("selectionRect");
-        tickRect.setVisible(true);
-        tickRect.setFill(Color.GRAY);
-        tickRect.setOpacity(0.3);
-        ticksWrapper.getChildren().add(tickRect);
-        Rectangle selectRect = new Rectangle(startX, 0, 0, selectionWrapper.getHeight());
-        selectRect.setId("selectionRect");
-        selectRect.setVisible(true);
-        selectRect.setFill(Color.GRAY);
-        selectRect.setOpacity(0.3);
-        selectionWrapper.getChildren().add(selectRect);
-    }
-
-    public void ticksDragged(MouseEvent e) {
-        Rectangle tickRect = (Rectangle) this.ticksWrapper.lookup("#selectionRect");
-        Rectangle selectRect = (Rectangle) this.selectionWrapper.lookup("#selectionRect");
-        double width = e.getX() - tickRect.getX();
-        // only update selection in forward direction
-        if (width > 0) {
-            tickRect.setWidth(width);
-            selectRect.setWidth(width);
-        } else {
-            // do nothing!
-        }
-    }
-
-    public void ticksReleased(MouseEvent e) {
-        Rectangle tickRect = (Rectangle) this.ticksWrapper.lookup("#selectionRect");
-        Rectangle selectRect = (Rectangle) this.selectionWrapper.lookup("#selectionRect");
-        double width = e.getX() - tickRect.getX();
-        // only update selection in forward direction
-        if (width > 0) {
-            // update width
-            tickRect.setWidth(width);
-            selectRect.setWidth(width);
-            // CHANGE : this might not be best place to have this/handle this under the width > 0
-            if (this.releaseSelectionHandler != null) {
-                releaseSelectionHandler.handle(e);
-            }
-        } else {
-            // this rectangle isn't displayed, so remove
-            this.ticksWrapper.getChildren().remove(tickRect);
-            this.selectionWrapper.getChildren().remove(selectRect);
-        }
-    }
-
+    /**
+     * Resets View so new file can be uploaded.
+     */
     public void reset() {
         this.ticksWrapper.getChildren().clear();
         this.selectionWrapper.getChildren().clear();
@@ -368,6 +308,8 @@ public class View {
     public Stage getPrimaryStage() {
         return this.primaryStage;
     }
+
+    // *************************************************************** MAIN INITIALIZATION FUNCTIONS ************************************************************************
 
     public void initSidePane(ArrayList<Sample> samples, HashMap<String, Color> sampleColors, Supplier<Integer> numAnnotations) {
         HashMap<String,Boolean> result = new HashMap<>();
@@ -403,7 +345,14 @@ public class View {
         }
     }
 
-    public void initReference(LinkedHashMap<String, Integer> refContigs, int totalRefLength) {
+    /**
+     *
+     * @param refContigs
+     * @param totalRefLength
+     *
+     * Post Conditions: chromComboBox default set to < ALL >
+     */
+    public void initReference(LinkedHashMap<String, Chromosome> refContigs, int totalRefLength) {
         referenceWrapper.setBackground(new Background(new BackgroundFill(Color.WHITE, CornerRadii.EMPTY, Insets.EMPTY)));
         labelsBox.setStyle("-fx-alignment: center;");
         // view box styling
@@ -411,35 +360,42 @@ public class View {
         marker.setStroke(Color.ORANGERED);
         marker.setStrokeWidth(3);
         marker.setOpacity(0.5);
-        marker.setOnMouseDragged(event -> updateHighLevelView(event));
         // fill chrom combo box
         double currentX = 0;
         // add <ALL> as a chrom dropdown option and set as default
         chromComboBox.getItems().add("<ALL>");
         chromComboBox.setValue("<ALL>");
-        // add each chromosome from VCF
-        for (Map.Entry<String, Integer> refContig : refContigs.entrySet()) {
-            // add to chromComboBox dropdown
-            chromComboBox.getItems().add(refContig.getKey());
-            // get percentage of total reference
-            double percent = ((float) refContig.getValue() / totalRefLength);
-            // add rectangle to referenceWrapper
-            Rectangle rect = new Rectangle();
-            rect.setX(currentX);
-            rect.setStroke(Color.DARKGRAY);
-            rect.setFill(Color.WHITE);
-            rect.setArcWidth(14);
-            rect.setArcHeight(14);
-            rect.setHeight(referenceWrapper.getHeight());
-            rect.setWidth(referenceWrapper.getWidth() * percent);
-            referenceWrapper.getChildren().add(rect);
-            currentX += rect.getWidth();
+        // add each chromosome from VCF to create chromosome representation
+        double totalWidth = 0;
+        for (Map.Entry<String, Chromosome> refContig : refContigs.entrySet()) {
+            if (Objects.equals(refContig.getKey(), "<ALL>")) {
+                // do nothing
+            }
+            else {
+                // add to chromComboBox dropdown
+                chromComboBox.getItems().add(refContig.getKey());
+                // get percentage of total reference
+                double percent = ((float) refContig.getValue().getLength() / totalRefLength);
+                // add rectangle to referenceWrapper
+                Rectangle rect = new Rectangle();
+                rect.setX(currentX);
+                rect.setStroke(Color.DARKGRAY);
+                rect.setFill(Color.WHITE);
+                rect.setArcWidth(14);
+                rect.setArcHeight(14);
+                rect.setHeight(referenceWrapper.getHeight());
+                double chromWidth = referenceWrapper.getWidth() * percent;
+                rect.setWidth(chromWidth);
+                refContig.getValue().setPixelAbsoluteOffset(currentX);
+                refContig.getValue().setPixelWidth(chromWidth);
+                totalWidth += chromWidth;
+                referenceWrapper.getChildren().add(rect);
+                currentX += rect.getWidth();
+            }
         }
-        // handle chromComboBox selection
-        chromComboBox.setOnAction(e -> {
-            String selected = chromComboBox.getValue();
-            System.out.println("SELECTED: " + selected);
-        });
+        // add pixel offsets for <ALL>
+        refContigs.get("<ALL>").setPixelAbsoluteOffset(0);
+        refContigs.get("<ALL>").setPixelWidth(totalWidth);
 //        this.l1.setText(refName);
 //        this.l2.setText(String.valueOf(refLength) + " bp");
     }
@@ -456,6 +412,110 @@ public class View {
         }
         this.callsPanel.setPannable(true);   // Optional: enables mouse drag scrolling
     }
+
+    public void showCalls(Chromosome region, ArrayList<Sample> samples, double zoomLevel, int originalTrackHeight) {
+        /**
+         * Pre-conditions/assumptions: Gets call pane for each sample by looking up the ID
+         */
+        this.samplePanel.setMinWidth(region.getLength() * zoomLevel);
+        this.samplePanel.setMaxWidth(region.getLength() * zoomLevel);
+
+        System.out.println("CURRENT REGION FROM SHOWCALLS IS " + region.getName());
+        // loops through each sample and gets the sample pane to update, access order does not matter
+        for (Sample sample : samples) {
+            Pane currentCalls = (Pane) this.samplesContainer.lookup("#" + sample.getName());
+            currentCalls.getChildren().clear();
+            currentCalls.setMinWidth(region.getLength() * zoomLevel);
+            currentCalls.setPrefWidth(region.getLength() * zoomLevel);
+            currentCalls.setMaxWidth(region.getLength() * zoomLevel);
+            // loop through each call
+            for (int j=0; j<sample.getRegionCalls(region.getName()).size(); j++) {
+                // get the current Call and set its id for the call and rectangle
+                Call currentCall = sample.getRegionCalls(region.getName()).get(j);
+                System.out.println(currentCall.toString());
+                Rectangle callRect;
+                if (Objects.equals(region.getName(), "<ALL>")) {
+                    callRect = new Rectangle(currentCall.getAbsoluteStart()*zoomLevel, 1, currentCall.getLength()*zoomLevel, originalTrackHeight-2);
+                }
+                else {
+                    callRect = new Rectangle(currentCall.getStart()*zoomLevel, 1, currentCall.getLength()*zoomLevel, originalTrackHeight-2);
+                }
+                String callId = sample.getName() + "-" + j;
+                callRect.setId(callId);
+                // styling
+                callRect.setOpacity(1);
+                callRect.setStrokeWidth(2);
+                callRect.setArcWidth(5);   // horizontal roundness
+                callRect.setArcHeight(5);
+                if (Objects.equals(currentCall.getType(), "DUP")) {
+                    callRect.setStroke(Color.rgb(40, 70, 160));
+                    callRect.setOpacity(0.5);
+                    callRect.setFill(Color.rgb(65, 105, 225));
+                }
+                else if (Objects.equals(currentCall.getType(), "INV")) {
+                    callRect.setStroke(Color.rgb(200, 140, 0));
+                    callRect.setOpacity(0.5);
+                    callRect.setFill(Color.rgb(255, 195, 0 ));
+                }
+                else if (Objects.equals(currentCall.getType(), "DEL")) {
+                    callRect.setStroke(Color.rgb(120, 30, 2));
+                    callRect.setOpacity(0.5);
+                    callRect.setFill(Color.rgb(164, 42, 4));
+                }
+                else if (Objects.equals(currentCall.getType(), "INS")) {
+                    callRect.setStroke(Color.rgb(100, 140, 80));
+                    callRect.setOpacity(0.5);
+                    callRect.setFill(Color.rgb(147, 197, 114));
+                }
+                else {
+                    System.out.println(currentCall.getType());
+                    callRect.setStroke(Color.BLACK);
+                    callRect.setOpacity(0.7);
+                    callRect.setFill(Color.BLACK);
+                }
+                currentCalls.getChildren().add(callRect);
+            }
+        }
+    }
+
+    public double initZoomAndCoordsWG(Chromosome region, int refLength, int tickSpacing) {
+        this.ticksWrapper.getChildren().clear();
+        // calculate zoom level such that whole genome is in view
+        double zoomLevel = callsPanel.getViewportBounds().getWidth() / refLength;
+        System.out.println("THE BASE LEVEL IS:" + zoomLevel);
+        // display ticks
+//        for (int x = 0; x <= refLength; x += tickSpacing) {
+//            // coordinate
+//            Text text = new Text(String.valueOf(x));
+//            double textWidth = text.getLayoutBounds().getWidth();
+//            text.setX((x*zoomLevel) - textWidth / 2);
+//            text.setY(20);
+//            // tick
+//            Line tick = new Line(x*zoomLevel, 0, x*zoomLevel, 5);
+//            // add to pane
+//            this.ticksWrapper.getChildren().add(tick);
+//            this.ticksWrapper.getChildren().add(text);
+//        }
+        updateMarkerOnViewportScaleOrZoom(region, refLength, zoomLevel);
+        return zoomLevel;
+    }
+
+    public void showRegion(Chromosome region, double zoomLevel, int totalRefLength, int originalTrackHeight) {
+        showCalls(region, sampleOrder, zoomLevel, originalTrackHeight);
+        updateMarkerOnViewportScaleOrZoom(region, totalRefLength, zoomLevel);
+    }
+
+    public double getVerticalSBWidth() {
+        ScrollBar vBar = (ScrollBar) this.callsPanel.lookup(".scroll-bar:vertical");
+        if (vBar == null || !vBar.isVisible()) {
+            return 0;
+        }
+        else {
+            return vBar.getWidth();
+        }
+    }
+
+    // *************************************************************** TRACK CREATION FUNCTIONS ************************************************************************
 
     public void createNewAnnotationTrack(int refLength, double zoomLevel, String trackName, double baseFontSize, int height, String key) {
         // types
@@ -552,140 +612,86 @@ public class View {
         callsWrapper.setId(sampleName);
     }
 
-    public void showCalls(ArrayList<Sample> samples, double zoomLevel, int refLength, int originalTrackHeight) {
-        /**
-         * Pre-conditions/assumptions: Gets call pane for each sample by looking up the ID
-         */
-        this.samplePanel.setMinWidth(refLength * zoomLevel);
-        this.samplePanel.setMaxWidth(refLength * zoomLevel);
 
-        // loops through each sample and gets the sample pane to update, access order does not matter
-        for (Sample sample : samples) {
-            Pane currentCalls = (Pane) this.samplesContainer.lookup("#" + sample.getName());
-            currentCalls.getChildren().clear();
-            currentCalls.setMinWidth(refLength * zoomLevel);
-            currentCalls.setPrefWidth(refLength * zoomLevel);
-            currentCalls.setMaxWidth(refLength * zoomLevel);
-            // loop through each call
-            for (int j=0; j<sample.calls.size(); j++) {
-                // get the current Call and set its id for the call and rectangle
-                Call currentCall = sample.calls.get(j);
-                Rectangle callRect = new Rectangle(currentCall.getAbsoluteStart()*zoomLevel, 1, currentCall.getLength()*zoomLevel, originalTrackHeight-2);
-                String callId = sample.getName() + "-" + j;
-                callRect.setId(callId);
-                // styling
-                callRect.setOpacity(1);
-                callRect.setStrokeWidth(2);
-                callRect.setArcWidth(5);   // horizontal roundness
-                callRect.setArcHeight(5);
-                if (Objects.equals(currentCall.getType(), "DUP")) {
-                    callRect.setStroke(Color.rgb(40, 70, 160));
-                    callRect.setOpacity(0.5);
-                    callRect.setFill(Color.rgb(65, 105, 225));
-                }
-                else if (Objects.equals(currentCall.getType(), "INV")) {
-                    callRect.setStroke(Color.rgb(200, 140, 0));
-                    callRect.setOpacity(0.5);
-                    callRect.setFill(Color.rgb(255, 195, 0 ));
-                }
-                else if (Objects.equals(currentCall.getType(), "DEL")) {
-                    callRect.setStroke(Color.rgb(120, 30, 2));
-                    callRect.setOpacity(0.5);
-                    callRect.setFill(Color.rgb(164, 42, 4));
-                }
-                else if (Objects.equals(currentCall.getType(), "INS")) {
-                    callRect.setStroke(Color.rgb(100, 140, 80));
-                    callRect.setOpacity(0.5);
-                    callRect.setFill(Color.rgb(147, 197, 114));
-                }
-                else {
-                    System.out.println(currentCall.getType());
-                    callRect.setStroke(Color.BLACK);
-                    callRect.setOpacity(0.7);
-                    callRect.setFill(Color.BLACK);
-                }
-                currentCalls.getChildren().add(callRect);
+
+
+    // sync scrollpane scroll with marker and coordinate ticks
+    public void syncScroll(Number newVal, Chromosome currentRegion) {
+        // oldVal = old scroll position (between 0 and 1)
+        // newVal = new scroll position (between 0 and 1)
+        // getContent() gets node scrollpane is scrolling, getboundsinlocal gets actual width and height of node, so maxX is the maximum distance that can be scrolled
+        double maxX = callsPanel.getContent().getBoundsInLocal().getWidth()
+                - callsPanel.getViewportBounds().getWidth();
+        double translateX = -newVal.doubleValue() * maxX;
+        ticksWrapper.setTranslateX(translateX);
+        double max = currentRegion.getPixelWidth() - marker.getWidth();
+        double scrollX = currentRegion.getPixelAbsoluteOffset() + (newVal.doubleValue() * max);
+        marker.setLayoutX(scrollX);
+    }
+
+    public void ticksPressed(MouseEvent e) {
+        double startX = e.getX();
+        Rectangle tickRect = new Rectangle(startX, 0, 0, ticksWrapper.getHeight());
+        tickRect.setId("selectionRect");
+        tickRect.setVisible(true);
+        tickRect.setFill(Color.GRAY);
+        tickRect.setOpacity(0.3);
+        ticksWrapper.getChildren().add(tickRect);
+        Rectangle selectRect = new Rectangle(startX, 0, 0, selectionWrapper.getHeight());
+        selectRect.setId("selectionRect");
+        selectRect.setVisible(true);
+        selectRect.setFill(Color.GRAY);
+        selectRect.setOpacity(0.3);
+        selectionWrapper.getChildren().add(selectRect);
+    }
+
+    public void ticksDragged(MouseEvent e) {
+        Rectangle tickRect = (Rectangle) this.ticksWrapper.lookup("#selectionRect");
+        Rectangle selectRect = (Rectangle) this.selectionWrapper.lookup("#selectionRect");
+        double width = e.getX() - tickRect.getX();
+        // only update selection in forward direction
+        if (width > 0) {
+            tickRect.setWidth(width);
+            selectRect.setWidth(width);
+        } else {
+            // do nothing!
+        }
+    }
+
+    public void ticksReleased(MouseEvent e) {
+        Rectangle tickRect = (Rectangle) this.ticksWrapper.lookup("#selectionRect");
+        Rectangle selectRect = (Rectangle) this.selectionWrapper.lookup("#selectionRect");
+        double width = e.getX() - tickRect.getX();
+        // only update selection in forward direction
+        if (width > 0) {
+            // update width
+            tickRect.setWidth(width);
+            selectRect.setWidth(width);
+            // CHANGE : this might not be best place to have this/handle this under the width > 0
+            if (this.releaseSelectionHandler != null) {
+                releaseSelectionHandler.handle(e);
             }
+        } else {
+            // this rectangle isn't displayed, so remove
+            this.ticksWrapper.getChildren().remove(tickRect);
+            this.selectionWrapper.getChildren().remove(selectRect);
         }
     }
 
-    public double initZoomAndCoords(int refLength, int tickSpacing, LinkedHashMap<String, Integer> refContigs) {
-        this.ticksWrapper.getChildren().clear();
-        // calculate zoom level such that whole genome is in view
-        double zoomLevel = callsPanel.getViewportBounds().getWidth() / refLength;
-        System.out.println("THE BASE LEVEL IS:" + zoomLevel);
-        // display refContigs ticks
-        int xval = 1;
-        for (Map.Entry<String, Integer> refContig : refContigs.entrySet()) {
-            // coordinate
-            System.out.println("XVAL FOR " + refContig.getKey() + " AND XVAL " + xval);
-            Text text = new Text(String.valueOf(refContig.getKey()));
-            double textWidth = text.getLayoutBounds().getWidth();
-            text.setX((xval*zoomLevel) - textWidth / 2);
-            text.setY(25);
-            // tick
-            Line tick = new Line(xval*zoomLevel, 0, xval*zoomLevel, 12);
-            // add to pane
-            this.ticksWrapper.getChildren().add(tick);
-            this.ticksWrapper.getChildren().add(text);
-            xval += refContig.getValue();
-        }
-        updateMarkerOnViewportScaleOrZoom(refLength, zoomLevel);
-        return zoomLevel;
-    }
-
-    public void updateCoords(int refLength, double zoomLevel, int tickSpacing, LinkedHashMap<String, Integer> refContigs) {
-        this.ticksWrapper.getChildren().clear();
-        int xval = 1;
-        for (Map.Entry<String, Integer> refContig : refContigs.entrySet()) {
-            // coordinate
-            Text text = new Text(String.valueOf(refContig.getKey()));
-            double textWidth = text.getLayoutBounds().getWidth();
-            text.setX((xval*zoomLevel) - textWidth / 2);
-            text.setY(25);
-            // tick
-            Line tick = new Line(xval*zoomLevel, 0, xval*zoomLevel, 12);
-            // add to pane
-            this.ticksWrapper.getChildren().add(tick);
-            this.ticksWrapper.getChildren().add(text);
-            xval += refContig.getValue();
-        }
-        if (tickSpacing == -1) {
-            // do nothing, too zoomed out
-        }
-        else {
-            // display ticks
-            int prev = 0;
-            for (Map.Entry<String, Integer> refContig : refContigs.entrySet()) {
-                for (int x = 0; x <= refContig.getValue(); x += tickSpacing) {
-                    System.out.println(refContig.getKey());
-                    int loc = x + prev;
-                    System.out.println("PREV " + prev);
-                    // coordinate
-                    Text text = new Text(String.valueOf(x));
-                    double textWidth = text.getLayoutBounds().getWidth();
-                    text.setX((loc * zoomLevel) - textWidth / 2);
-                    text.setY(20);
-                    // tick
-                    Line tick = new Line(loc * zoomLevel, 0, loc * zoomLevel, 5);
-                    // add to pane
-                    this.ticksWrapper.getChildren().add(tick);
-                    this.ticksWrapper.getChildren().add(text);
-                }
-                prev += refContig.getValue();
-            }
-        }
-    }
-
-    public void updateMarkerOnViewportScaleOrZoom(int refLength, double zoomLevel) {
+    public void updateMarkerOnViewportScaleOrZoom(Chromosome region, int refLength, double zoomLevel) {
         // set width
-        double contentWidth = refLength * zoomLevel;
+        double contentWidth = region.getLength() * zoomLevel;
         callsPanel.layout();
         double viewportWidth = callsPanel.getViewportBounds().getWidth();
         double proportionVisible = viewportWidth / contentWidth;
-        System.out.println("PROPORTION VISIBLE" + proportionVisible);
-        double markerWidth = markerWrapper.getWidth() * proportionVisible;
-        marker.setWidth(markerWidth);
+        marker.setWidth(region.getPixelWidth() * proportionVisible);
+        System.out.println("REGION PIXEL WIDTH IS " + region.getPixelWidth());
+        System.out.println("CONTENT WIDTH IS " + contentWidth);
+        System.out.println("VIEWPORT WIDTH IS " + viewportWidth);
+        System.out.println("PROPORTION VISISBLE IS " + proportionVisible);
+        System.out.println("-------------- MARKER WIDTH IS ----------------- " + marker.getWidth());
+        // set offset
+        marker.setLayoutX(region.getPixelAbsoluteOffset());
     }
 
     public double getBaseCallPanelHeight() {
@@ -737,7 +743,7 @@ public class View {
         this.ticksWrapper.getChildren().removeIf(node -> node instanceof Rectangle);
     }
 
-    public void updateSelections(ArrayList<Selection> selections, double zoomLevel, double baseLevel) {
+    public void updateSelections(ArrayList<Selection> selections, double zoomLevel) {
         this.selectionWrapper.getChildren().clear();
         this.ticksWrapper.getChildren().removeIf(node -> node instanceof Rectangle);
         // add back each selection considering the zoom
@@ -855,30 +861,21 @@ public class View {
         }
     }
 
-    public void updateZoom(ArrayList<Sample> samples, double zoomLevel, int refLength, ArrayList<Selection> selections, double baseLevel, int tickSpacing, int originalTrackHeight, LinkedHashMap<String, Integer> refContigs) {
-        System.out.println(this.callsPanel.getContent().getLayoutBounds().getWidth());
-        System.out.println(this.ticksWrapper.getWidth());
-        double contentWidth = refLength * zoomLevel;
-        double viewportWidth = callsPanel.getViewportBounds().getWidth();
-        double proportionVisible = viewportWidth / contentWidth;
-        if (proportionVisible >= 1) {
-            // Create and show an information alert
-            Alert alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setTitle("Information");
-            alert.setHeaderText(null);  // Optional: no header text
-            alert.setContentText("This is a popup alert message!");
-            alert.showAndWait();
-        }
-        else {
-            this.showCalls(samples, zoomLevel, refLength, originalTrackHeight);
-            this.updateCoords(refLength, zoomLevel, tickSpacing, refContigs);
-            this.updateSelections(selections, zoomLevel, baseLevel);
-            // update marker width
-            updateMarkerOnViewportScaleOrZoom(refLength, zoomLevel);
-        }
+    public void updateZoom(Chromosome region, ArrayList<Sample> samples, double zoomLevel, int refLength, ArrayList<Selection> selections, int tickSpacing, int originalTrackHeight) {
+//            // Create and show an information alert
+//            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+//            alert.setTitle("Information");
+//            alert.setHeaderText(null);  // Optional: no header text
+//            alert.setContentText("Cannot zoom out further!");
+//            alert.showAndWait();
+        this.showCalls(region, samples, zoomLevel, originalTrackHeight);
+        //this.initZoomAndCoordsWG(region, refLength, tickSpacing);
+        this.updateSelections(selections, zoomLevel);
+        // update marker width
+        updateMarkerOnViewportScaleOrZoom(region, refLength, zoomLevel);
     }
 
-    public void updateHighLevelView(MouseEvent event) {
+    public void updateMarkerOnDrag(MouseEvent event, Chromosome currentRegion) {
         /**
          * Deal with moving
          */
@@ -887,12 +884,17 @@ public class View {
         // Convert scene X to local X of the markerPane
         double localX = markerWrapper.sceneToLocal(mouseX, 0).getX();
 
-        // Clamp within the bounds of the markerPane
-        double clampedX = Math.max(0, Math.min(localX, markerWrapper.getWidth() - marker.getWidth()));
+        double startX = currentRegion.getPixelAbsoluteOffset();
+        double endX = currentRegion.getPixelAbsoluteOffset() + currentRegion.getPixelWidth();
+        double clampedX = Math.max(startX, Math.min(localX, endX));
+        if (localX >= (endX - marker.getWidth())) {
+            marker.setLayoutX(clampedX-marker.getWidth());
+        }
+        else {
+            marker.setLayoutX(clampedX);
+        }
 
-        marker.setLayoutX(clampedX);
-        double percent = clampedX / markerWrapper.getWidth();
-
+        double percent = (clampedX - startX) / (endX - startX);
         System.out.printf("Marker at X: %.2f (%.1f%%)%n", clampedX, percent * 100);
         this.callsPanel.setHvalue(percent);
     }
@@ -931,11 +933,24 @@ public class View {
     public void closeSidePaneListener(EventHandler<ActionEvent> handler) {
         closeSidePaneButton.setOnAction(handler);
     }
+
+    public void chromComboBoxListener(EventHandler<ActionEvent> handler) {
+        chromComboBox.setOnAction(handler);
+    }
+
     public void viewportWidthChange(EventHandler<ActionEvent> handler) {
         callsPanel.viewportBoundsProperty().addListener((obs, oldBounds, newBounds) -> {
             if (oldBounds == null || newBounds == null || oldBounds.getWidth() != newBounds.getWidth()) {
                 handler.handle(new ActionEvent(this, null));
             }
         });
+    }
+
+    public void scrollChange(ChangeListener<Number> listener) {
+        this.callsPanel.hvalueProperty().addListener(listener);
+    }
+
+    public void markerDragged(EventHandler<MouseEvent> handler) {
+        marker.setOnMouseDragged(handler);
     }
 }

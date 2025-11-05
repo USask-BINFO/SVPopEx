@@ -5,20 +5,21 @@ import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.ScrollBar;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 
 public class Model {
-    private LinkedHashMap<String, Integer> refContigs = new LinkedHashMap<>();
+    private Chromosome currentRegion = null;
+    private LinkedHashMap<String,Chromosome> refChromosomes = new LinkedHashMap<>();
     private int refTotalLength;
     private ArrayList<Sample> samples = new ArrayList<>();
     HashMap<String, Color> sampleColors = new HashMap<>();
     private ArrayList<Call> calls = new ArrayList<>();
     private ArrayList<Selection> selections = new ArrayList<>();
     private double zoomLevel = 0.2;
-    private double baseLevel = 0.2;
-    private ArrayList<Integer> increments = new ArrayList<>(Arrays.asList(100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000, 500000, 1000000, 2000000, 5000000, 10000000, 20000000, 50000000));
-    private int coordIncrementIndex;
+    private ArrayList<Integer> increments = new ArrayList<>(Arrays.asList(100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000, 500000, 1000000, 2000000, 5000000, 10000000, 20000000, 50000000, 100000000));
+    private int coordIncrementIndex = 3;
     private double trackHeightScale = 1;
     private final double baseFontSize = 12;
     private final int originalTrackHeight = 100;
@@ -32,9 +33,15 @@ public class Model {
         this.sampleColors.clear();
         this.calls.clear();
         this.selections.clear();
-        // set zoom back to original
-        this.zoomLevel = this.baseLevel;
+        setCurrentRegion(null);
+    }
 
+    public Chromosome getCurrentRegion() {
+        return this.currentRegion;
+    }
+
+    public void setCurrentRegion(Chromosome region) {
+        this.currentRegion = region;
     }
 
     public String loadFile(java.io.File file) throws java.io.IOException {
@@ -46,12 +53,19 @@ public class Model {
         return this.zoomLevel;
     }
 
-    public double getBaseLevel() {
-        return this.baseLevel;
-    }
-
-    public double updateZoomLevel(double factor) {
-        this.zoomLevel *= factor;
+    public double updateZoomLevelByFactor(double factor, Chromosome region, double viewportWidth, double verticalSBWidth) {
+        double testZoomLevel = this.zoomLevel * factor;
+        // test what the content width would be
+        double contentWidth = region.getLength() * testZoomLevel;
+        double proportionVisible = viewportWidth / contentWidth;
+        double selectedZoom;
+        if (proportionVisible > 1) {
+            selectedZoom = (viewportWidth + verticalSBWidth) / region.getLength();
+        }
+        else {
+            selectedZoom = testZoomLevel;
+        }
+        this.zoomLevel = selectedZoom;
         return this.zoomLevel;
     }
 
@@ -64,25 +78,12 @@ public class Model {
         }
     }
 
-    public void initZoom(double baseLevel, double viewportWidth) {
-        this.baseLevel = baseLevel;
-        this.zoomLevel = baseLevel;
-        double genomicProportion = getGenomicProportion(viewportWidth);
-        System.out.println("GENOMIC PROPORTION " + genomicProportion);
-        if (genomicProportion < 50000000) {
-            this.coordIncrementIndex = 0;
-            updateCoordIncrement(viewportWidth);
-            System.out.println(this.coordIncrementIndex);
-        }
-        else {
-            this.coordIncrementIndex = -1;
-        }
+    public void setZoom(double level) {
+        this.zoomLevel = level;
     }
 
-    public double getGenomicProportion(double viewportWidth) {
-        double contentWidth = refTotalLength * zoomLevel;
-        double proportionVisible = viewportWidth / contentWidth;
-        return proportionVisible * refTotalLength;
+    public void updateZoomLevelByRegion(Chromosome region, double viewportWidth) {
+       this.zoomLevel = viewportWidth / region.getLength();
     }
 
     public int getNumAnnotationsShown() {
@@ -101,8 +102,8 @@ public class Model {
         return this.baseCallPanelHeight;
     }
 
-    public LinkedHashMap<String,Integer> getRefContigs() {
-        return this.refContigs;
+    public LinkedHashMap<String,Chromosome> getRefChromosomes() {
+        return this.refChromosomes;
     }
 
     public int getRefTotalLength() {
@@ -149,7 +150,7 @@ public class Model {
                 for (Sample checkedSample : checkedSamples) {
                     System.out.println("___________" + checkedSample.getName());
                     // loop through sample calls
-                    for (Call call : checkedSample.calls) {
+                    for (Call call : checkedSample.getCalls()) {
                         double calcStart = call.getStart() * zoomLevel;
                         double calcLength = call.getLength() * zoomLevel;
                         // if entire call is in selection area, then loop through genotypes
@@ -360,14 +361,16 @@ public class Model {
                 // assign reference length if match is found, otherwise exit
                 if (matcher.find()) {
                     // assign name
-                    this.refContigs.put(matcher.group(1), Integer.parseInt(matcher.group(2)));
+                    this.refChromosomes.put(matcher.group(1), new Chromosome(matcher.group(1), Integer.parseInt(matcher.group(2)), this.refTotalLength+1));
                     this.refTotalLength += Integer.parseInt(matcher.group(2));
                 }
             }
             // header line with sample info
             else if (line.startsWith("#")) {
+                // add <ALL> to refChromosomes now that all header lines have been processed and total ref length is known
+                this.refChromosomes.put("<ALL>", new Chromosome("<ALL>", this.refTotalLength, 1));
                 String[] header = line.split("\t");
-                createSamples(Arrays.copyOfRange(header, 9, header.length));
+                createSamples(Arrays.copyOfRange(header, 9, header.length), this.refChromosomes);
             }
             // call line
             else {
@@ -382,7 +385,7 @@ public class Model {
                     System.err.println("Error: Could not find type or length in expected VCF format for call. Ignoring call.");
                 }
                 else {
-                    int absoluteStart = getAbsoluteStart(refContigs, fields[0], Integer.parseInt(fields[1])) + Integer.parseInt(fields[1]);
+                    int absoluteStart = refChromosomes.get(fields[0]).getAbsoluteStart() + Integer.parseInt(fields[1]);
                     Call currentCall = new Call(infoMatcher.group(1), Integer.parseInt(infoMatcher.group(2)), fields[0], Integer.parseInt(fields[1]), absoluteStart, fields[2], genotypes);
                     calls.add(currentCall);
                     System.out.println(currentCall);
@@ -401,7 +404,10 @@ public class Model {
                                 genotypes.put(sample.getName(), genotypeMatcher.group(1));
                                 // if has the variant, add
                                 if (Objects.equals(genotypeMatcher.group(1), "0/1") || Objects.equals(genotypeMatcher.group(1), "1/1")) {
-                                    sample.addCall(currentCall);
+                                    // add call for chromosome (in VCF)
+                                    sample.addCall(fields[0], currentCall);
+                                    // add call to <ALL>
+                                    sample.addCall("<ALL>", currentCall);
                                 }
                             }
                         } else {
@@ -414,28 +420,12 @@ public class Model {
         }
     }
 
-    public void createSamples(String[] sampleNames) {
+    public void createSamples(String[] sampleNames, LinkedHashMap<String, Chromosome> regions) {
         for (int i=0; i<sampleNames.length; i++) {
-            Sample sample = new Sample(sampleNames[i]);
+            Sample sample = new Sample(sampleNames[i], regions);
             this.samples.add(sample);
             this.sampleColors.put(samples.get(i).getName(), this.getRandomColor());
         }
-    }
-
-    public int getAbsoluteStart(LinkedHashMap<String,Integer> contigs, String currentContig, int start) {
-        int sum = 0;
-        for (String key : contigs.keySet()) {
-            // if found the current contig, add start value to sum and break
-            if (Objects.equals(key, currentContig)) {
-                sum += start;
-                break;
-            }
-            // otherwise add entire contig length to sum
-            else {
-                sum += contigs.get(key);
-            }
-        }
-        return sum;
     }
 
     public void updateCoordIncrement(double viewportWidth) {
