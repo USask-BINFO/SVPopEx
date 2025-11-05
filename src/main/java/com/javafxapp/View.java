@@ -1,6 +1,7 @@
 package com.javafxapp;
 
 import javafx.animation.TranslateTransition;
+import javafx.beans.value.ChangeListener;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
@@ -255,9 +256,6 @@ public class View {
         this.callsPanel.setPrefWidth(Screen.getPrimary().getBounds().getWidth() - sampleSpaceWidth);
         this.callsPanel.setMaxWidth(Screen.getPrimary().getBounds().getWidth() - sampleSpaceWidth);
         selectionWrapper.setPickOnBounds(false);
-        this.callsPanel.hvalueProperty().addListener((obs, oldVal, newVal) -> {
-            this.syncScroll(newVal);
-        });
         this.selectionContainer.getChildren().add(selectionWrapper);
         this.callsPanel.setFitToHeight(true);
     }
@@ -619,7 +617,7 @@ public class View {
 
 
     // sync scrollpane scroll with marker and coordinate ticks
-    public void syncScroll(Number newVal) {
+    public void syncScroll(Number newVal, Chromosome currentRegion) {
         // oldVal = old scroll position (between 0 and 1)
         // newVal = new scroll position (between 0 and 1)
         // getContent() gets node scrollpane is scrolling, getboundsinlocal gets actual width and height of node, so maxX is the maximum distance that can be scrolled
@@ -627,8 +625,8 @@ public class View {
                 - callsPanel.getViewportBounds().getWidth();
         double translateX = -newVal.doubleValue() * maxX;
         ticksWrapper.setTranslateX(translateX);
-        double max = markerWrapper.getWidth() - marker.getWidth();
-        double scrollX = newVal.doubleValue() * max;
+        double max = currentRegion.getPixelWidth() - marker.getWidth();
+        double scrollX = currentRegion.getPixelAbsoluteOffset() + (newVal.doubleValue() * max);
         marker.setLayoutX(scrollX);
     }
 
@@ -688,6 +686,11 @@ public class View {
         double viewportWidth = callsPanel.getViewportBounds().getWidth();
         double proportionVisible = viewportWidth / contentWidth;
         marker.setWidth(region.getPixelWidth() * proportionVisible);
+        System.out.println("REGION PIXEL WIDTH IS " + region.getPixelWidth());
+        System.out.println("CONTENT WIDTH IS " + contentWidth);
+        System.out.println("VIEWPORT WIDTH IS " + viewportWidth);
+        System.out.println("PROPORTION VISISBLE IS " + proportionVisible);
+        System.out.println("-------------- MARKER WIDTH IS ----------------- " + marker.getWidth());
         // set offset
         marker.setLayoutX(region.getPixelAbsoluteOffset());
     }
@@ -937,5 +940,9 @@ public class View {
                 handler.handle(new ActionEvent(this, null));
             }
         });
+    }
+
+    public void scrollChange(ChangeListener<Number> listener) {
+        this.callsPanel.hvalueProperty().addListener(listener);
     }
 }

@@ -2,6 +2,7 @@ package com.javafxapp;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Objects;
 
 import javafx.scene.Node;
 import javafx.scene.input.MouseEvent;
@@ -52,9 +53,6 @@ public class Controller {
             String selectedChrom = view.chromComboBox.getValue();
             this.showRegion(selectedChrom);
         });
-        view.viewportWidthChange(e -> {
-            this.processViewportWidthChange();
-        });
     }
 
     public void importFile() {
@@ -84,12 +82,18 @@ public class Controller {
             this.view.reset();
             model.processFile(fileContent);
             model.setCurrentRegion(model.getRefChromosomes().get("<ALL>"));
+            view.initReference(model.getRefChromosomes(), model.getRefTotalLength());
             model.setZoom(view.initZoomAndCoordsWG(model.getCurrentRegion(), model.getRefTotalLength(), model.getTickSpacing()));
             view.initSidePane(model.getSamples(), model.getSampleColors(), model::getNumAnnotationsShown);
-            view.initReference(model.getRefChromosomes(), model.getRefTotalLength());
             view.initSamples(model.getSamples(), model.getRefTotalLength(), model.getZoomLevel(), model.getBaseFontSize(), model.getOriginalTrackHeight());
             view.showCalls(model.getRefChromosomes().get("<ALL>"), model.getSamples(), model.getZoomLevel(), model.getOriginalTrackHeight());
             view.enableControls();
+            view.viewportWidthChange(e -> {
+                this.processViewportWidthChange();
+            });
+            view.scrollChange((obs,oldVal, newVal) -> {
+               this.processScrollChange(newVal.doubleValue());
+            });
         }
         // user closed or cancelled file
         else {
@@ -100,16 +104,26 @@ public class Controller {
 
     public void updateZoomIn() {
         System.out.println("***************** IN *********************");
-        double level = model.updateZoomLevelByFactor(1.3, model.getCurrentRegion(), view.getViewportWidth(), view.getVerticalSBWidth());
-        model.updateCoordIncrement(view.getViewportWidth());
-        view.updateZoom(model.getCurrentRegion(), model.getSamples(), level, model.getRefTotalLength(), model.getSelections(), model.getTickSpacing(), model.getOriginalTrackHeight());
+        if (Objects.equals(model.getCurrentRegion().getName(), "<ALL>")) {
+            // not meant to zoom in on <ALL> region so do nothing
+        }
+        else {
+            double level = model.updateZoomLevelByFactor(1.3, model.getCurrentRegion(), view.getViewportWidth(), view.getVerticalSBWidth());
+            model.updateCoordIncrement(view.getViewportWidth());
+            view.updateZoom(model.getCurrentRegion(), model.getSamples(), level, model.getRefTotalLength(), model.getSelections(), model.getTickSpacing(), model.getOriginalTrackHeight());
+        }
     }
 
     public void updateZoomOut() {
         System.out.println("***************** OUT *********************");
-        double level = model.updateZoomLevelByFactor(0.7, model.getCurrentRegion(), view.getViewportWidth(), view.getVerticalSBWidth());
-        model.updateCoordIncrement(view.getViewportWidth());
-        view.updateZoom(model.getCurrentRegion(), model.getSamples(), level, model.getRefTotalLength(), model.getSelections(), model.getTickSpacing(), model.getOriginalTrackHeight());
+        if (Objects.equals(model.getCurrentRegion().getName(), "<ALL>")) {
+            // not meant to zoom out on <ALL> region so do nothing
+        }
+        else {
+            double level = model.updateZoomLevelByFactor(0.7, model.getCurrentRegion(), view.getViewportWidth(), view.getVerticalSBWidth());
+            model.updateCoordIncrement(view.getViewportWidth());
+            view.updateZoom(model.getCurrentRegion(), model.getSamples(), level, model.getRefTotalLength(), model.getSelections(), model.getTickSpacing(), model.getOriginalTrackHeight());
+        }
     }
 
     public void clearSelections() {
@@ -150,5 +164,9 @@ public class Controller {
 
     public void processViewportWidthChange() {
         view.updateMarkerOnViewportScaleOrZoom(model.getCurrentRegion(), model.getRefTotalLength(), model.getZoomLevel());
+    }
+
+    public void processScrollChange(double newVal) {
+        view.syncScroll(newVal, model.getCurrentRegion());
     }
 }
