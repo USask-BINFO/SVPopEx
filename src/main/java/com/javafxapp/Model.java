@@ -429,39 +429,36 @@ public class Model {
     }
 
     public void updateCoordIncrement(double viewportWidth) {
-        double genomicProportion = getGenomicProportion(viewportWidth);
-        System.out.println(genomicProportion);
-        System.out.println(viewportWidth);
-        if (genomicProportion < 50000000) {
-            double ideal = genomicProportion / 7;
-            this.coordIncrementIndex = getClosestIntegerValue(ideal, increments);
-        }
-        else {
-            this.coordIncrementIndex = -1;
-        }
-    }
-
-    public int getClosestIntegerValue(double idealSpacing, ArrayList<Integer> definedIncrements) {
-        int closestIndex = 0;
-        double minDiff = Math.abs(definedIncrements.getFirst() - idealSpacing);
-
-        for (int i = 1; i < definedIncrements.size(); i++) {
-            double diff = Math.abs(definedIncrements.get(i) - idealSpacing);
-            if (diff < minDiff) {
-                minDiff = diff;
-                closestIndex = i;
+        int tickSpacing = increments.get(coordIncrementIndex);
+        //double rawStep = viewportWidth/
+        int lowerThreshold = 150;
+        int upperThreshold = 350;
+        // distance from first to second tick because first tick will be at 0
+        double tickDist = tickSpacing*zoomLevel;
+        // increase increment
+        if (tickDist < lowerThreshold) {
+            if (coordIncrementIndex+1 == increments.size()) {
+                // do nothing, already at largest
+            }
+            else {
+                coordIncrementIndex++;
             }
         }
-
-        return closestIndex;
+        // lower increment
+        else if (tickDist > upperThreshold) {
+            if (coordIncrementIndex == 0) {
+                // do nothing, already at lowest
+            }
+            else {
+                coordIncrementIndex--;
+            }
+        }
+        else {
+            // do nothing, tick increments stay the same
+        }
     }
 
     public int getTickSpacing() {
-        if (this.coordIncrementIndex == -1) {
-            return -1;
-        }
-        else {
-            return increments.get(coordIncrementIndex);
-        }
+        return increments.get(coordIncrementIndex);
     }
 }
