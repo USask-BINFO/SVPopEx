@@ -94,6 +94,9 @@ public class Controller {
             view.scrollChange((obs,oldVal, newVal) -> {
                this.processScrollChange(newVal.doubleValue());
             });
+            view.markerDragged(e -> {
+                this.processMarkerDragged(e);
+            });
         }
         // user closed or cancelled file
         else {
@@ -168,5 +171,9 @@ public class Controller {
 
     public void processScrollChange(double newVal) {
         view.syncScroll(newVal, model.getCurrentRegion());
+    }
+
+    public void processMarkerDragged(MouseEvent e) {
+        view.updateMarkerOnDrag(e, model.getCurrentRegion());
     }
 }

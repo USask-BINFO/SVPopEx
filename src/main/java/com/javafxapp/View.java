@@ -230,6 +230,8 @@ public class View {
         this.referenceContainer.getChildren().add(rectWithMarker);
         // marker
         markerWrapper.getChildren().add(marker);
+        marker.setOnMouseEntered(e -> marker.setCursor(Cursor.HAND));
+        marker.setOnMouseExited(e -> marker.setCursor(Cursor.DEFAULT));
         layout.getChildren().addAll(menuBar, dropdownChromContainer, controlContainer, referenceContainer, tickContainer, callsContentContainer);
         // ---------- TICK PANEL ---------
         spaceWrapper.setMinWidth(this.sampleSpaceWidth);
@@ -360,7 +362,6 @@ public class View {
         labelsBox.setStyle("-fx-alignment: center;");
         marker.setFill(Color.ORANGERED);
         marker.setOpacity(0.5);
-        marker.setOnMouseDragged(event -> updateHighLevelView(event));
         // fill chrom combo box
         double currentX = 0;
         // add <ALL> as a chrom dropdown option and set as default
@@ -876,7 +877,7 @@ public class View {
         updateMarkerOnViewportScaleOrZoom(region, refLength, zoomLevel);
     }
 
-    public void updateHighLevelView(MouseEvent event) {
+    public void updateMarkerOnDrag(MouseEvent event, Chromosome currentRegion) {
         /**
          * Deal with moving
          */
@@ -885,12 +886,17 @@ public class View {
         // Convert scene X to local X of the markerPane
         double localX = markerWrapper.sceneToLocal(mouseX, 0).getX();
 
-        // Clamp within the bounds of the markerPane
-        double clampedX = Math.max(0, Math.min(localX, markerWrapper.getWidth() - marker.getWidth()));
+        double startX = currentRegion.getPixelAbsoluteOffset();
+        double endX = currentRegion.getPixelAbsoluteOffset() + currentRegion.getPixelWidth();
+        double clampedX = Math.max(startX, Math.min(localX, endX));
+        if (localX >= (endX - marker.getWidth())) {
+            marker.setLayoutX(clampedX-marker.getWidth());
+        }
+        else {
+            marker.setLayoutX(clampedX);
+        }
 
-        marker.setLayoutX(clampedX);
-        double percent = clampedX / markerWrapper.getWidth();
-
+        double percent = (clampedX - startX) / (endX - startX);
         System.out.printf("Marker at X: %.2f (%.1f%%)%n", clampedX, percent * 100);
         this.callsPanel.setHvalue(percent);
     }
@@ -944,5 +950,9 @@ public class View {
 
     public void scrollChange(ChangeListener<Number> listener) {
         this.callsPanel.hvalueProperty().addListener(listener);
+    }
+
+    public void markerDragged(EventHandler<MouseEvent> handler) {
+        marker.setOnMouseDragged(handler);
     }
 }
