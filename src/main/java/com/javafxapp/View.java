@@ -434,7 +434,6 @@ public class View {
             for (int j=0; j<sample.getRegionCalls(region.getName()).size(); j++) {
                 // get the current Call and set its id for the call and rectangle
                 Call currentCall = sample.getRegionCalls(region.getName()).get(j);
-                System.out.println(currentCall.toString());
                 Rectangle callRect;
                 if (Objects.equals(region.getName(), "<ALL>")) {
                     callRect = new Rectangle(currentCall.getAbsoluteStart()*zoomLevel, 1, currentCall.getLength()*zoomLevel, originalTrackHeight-2);
@@ -507,6 +506,12 @@ public class View {
         updateMarkerOnViewportScaleOrZoom(region, totalRefLength, zoomLevel);
     }
 
+    /**
+     * Gets the width of the vertical scrollbar (on Scrollpane callsPanel), this method does not assume
+     * the scrollbar is visible it can be called if visible or not
+     *
+     * @return the width if visible, or 0 if not visible or null
+     */
     public double getVerticalSBWidth() {
         ScrollBar vBar = (ScrollBar) this.callsPanel.lookup(".scroll-bar:vertical");
         if (vBar == null || !vBar.isVisible()) {
@@ -515,6 +520,16 @@ public class View {
         else {
             return vBar.getWidth();
         }
+    }
+
+    /**
+     * Checks if the vertical scrollbar (on Scrollpane callsPanel) is visible or not
+     *
+     * @return true if visible, false otherwise
+     */
+    public boolean isVerticalSBVisible() {
+        ScrollBar vBar = (ScrollBar) this.callsPanel.lookup(".scroll-bar:vertical");
+        return vBar.isVisible();
     }
 
     // *************************************************************** TRACK CREATION FUNCTIONS ************************************************************************

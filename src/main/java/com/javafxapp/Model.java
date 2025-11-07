@@ -82,8 +82,22 @@ public class Model {
         this.zoomLevel = level;
     }
 
-    public void updateZoomLevelByRegion(Chromosome region, double viewportWidth) {
-       this.zoomLevel = viewportWidth / region.getLength();
+    /**
+     * Updates attribute zoomLevel to show one chromosome
+     * @param region Chromosome to show
+     * @param viewportWidth double value of current scrollpane viewport width
+     * @param isSBVisible boolean value for whether the scrollpane vertical scrollbar is currently visible
+     * @param SBwidth double value of the width of the scrollpane vertical scrollbar
+     */
+    public void updateZoomLevelByRegion(Chromosome region, double viewportWidth, boolean isSBVisible, double SBwidth) {
+        // if scrollbar is visible, update zoomLevel taking into account the viewport width needs to include the scrollbar width
+        if (isSBVisible) {
+            this.zoomLevel = (viewportWidth + SBwidth) / region.getLength();
+        }
+        // otherwise the entire viewport width is showing and calculate normally
+        else {
+            this.zoomLevel = viewportWidth / region.getLength();
+        }
     }
 
     public int getNumAnnotationsShown() {

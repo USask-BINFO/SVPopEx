@@ -160,8 +160,9 @@ public class Controller {
     public void showRegion(String selectedChrom) {
         Chromosome region = model.getRefChromosomes().get(selectedChrom);
         model.setCurrentRegion(region);
-        System.out.println("CURRENT REGION IS " + model.getCurrentRegion().getName());
-        model.updateZoomLevelByRegion(region, view.getViewportWidth());
+        // updates zoom level based on selected chrom and whether the scrollbar is currently showing
+        model.updateZoomLevelByRegion(region, view.getViewportWidth(), view.isVerticalSBVisible(), view.getVerticalSBWidth());
+        // then make updates to show region
         view.showRegion(region, model.getZoomLevel(), model.getRefTotalLength(), model.getOriginalTrackHeight());
     }
 
