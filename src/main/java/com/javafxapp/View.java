@@ -238,6 +238,7 @@ public class View {
         spaceWrapper.setPrefWidth(this.sampleSpaceWidth);
         spaceWrapper.setMaxWidth(this.sampleSpaceWidth);
         tickContainer.getChildren().add(spaceWrapper);
+        this.ticksWrapper.setPrefHeight(40);
         tickContainer.getChildren().add(ticksWrapper);
         ticksWrapper.setOnMouseEntered(e -> ticksWrapper.setCursor(Cursor.HAND));
         ticksWrapper.setOnMouseExited(e -> ticksWrapper.setCursor(Cursor.DEFAULT));
@@ -479,25 +480,34 @@ public class View {
         }
     }
 
-    public double initZoomAndCoordsWG(Chromosome region, int refLength, int tickSpacing) {
+    /**
+     * Calculate the appropriate zoom level to show entire reference at startup and show ticks for each chromosome
+     * @param refLength int length of the entire reference
+     * @param refContigs LinkedHashMap with the chromosome names as key and Chromosome object as value (this includes an < /ALL > entry)
+     * @return the zoom level
+     */
+    public double initZoomAndCoordsWG(int refLength, LinkedHashMap<String, Chromosome> refContigs) {
         this.ticksWrapper.getChildren().clear();
         // calculate zoom level such that whole genome is in view
         double zoomLevel = callsPanel.getViewportBounds().getWidth() / refLength;
-        System.out.println("THE BASE LEVEL IS:" + zoomLevel);
         // display ticks
-//        for (int x = 0; x <= refLength; x += tickSpacing) {
-//            // coordinate
-//            Text text = new Text(String.valueOf(x));
-//            double textWidth = text.getLayoutBounds().getWidth();
-//            text.setX((x*zoomLevel) - textWidth / 2);
-//            text.setY(20);
-//            // tick
-//            Line tick = new Line(x*zoomLevel, 0, x*zoomLevel, 5);
-//            // add to pane
-//            this.ticksWrapper.getChildren().add(tick);
-//            this.ticksWrapper.getChildren().add(text);
-//        }
-        updateMarkerOnViewportScaleOrZoom(region, refLength, zoomLevel);
+        for (Map.Entry<String, Chromosome> refContig : refContigs.entrySet()) {
+            if (Objects.equals(refContig.getKey(), "<ALL>")) {
+                // do nothing
+            }
+            else {
+                double pos = refContig.getValue().getAbsoluteStart();
+                Text text = new Text(String.valueOf(refContig.getValue().getName()));
+                double textWidth = text.getLayoutBounds().getWidth();
+                text.setX((pos*zoomLevel) - textWidth / 2);
+                text.setY(25);
+                // tick
+                Line tick = new Line(pos*zoomLevel, 30, pos*zoomLevel, 40);
+                // add to pane
+                this.ticksWrapper.getChildren().add(tick);
+                this.ticksWrapper.getChildren().add(text);
+            }
+        }
         return zoomLevel;
     }
 
@@ -879,17 +889,11 @@ public class View {
     }
 
     public void updateZoom(Chromosome region, ArrayList<Sample> samples, double zoomLevel, int refLength, ArrayList<Selection> selections, int tickSpacing, int originalTrackHeight) {
-//            // Create and show an information alert
-//            Alert alert = new Alert(Alert.AlertType.INFORMATION);
-//            alert.setTitle("Information");
-//            alert.setHeaderText(null);  // Optional: no header text
-//            alert.setContentText("Cannot zoom out further!");
-//            alert.showAndWait();
         this.showCalls(region, samples, zoomLevel, originalTrackHeight);
         //this.initZoomAndCoordsWG(region, refLength, tickSpacing);
         this.updateSelections(selections, zoomLevel);
         // update marker width
-        updateMarkerOnViewportScaleOrZoom(region, refLength, zoomLevel);
+        this.updateMarkerOnViewportScaleOrZoom(region, refLength, zoomLevel);
     }
 
     public void updateMarkerOnDrag(MouseEvent event, Chromosome currentRegion) {

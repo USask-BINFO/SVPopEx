@@ -83,7 +83,8 @@ public class Controller {
             model.processFile(fileContent);
             model.setCurrentRegion(model.getRefChromosomes().get("<ALL>"));
             view.initReference(model.getRefChromosomes(), model.getRefTotalLength());
-            model.setZoom(view.initZoomAndCoordsWG(model.getCurrentRegion(), model.getRefTotalLength(), model.getTickSpacing()));
+            model.setZoom(view.initZoomAndCoordsWG(model.getRefTotalLength(), model.getRefChromosomes()));
+            view.updateMarkerOnViewportScaleOrZoom(model.getCurrentRegion(), model.getRefTotalLength(), model.getZoomLevel());
             view.initSidePane(model.getSamples(), model.getSampleColors(), model::getNumAnnotationsShown);
             view.initSamples(model.getSamples(), model.getRefTotalLength(), model.getZoomLevel(), model.getBaseFontSize(), model.getOriginalTrackHeight());
             view.showCalls(model.getRefChromosomes().get("<ALL>"), model.getSamples(), model.getZoomLevel(), model.getOriginalTrackHeight());
