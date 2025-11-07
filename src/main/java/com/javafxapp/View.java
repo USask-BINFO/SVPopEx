@@ -481,40 +481,55 @@ public class View {
     }
 
     /**
-     * Calculate the appropriate zoom level to show entire reference at startup and show ticks for each chromosome
+     * Calculate the appropriate zoom level to show entire reference at startup
      * @param refLength int length of the entire reference
-     * @param refContigs LinkedHashMap with the chromosome names as key and Chromosome object as value (this includes an < /ALL > entry)
      * @return the zoom level
      */
-    public double initZoomAndCoordsWG(int refLength, LinkedHashMap<String, Chromosome> refContigs) {
+    public double initZoomWG(int refLength) {
         this.ticksWrapper.getChildren().clear();
         // calculate zoom level such that whole genome is in view
-        double zoomLevel = callsPanel.getViewportBounds().getWidth() / refLength;
-        // display ticks
-        for (Map.Entry<String, Chromosome> refContig : refContigs.entrySet()) {
-            if (Objects.equals(refContig.getKey(), "<ALL>")) {
-                // do nothing
+        return callsPanel.getViewportBounds().getWidth() / refLength;
+    }
+
+    public void showCoords(Chromosome region, int tickSpacing, double zoomLevel, LinkedHashMap<String, Chromosome> refContigs) {
+        this.ticksWrapper.getChildren().clear();
+        // display ticks for chromosome names
+        if (Objects.equals(region.getName(), "<ALL>")) {
+            for (Map.Entry<String, Chromosome> refContig : refContigs.entrySet()) {
+                if (Objects.equals(refContig.getKey(), "<ALL>")) {
+                    // do nothing
+                }
+                else {
+                    double pos = refContig.getValue().getAbsoluteStart();
+                    Text text = new Text(String.valueOf(refContig.getValue().getName()));
+                    double textWidth = text.getLayoutBounds().getWidth();
+                    text.setX((pos*zoomLevel) - textWidth / 2);
+                    text.setY(25);
+                    // tick
+                    Line tick = new Line(pos*zoomLevel, 30, pos*zoomLevel, 40);
+                    // add to pane
+                    this.ticksWrapper.getChildren().add(tick);
+                    this.ticksWrapper.getChildren().add(text);
+                }
             }
-            else {
-                double pos = refContig.getValue().getAbsoluteStart();
-                Text text = new Text(String.valueOf(refContig.getValue().getName()));
+        }
+        // display ticks for increment
+        else {
+            for (int x = 0; x <= region.getLength(); x += tickSpacing) {
+                // coordinate
+                Text text = new Text(String.valueOf(x));
                 double textWidth = text.getLayoutBounds().getWidth();
-                text.setX((pos*zoomLevel) - textWidth / 2);
+                text.setX((x*zoomLevel) - textWidth / 2);
                 text.setY(25);
                 // tick
-                Line tick = new Line(pos*zoomLevel, 30, pos*zoomLevel, 40);
+                Line tick = new Line(x*zoomLevel, 30, x*zoomLevel, 40);
                 // add to pane
                 this.ticksWrapper.getChildren().add(tick);
                 this.ticksWrapper.getChildren().add(text);
             }
         }
-        return zoomLevel;
     }
 
-    public void showRegion(Chromosome region, double zoomLevel, int totalRefLength, int originalTrackHeight) {
-        showCalls(region, sampleOrder, zoomLevel, originalTrackHeight);
-        updateMarkerOnViewportScaleOrZoom(region, totalRefLength, zoomLevel);
-    }
 
     /**
      * Gets the width of the vertical scrollbar (on Scrollpane callsPanel), this method does not assume
@@ -886,14 +901,6 @@ public class View {
             slideOut.setToX(300);
             slideOut.play();
         }
-    }
-
-    public void updateZoom(Chromosome region, ArrayList<Sample> samples, double zoomLevel, int refLength, ArrayList<Selection> selections, int tickSpacing, int originalTrackHeight) {
-        this.showCalls(region, samples, zoomLevel, originalTrackHeight);
-        //this.initZoomAndCoordsWG(region, refLength, tickSpacing);
-        this.updateSelections(selections, zoomLevel);
-        // update marker width
-        this.updateMarkerOnViewportScaleOrZoom(region, refLength, zoomLevel);
     }
 
     public void updateMarkerOnDrag(MouseEvent event, Chromosome currentRegion) {

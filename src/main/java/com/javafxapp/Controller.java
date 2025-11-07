@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Objects;
 
 import javafx.scene.Node;
+import javafx.scene.control.Button;
 import javafx.scene.input.MouseEvent;
 import javafx.stage.FileChooser;
 import javafx.event.ActionEvent;
@@ -20,10 +21,14 @@ public class Controller {
             this.importFile();
         });
         view.zoomInListener(e -> {
-            this.updateZoomIn();
+            Button source = (Button) e.getSource();
+            String text = source.getText();
+            this.updateZoom(text);
         });
         view.zoomOutListener(e -> {
-            this.updateZoomOut();
+            Button source = (Button) e.getSource();
+            String text = source.getText();
+            this.updateZoom(text);
         });
         view.clearSelectionsListener(e -> {
             this.clearSelections();
@@ -83,7 +88,8 @@ public class Controller {
             model.processFile(fileContent);
             model.setCurrentRegion(model.getRefChromosomes().get("<ALL>"));
             view.initReference(model.getRefChromosomes(), model.getRefTotalLength());
-            model.setZoom(view.initZoomAndCoordsWG(model.getRefTotalLength(), model.getRefChromosomes()));
+            model.setZoom(view.initZoomWG(model.getRefTotalLength()));
+            view.showCoords(model.getCurrentRegion(), -1, model.getZoomLevel(), model.getRefChromosomes());
             view.updateMarkerOnViewportScaleOrZoom(model.getCurrentRegion(), model.getRefTotalLength(), model.getZoomLevel());
             view.initSidePane(model.getSamples(), model.getSampleColors(), model::getNumAnnotationsShown);
             view.initSamples(model.getSamples(), model.getRefTotalLength(), model.getZoomLevel(), model.getBaseFontSize(), model.getOriginalTrackHeight());
@@ -106,27 +112,31 @@ public class Controller {
         }
     }
 
-    public void updateZoomIn() {
-        System.out.println("***************** IN *********************");
+    public void updateZoom(String text) {
         if (Objects.equals(model.getCurrentRegion().getName(), "<ALL>")) {
             // not meant to zoom in on <ALL> region so do nothing
         }
         else {
-            double level = model.updateZoomLevelByFactor(1.3, model.getCurrentRegion(), view.getViewportWidth(), view.getVerticalSBWidth());
-            model.updateCoordIncrement(view.getViewportWidth());
-            view.updateZoom(model.getCurrentRegion(), model.getSamples(), level, model.getRefTotalLength(), model.getSelections(), model.getTickSpacing(), model.getOriginalTrackHeight());
-        }
-    }
-
-    public void updateZoomOut() {
-        System.out.println("***************** OUT *********************");
-        if (Objects.equals(model.getCurrentRegion().getName(), "<ALL>")) {
-            // not meant to zoom out on <ALL> region so do nothing
-        }
-        else {
-            double level = model.updateZoomLevelByFactor(0.7, model.getCurrentRegion(), view.getViewportWidth(), view.getVerticalSBWidth());
-            model.updateCoordIncrement(view.getViewportWidth());
-            view.updateZoom(model.getCurrentRegion(), model.getSamples(), level, model.getRefTotalLength(), model.getSelections(), model.getTickSpacing(), model.getOriginalTrackHeight());
+            double factor;
+            if (Objects.equals(text, "+")) {
+                factor = 1.3;
+            }
+            else if (Objects.equals(text, "-")) {
+                factor = 0.7;
+            }
+            else {
+                throw new IllegalArgumentException("Unexpected zoom button text " + text);
+            }
+            // update zoom level
+            double level = model.updateZoomLevelByFactor(factor, model.getCurrentRegion(), view.getViewportWidth(), view.getVerticalSBWidth());
+            // update coord increment
+            model.updateCoordIncrement(view.getViewportWidth(), model.getCurrentRegion());
+            // show coords
+            view.showCoords(model.getCurrentRegion(), model.getTickSpacing(), model.getZoomLevel(), model.getRefChromosomes());
+            // show calls
+            view.showCalls(model.getCurrentRegion(), model.getSamples(), level, model.getOriginalTrackHeight());
+            view.updateSelections(model.getSelections(), level);
+            view.updateMarkerOnViewportScaleOrZoom(model.getCurrentRegion(), model.getRefTotalLength(), level);
         }
     }
 
@@ -159,12 +169,18 @@ public class Controller {
     }
 
     public void showRegion(String selectedChrom) {
+        // set region
         Chromosome region = model.getRefChromosomes().get(selectedChrom);
         model.setCurrentRegion(region);
-        // updates zoom level based on selected chrom and whether the scrollbar is currently showing
+        // update zoom level
         model.updateZoomLevelByRegion(region, view.getViewportWidth(), view.isVerticalSBVisible(), view.getVerticalSBWidth());
-        // then make updates to show region
-        view.showRegion(region, model.getZoomLevel(), model.getRefTotalLength(), model.getOriginalTrackHeight());
+        // update coord increment
+        model.updateCoordIncrement(view.getViewportWidth(), model.getCurrentRegion());
+        // show coords
+        view.showCoords(model.getCurrentRegion(), model.getTickSpacing(), model.getZoomLevel(), model.getRefChromosomes());
+        // show calls
+        view.showCalls(region, view.getSampleOrderInView(), model.getZoomLevel(), model.getOriginalTrackHeight());
+        view.updateMarkerOnViewportScaleOrZoom(region, model.getRefTotalLength(), model.getZoomLevel());
     }
 
     public void processViewportWidthChange() {

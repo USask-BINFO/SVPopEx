@@ -18,7 +18,7 @@ public class Model {
     private ArrayList<Call> calls = new ArrayList<>();
     private ArrayList<Selection> selections = new ArrayList<>();
     private double zoomLevel = 0.2;
-    private ArrayList<Integer> increments = new ArrayList<>(Arrays.asList(100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000, 500000, 1000000, 2000000, 5000000, 10000000, 20000000, 50000000, 100000000));
+    private ArrayList<Integer> increments = new ArrayList<>(Arrays.asList(100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000, 500000, 1000000, 2000000, 5000000, 10000000, 20000000, 50000000));
     private int coordIncrementIndex = 3;
     private double trackHeightScale = 1;
     private final double baseFontSize = 12;
@@ -442,34 +442,37 @@ public class Model {
         }
     }
 
-    public void updateCoordIncrement(double viewportWidth) {
-        int tickSpacing = increments.get(coordIncrementIndex);
-        //double rawStep = viewportWidth/
-        int lowerThreshold = 150;
-        int upperThreshold = 350;
-        // distance from first to second tick because first tick will be at 0
-        double tickDist = tickSpacing*zoomLevel;
-        // increase increment
-        if (tickDist < lowerThreshold) {
-            if (coordIncrementIndex+1 == increments.size()) {
-                // do nothing, already at largest
-            }
-            else {
-                coordIncrementIndex++;
-            }
+    public void updateCoordIncrement(double viewportWidth, Chromosome region) {
+        double genomicProportion = getGenomicProportion(viewportWidth, region);
+        if (genomicProportion < 100000000) {
+            double ideal = genomicProportion / 7;
+            this.coordIncrementIndex = getClosestIntegerValue(ideal, increments);
         }
-        // lower increment
-        else if (tickDist > upperThreshold) {
-            if (coordIncrementIndex == 0) {
-                // do nothing, already at lowest
-            }
-            else {
-                coordIncrementIndex--;
-            }
-        }
+        // last increment which corresponds to 100 MB
         else {
-            // do nothing, tick increments stay the same
+            this.coordIncrementIndex = this.increments.size() - 1;
         }
+    }
+
+    public double getGenomicProportion(double viewportWidth, Chromosome region) {
+        double contentWidth = region.getLength() * zoomLevel;
+        double proportionVisible = viewportWidth / contentWidth;
+        return proportionVisible * region.getLength();
+    }
+
+    public int getClosestIntegerValue(double idealSpacing, ArrayList<Integer> definedIncrements) {
+        int closestIndex = 0;
+        double minDiff = Math.abs(definedIncrements.getFirst() - idealSpacing);
+
+        for (int i = 1; i < definedIncrements.size(); i++) {
+            double diff = Math.abs(definedIncrements.get(i) - idealSpacing);
+            if (diff < minDiff) {
+                minDiff = diff;
+                closestIndex = i;
+            }
+        }
+
+        return closestIndex;
     }
 
     public int getTickSpacing() {
