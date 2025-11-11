@@ -516,8 +516,34 @@ public class View {
         // display ticks for increment
         else {
             for (int x = 0; x <= region.getLength(); x += tickSpacing) {
-                // coordinate
                 Text text = new Text(String.valueOf(x));
+                // base (b) range
+                if (x < 1000) {
+                    text = new Text(x + " b");
+                }
+                // kilobase (KB) range
+                else if (x >= 1000 && x < 1000000) {
+                    double truncatedX = (double) x / 1000;
+                    if (truncatedX % 1 == 0) {
+                        text = new Text(String.format("%.0f", truncatedX) + " kb");
+                    }
+                    else {
+                        text = new Text(String.format("%.1f", truncatedX) + " kb");
+                    }
+                }
+                // megabase (MB) range
+                else if (x >= 1000000) {
+                    double truncatedX = (double) x / 1000000;
+                    if (truncatedX % 1 == 0) {
+                        text = new Text(String.format("%.0f", truncatedX) + " Mb");
+                    }
+                    else {
+                        text = new Text(String.format("%.1f", truncatedX) + " Mb");
+                    }
+                }
+                else {
+                    // do nothing
+                }
                 double textWidth = text.getLayoutBounds().getWidth();
                 text.setX((x*zoomLevel) - textWidth / 2);
                 text.setY(25);
@@ -727,11 +753,6 @@ public class View {
         double viewportWidth = callsPanel.getViewportBounds().getWidth();
         double proportionVisible = viewportWidth / contentWidth;
         marker.setWidth(region.getPixelWidth() * proportionVisible);
-        System.out.println("REGION PIXEL WIDTH IS " + region.getPixelWidth());
-        System.out.println("CONTENT WIDTH IS " + contentWidth);
-        System.out.println("VIEWPORT WIDTH IS " + viewportWidth);
-        System.out.println("PROPORTION VISISBLE IS " + proportionVisible);
-        System.out.println("-------------- MARKER WIDTH IS ----------------- " + marker.getWidth());
         // set offset
         marker.setLayoutX(region.getPixelAbsoluteOffset());
     }
