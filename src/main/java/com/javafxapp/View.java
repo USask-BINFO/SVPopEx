@@ -77,6 +77,7 @@ public class View {
     private final HBox dropdownChromContainer = new HBox(10);
     TextField regionField = new TextField();
     ComboBox<String> chromComboBox = new ComboBox<>();
+    Button processRegionButton = new Button("Go");
     // ----------- controlContainer ---------
     private final HBox controlContainer = new HBox();
     Region controlContainerSpacer = new Region();
@@ -100,6 +101,17 @@ public class View {
 
 
     public View(Stage primaryStage) {
+        // ---------- STYLING --------------------
+        String circularStyle = """
+    -fx-background-radius: 10px;
+    -fx-border-radius: 10px;
+    -fx-text-fill: #555555;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+""";
         // ---------- ROOT AND SIDE PANE ---------
         this.primaryStage = primaryStage;
         root.setAlignment(sidePane, Pos.CENTER_RIGHT);
@@ -148,7 +160,25 @@ public class View {
         // ---------- DROPDOWN CHROM CONTAINER ----
         dropdownChromContainer.setAlignment(Pos.CENTER);
         regionField.setPromptText("Show region: chrom1:0-100");
-        dropdownChromContainer.getChildren().addAll(chromComboBox, regionField);
+        processRegionButton.setDisable(true);
+        processRegionButton.setFocusTraversable(false);
+        processRegionButton.setStyle("""
+        -fx-focus-color: transparent;
+        -fx-faint-focus-color: transparent;
+        -fx-border-color: #AAAAAA;
+        -fx-border-radius: 3px;
+        -fx-border-width: 1px;
+        -fx-cursor: hand;
+        """);
+        dropdownChromContainer.getChildren().addAll(chromComboBox, regionField, processRegionButton);
+        chromComboBox.setStyle("""
+        -fx-focus-color: transparent;
+        -fx-faint-focus-color: transparent;
+        -fx-border-color: #AAAAAA;
+        -fx-border-radius: 3px;
+        -fx-border-width: 1px;
+        -fx-cursor: hand;
+        """);
         // initally disable dropdown and text field
         regionField.setDisable(true);
         chromComboBox.setDisable(true);
@@ -184,16 +214,6 @@ public class View {
         sidePaneButton.setMaxSize(120,25);
         closeSidePaneButton.setMinSize(25,25);
         closeSidePaneButton.setMaxSize(25,25);
-        String circularStyle = """
-    -fx-background-radius: 10px;
-    -fx-border-radius: 10px;
-    -fx-text-fill: #555555;
-    -fx-font-size: 11px;
-    -fx-font-weight: bold;
-    -fx-cursor: hand;
-    -fx-focus-color: transparent;
-    -fx-faint-focus-color: transparent;
-""";
         // button focus off
         zoomInButton.setFocusTraversable(false);
         zoomOutButton.setFocusTraversable(false);
@@ -279,6 +299,7 @@ public class View {
         this.closeSidePaneButton.setDisable(false);
         this.regionField.setDisable(false);
         this.chromComboBox.setDisable(false);
+        this.processRegionButton.setDisable(false);
         double bottomOfTickContainerY = tickContainer.getLayoutY() + tickContainer.getLayoutBounds().getHeight();
         sidePane.setTranslateY(bottomOfTickContainerY);
     }
@@ -299,6 +320,7 @@ public class View {
         this.growTrackHeightButton.setDisable(true);
         this.sidePaneButton.setDisable(true);
         this.closeSidePaneButton.setDisable(true);
+        this.processRegionButton.setDisable(true);
     }
 
     public Scene getScene() {
