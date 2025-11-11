@@ -10,7 +10,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 
 public class Model {
-    private Chromosome currentRegion = null;
+    private Chromosome currentChrom = null;
     private LinkedHashMap<String,Chromosome> refChromosomes = new LinkedHashMap<>();
     private int refTotalLength;
     private ArrayList<Sample> samples = new ArrayList<>();
@@ -33,15 +33,15 @@ public class Model {
         this.sampleColors.clear();
         this.calls.clear();
         this.selections.clear();
-        setCurrentRegion(null);
+        setCurrentChrom(null);
     }
 
-    public Chromosome getCurrentRegion() {
-        return this.currentRegion;
+    public Chromosome getCurrentChrom() {
+        return this.currentChrom;
     }
 
-    public void setCurrentRegion(Chromosome region) {
-        this.currentRegion = region;
+    public void setCurrentChrom(Chromosome chrom) {
+        this.currentChrom = chrom;
     }
 
     public String loadFile(java.io.File file) throws java.io.IOException {
@@ -53,14 +53,14 @@ public class Model {
         return this.zoomLevel;
     }
 
-    public double updateZoomLevelByFactor(double factor, Chromosome region, double viewportWidth, double verticalSBWidth) {
+    public double updateZoomLevelByFactor(double factor, Chromosome chrom, double viewportWidth, double verticalSBWidth) {
         double testZoomLevel = this.zoomLevel * factor;
         // test what the content width would be
-        double contentWidth = region.getLength() * testZoomLevel;
+        double contentWidth = chrom.getLength() * testZoomLevel;
         double proportionVisible = viewportWidth / contentWidth;
         double selectedZoom;
         if (proportionVisible > 1) {
-            selectedZoom = (viewportWidth + verticalSBWidth) / region.getLength();
+            selectedZoom = (viewportWidth + verticalSBWidth) / chrom.getLength();
         }
         else {
             selectedZoom = testZoomLevel;
@@ -84,19 +84,19 @@ public class Model {
 
     /**
      * Updates attribute zoomLevel to show one chromosome
-     * @param region Chromosome to show
+     * @param chrom Chromosome to show
      * @param viewportWidth double value of current scrollpane viewport width
      * @param isSBVisible boolean value for whether the scrollpane vertical scrollbar is currently visible
      * @param SBwidth double value of the width of the scrollpane vertical scrollbar
      */
-    public void updateZoomLevelByRegion(Chromosome region, double viewportWidth, boolean isSBVisible, double SBwidth) {
+    public void updateZoomLevelByChrom(Chromosome chrom, double viewportWidth, boolean isSBVisible, double SBwidth) {
         // if scrollbar is visible, update zoomLevel taking into account the viewport width needs to include the scrollbar width
         if (isSBVisible) {
-            this.zoomLevel = (viewportWidth + SBwidth) / region.getLength();
+            this.zoomLevel = (viewportWidth + SBwidth) / chrom.getLength();
         }
         // otherwise the entire viewport width is showing and calculate normally
         else {
-            this.zoomLevel = viewportWidth / region.getLength();
+            this.zoomLevel = viewportWidth / chrom.getLength();
         }
     }
 
@@ -434,16 +434,16 @@ public class Model {
         }
     }
 
-    public void createSamples(String[] sampleNames, LinkedHashMap<String, Chromosome> regions) {
+    public void createSamples(String[] sampleNames, LinkedHashMap<String, Chromosome> refContigs) {
         for (int i=0; i<sampleNames.length; i++) {
-            Sample sample = new Sample(sampleNames[i], regions);
+            Sample sample = new Sample(sampleNames[i], refContigs);
             this.samples.add(sample);
             this.sampleColors.put(samples.get(i).getName(), this.getRandomColor());
         }
     }
 
-    public void updateCoordIncrement(double viewportWidth, Chromosome region) {
-        double genomicProportion = getGenomicProportion(viewportWidth, region);
+    public void updateCoordIncrement(double viewportWidth, Chromosome chrom) {
+        double genomicProportion = getGenomicProportion(viewportWidth, chrom);
         if (genomicProportion < 100000000) {
             double ideal = genomicProportion / 7;
             this.coordIncrementIndex = getClosestIntegerValue(ideal, increments);
@@ -454,10 +454,10 @@ public class Model {
         }
     }
 
-    public double getGenomicProportion(double viewportWidth, Chromosome region) {
-        double contentWidth = region.getLength() * zoomLevel;
+    public double getGenomicProportion(double viewportWidth, Chromosome chrom) {
+        double contentWidth = chrom.getLength() * zoomLevel;
         double proportionVisible = viewportWidth / contentWidth;
-        return proportionVisible * region.getLength();
+        return proportionVisible * chrom.getLength();
     }
 
     public int getClosestIntegerValue(double idealSpacing, ArrayList<Integer> definedIncrements) {

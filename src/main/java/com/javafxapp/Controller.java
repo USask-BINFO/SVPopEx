@@ -56,7 +56,7 @@ public class Controller {
         });
         view.chromComboBoxListener(e -> {
             String selectedChrom = view.chromComboBox.getValue();
-            this.showRegion(selectedChrom);
+            this.showChromosome(selectedChrom);
         });
     }
 
@@ -86,11 +86,11 @@ public class Controller {
             this.model.reset();
             this.view.reset();
             model.processFile(fileContent);
-            model.setCurrentRegion(model.getRefChromosomes().get("<ALL>"));
+            model.setCurrentChrom(model.getRefChromosomes().get("<ALL>"));
             view.initReference(model.getRefChromosomes(), model.getRefTotalLength());
             model.setZoom(view.initZoomWG(model.getRefTotalLength()));
-            view.showCoords(model.getCurrentRegion(), -1, model.getZoomLevel(), model.getRefChromosomes());
-            view.updateMarkerOnViewportScaleOrZoom(model.getCurrentRegion(), model.getRefTotalLength(), model.getZoomLevel());
+            view.showCoords(model.getCurrentChrom(), -1, model.getZoomLevel(), model.getRefChromosomes());
+            view.updateMarkerOnViewportScaleOrZoom(model.getCurrentChrom(), model.getRefTotalLength(), model.getZoomLevel());
             view.initSidePane(model.getSamples(), model.getSampleColors(), model::getNumAnnotationsShown);
             view.initSamples(model.getSamples(), model.getRefTotalLength(), model.getZoomLevel(), model.getBaseFontSize(), model.getOriginalTrackHeight());
             view.showCalls(model.getRefChromosomes().get("<ALL>"), model.getSamples(), model.getZoomLevel(), model.getOriginalTrackHeight());
@@ -113,7 +113,7 @@ public class Controller {
     }
 
     public void updateZoom(String text) {
-        if (Objects.equals(model.getCurrentRegion().getName(), "<ALL>")) {
+        if (Objects.equals(model.getCurrentChrom().getName(), "<ALL>")) {
             // not meant to zoom in on <ALL> region so do nothing
         }
         else {
@@ -128,15 +128,15 @@ public class Controller {
                 throw new IllegalArgumentException("Unexpected zoom button text " + text);
             }
             // update zoom level
-            double level = model.updateZoomLevelByFactor(factor, model.getCurrentRegion(), view.getViewportWidth(), view.getVerticalSBWidth());
+            double level = model.updateZoomLevelByFactor(factor, model.getCurrentChrom(), view.getViewportWidth(), view.getVerticalSBWidth());
             // update coord increment
-            model.updateCoordIncrement(view.getViewportWidth(), model.getCurrentRegion());
+            model.updateCoordIncrement(view.getViewportWidth(), model.getCurrentChrom());
             // show coords
-            view.showCoords(model.getCurrentRegion(), model.getTickSpacing(), model.getZoomLevel(), model.getRefChromosomes());
+            view.showCoords(model.getCurrentChrom(), model.getTickSpacing(), model.getZoomLevel(), model.getRefChromosomes());
             // show calls
-            view.showCalls(model.getCurrentRegion(), model.getSamples(), level, model.getOriginalTrackHeight());
+            view.showCalls(model.getCurrentChrom(), model.getSamples(), level, model.getOriginalTrackHeight());
             view.updateSelections(model.getSelections(), level);
-            view.updateMarkerOnViewportScaleOrZoom(model.getCurrentRegion(), model.getRefTotalLength(), level);
+            view.updateMarkerOnViewportScaleOrZoom(model.getCurrentChrom(), model.getRefTotalLength(), level);
         }
     }
 
@@ -168,30 +168,30 @@ public class Controller {
         view.redrawSampleInfoAfterScale(model.getSamples(), model.getBaseFontSize(), model.getTrackHeightScale(), model.getOriginalTrackHeight());
     }
 
-    public void showRegion(String selectedChrom) {
-        // set region
-        Chromosome region = model.getRefChromosomes().get(selectedChrom);
-        model.setCurrentRegion(region);
+    public void showChromosome(String selectedChrom) {
+        // set new chromosome
+        Chromosome chrom = model.getRefChromosomes().get(selectedChrom);
+        model.setCurrentChrom(chrom);
         // update zoom level
-        model.updateZoomLevelByRegion(region, view.getViewportWidth(), view.isVerticalSBVisible(), view.getVerticalSBWidth());
+        model.updateZoomLevelByChrom(chrom, view.getViewportWidth(), view.isVerticalSBVisible(), view.getVerticalSBWidth());
         // update coord increment
-        model.updateCoordIncrement(view.getViewportWidth(), model.getCurrentRegion());
+        model.updateCoordIncrement(view.getViewportWidth(), model.getCurrentChrom());
         // show coords
-        view.showCoords(model.getCurrentRegion(), model.getTickSpacing(), model.getZoomLevel(), model.getRefChromosomes());
+        view.showCoords(model.getCurrentChrom(), model.getTickSpacing(), model.getZoomLevel(), model.getRefChromosomes());
         // show calls
-        view.showCalls(region, view.getSampleOrderInView(), model.getZoomLevel(), model.getOriginalTrackHeight());
-        view.updateMarkerOnViewportScaleOrZoom(region, model.getRefTotalLength(), model.getZoomLevel());
+        view.showCalls(chrom, view.getSampleOrderInView(), model.getZoomLevel(), model.getOriginalTrackHeight());
+        view.updateMarkerOnViewportScaleOrZoom(chrom, model.getRefTotalLength(), model.getZoomLevel());
     }
 
     public void processViewportWidthChange() {
-        view.updateMarkerOnViewportScaleOrZoom(model.getCurrentRegion(), model.getRefTotalLength(), model.getZoomLevel());
+        view.updateMarkerOnViewportScaleOrZoom(model.getCurrentChrom(), model.getRefTotalLength(), model.getZoomLevel());
     }
 
     public void processScrollChange(double newVal) {
-        view.syncScroll(newVal, model.getCurrentRegion());
+        view.syncScroll(newVal, model.getCurrentChrom());
     }
 
     public void processMarkerDragged(MouseEvent e) {
-        view.updateMarkerOnDrag(e, model.getCurrentRegion());
+        view.updateMarkerOnDrag(e, model.getCurrentChrom());
     }
 }

@@ -147,7 +147,7 @@ public class View {
         menuBar.getMenus().add(fileMenu);
         // ---------- DROPDOWN CHROM CONTAINER ----
         dropdownChromContainer.setAlignment(Pos.CENTER);
-        regionField.setPromptText("Enter region:");
+        regionField.setPromptText("Show region: chrom1:0-100");
         dropdownChromContainer.getChildren().addAll(chromComboBox, regionField);
         // initally disable dropdown and text field
         regionField.setDisable(true);
@@ -416,27 +416,27 @@ public class View {
         this.callsPanel.setPannable(true);   // Optional: enables mouse drag scrolling
     }
 
-    public void showCalls(Chromosome region, ArrayList<Sample> samples, double zoomLevel, int originalTrackHeight) {
+    public void showCalls(Chromosome chromosome, ArrayList<Sample> samples, double zoomLevel, int originalTrackHeight) {
         /**
          * Pre-conditions/assumptions: Gets call pane for each sample by looking up the ID
          */
-        this.samplePanel.setMinWidth(region.getLength() * zoomLevel);
-        this.samplePanel.setMaxWidth(region.getLength() * zoomLevel);
+        this.samplePanel.setMinWidth(chromosome.getLength() * zoomLevel);
+        this.samplePanel.setMaxWidth(chromosome.getLength() * zoomLevel);
 
-        System.out.println("CURRENT REGION FROM SHOWCALLS IS " + region.getName());
+        System.out.println("CURRENT REGION FROM SHOWCALLS IS " + chromosome.getName());
         // loops through each sample and gets the sample pane to update, access order does not matter
         for (Sample sample : samples) {
             Pane currentCalls = (Pane) this.samplesContainer.lookup("#" + sample.getName());
             currentCalls.getChildren().clear();
-            currentCalls.setMinWidth(region.getLength() * zoomLevel);
-            currentCalls.setPrefWidth(region.getLength() * zoomLevel);
-            currentCalls.setMaxWidth(region.getLength() * zoomLevel);
+            currentCalls.setMinWidth(chromosome.getLength() * zoomLevel);
+            currentCalls.setPrefWidth(chromosome.getLength() * zoomLevel);
+            currentCalls.setMaxWidth(chromosome.getLength() * zoomLevel);
             // loop through each call
-            for (int j=0; j<sample.getRegionCalls(region.getName()).size(); j++) {
+            for (int j=0; j<sample.getChromosomeCalls(chromosome.getName()).size(); j++) {
                 // get the current Call and set its id for the call and rectangle
-                Call currentCall = sample.getRegionCalls(region.getName()).get(j);
+                Call currentCall = sample.getChromosomeCalls(chromosome.getName()).get(j);
                 Rectangle callRect;
-                if (Objects.equals(region.getName(), "<ALL>")) {
+                if (Objects.equals(chromosome.getName(), "<ALL>")) {
                     callRect = new Rectangle(currentCall.getAbsoluteStart()*zoomLevel, 1, currentCall.getLength()*zoomLevel, originalTrackHeight-2);
                 }
                 else {
@@ -491,10 +491,10 @@ public class View {
         return callsPanel.getViewportBounds().getWidth() / refLength;
     }
 
-    public void showCoords(Chromosome region, int tickSpacing, double zoomLevel, LinkedHashMap<String, Chromosome> refContigs) {
+    public void showCoords(Chromosome chromosome, int tickSpacing, double zoomLevel, LinkedHashMap<String, Chromosome> refContigs) {
         this.ticksWrapper.getChildren().clear();
         // display ticks for chromosome names
-        if (Objects.equals(region.getName(), "<ALL>")) {
+        if (Objects.equals(chromosome.getName(), "<ALL>")) {
             for (Map.Entry<String, Chromosome> refContig : refContigs.entrySet()) {
                 if (Objects.equals(refContig.getKey(), "<ALL>")) {
                     // do nothing
@@ -515,7 +515,7 @@ public class View {
         }
         // display ticks for increment
         else {
-            for (int x = 0; x <= region.getLength(); x += tickSpacing) {
+            for (int x = 0; x <= chromosome.getLength(); x += tickSpacing) {
                 Text text = new Text(String.valueOf(x));
                 // base (b) range
                 if (x < 1000) {
@@ -684,7 +684,7 @@ public class View {
 
 
     // sync scrollpane scroll with marker and coordinate ticks
-    public void syncScroll(Number newVal, Chromosome currentRegion) {
+    public void syncScroll(Number newVal, Chromosome currentChrom) {
         // oldVal = old scroll position (between 0 and 1)
         // newVal = new scroll position (between 0 and 1)
         // getContent() gets node scrollpane is scrolling, getboundsinlocal gets actual width and height of node, so maxX is the maximum distance that can be scrolled
@@ -692,8 +692,8 @@ public class View {
                 - callsPanel.getViewportBounds().getWidth();
         double translateX = -newVal.doubleValue() * maxX;
         ticksWrapper.setTranslateX(translateX);
-        double max = currentRegion.getPixelWidth() - marker.getWidth();
-        double scrollX = currentRegion.getPixelAbsoluteOffset() + (newVal.doubleValue() * max);
+        double max = currentChrom.getPixelWidth() - marker.getWidth();
+        double scrollX = currentChrom.getPixelAbsoluteOffset() + (newVal.doubleValue() * max);
         marker.setLayoutX(scrollX);
     }
 
@@ -746,15 +746,15 @@ public class View {
         }
     }
 
-    public void updateMarkerOnViewportScaleOrZoom(Chromosome region, int refLength, double zoomLevel) {
+    public void updateMarkerOnViewportScaleOrZoom(Chromosome chromosome, int refLength, double zoomLevel) {
         // set width
-        double contentWidth = region.getLength() * zoomLevel;
+        double contentWidth = chromosome.getLength() * zoomLevel;
         callsPanel.layout();
         double viewportWidth = callsPanel.getViewportBounds().getWidth();
         double proportionVisible = viewportWidth / contentWidth;
-        marker.setWidth(region.getPixelWidth() * proportionVisible);
+        marker.setWidth(chromosome.getPixelWidth() * proportionVisible);
         // set offset
-        marker.setLayoutX(region.getPixelAbsoluteOffset());
+        marker.setLayoutX(chromosome.getPixelAbsoluteOffset());
     }
 
     public double getBaseCallPanelHeight() {
@@ -924,7 +924,7 @@ public class View {
         }
     }
 
-    public void updateMarkerOnDrag(MouseEvent event, Chromosome currentRegion) {
+    public void updateMarkerOnDrag(MouseEvent event, Chromosome currentChrom) {
         /**
          * Deal with moving
          */
@@ -933,8 +933,8 @@ public class View {
         // Convert scene X to local X of the markerPane
         double localX = markerWrapper.sceneToLocal(mouseX, 0).getX();
 
-        double startX = currentRegion.getPixelAbsoluteOffset();
-        double endX = currentRegion.getPixelAbsoluteOffset() + currentRegion.getPixelWidth();
+        double startX = currentChrom.getPixelAbsoluteOffset();
+        double endX = currentChrom.getPixelAbsoluteOffset() + currentChrom.getPixelWidth();
         double clampedX = Math.max(startX, Math.min(localX, endX));
         if (localX >= (endX - marker.getWidth())) {
             marker.setLayoutX(clampedX-marker.getWidth());
