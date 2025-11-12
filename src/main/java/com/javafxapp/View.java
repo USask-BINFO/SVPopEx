@@ -77,6 +77,7 @@ public class View {
     private final HBox dropdownChromContainer = new HBox(10);
     TextField regionField = new TextField();
     ComboBox<String> chromComboBox = new ComboBox<>();
+    Button processRegionButton = new Button("Go");
     // ----------- controlContainer ---------
     private final HBox controlContainer = new HBox();
     Region controlContainerSpacer = new Region();
@@ -100,6 +101,17 @@ public class View {
 
 
     public View(Stage primaryStage) {
+        // ---------- STYLING --------------------
+        String circularStyle = """
+    -fx-background-radius: 10px;
+    -fx-border-radius: 10px;
+    -fx-text-fill: #555555;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+""";
         // ---------- ROOT AND SIDE PANE ---------
         this.primaryStage = primaryStage;
         root.setAlignment(sidePane, Pos.CENTER_RIGHT);
@@ -147,8 +159,33 @@ public class View {
         menuBar.getMenus().add(fileMenu);
         // ---------- DROPDOWN CHROM CONTAINER ----
         dropdownChromContainer.setAlignment(Pos.CENTER);
-        regionField.setPromptText("Enter region:");
-        dropdownChromContainer.getChildren().addAll(chromComboBox, regionField);
+        regionField.setPromptText("Show region: chrom1:0-100");
+        regionField.setStyle("""
+        -fx-focus-color: transparent;
+        -fx-faint-focus-color: transparent;
+        -fx-border-color: #AAAAAA;
+        -fx-border-radius: 3px;
+        -fx-border-width: 1px;
+        """);
+        processRegionButton.setDisable(true);
+        processRegionButton.setFocusTraversable(false);
+        processRegionButton.setStyle("""
+        -fx-focus-color: transparent;
+        -fx-faint-focus-color: transparent;
+        -fx-border-color: #AAAAAA;
+        -fx-border-radius: 3px;
+        -fx-border-width: 1px;
+        -fx-cursor: hand;
+        """);
+        dropdownChromContainer.getChildren().addAll(chromComboBox, regionField, processRegionButton);
+        chromComboBox.setStyle("""
+        -fx-focus-color: transparent;
+        -fx-faint-focus-color: transparent;
+        -fx-border-color: #AAAAAA;
+        -fx-border-radius: 3px;
+        -fx-border-width: 1px;
+        -fx-cursor: hand;
+        """);
         // initally disable dropdown and text field
         regionField.setDisable(true);
         chromComboBox.setDisable(true);
@@ -184,16 +221,6 @@ public class View {
         sidePaneButton.setMaxSize(120,25);
         closeSidePaneButton.setMinSize(25,25);
         closeSidePaneButton.setMaxSize(25,25);
-        String circularStyle = """
-    -fx-background-radius: 10px;
-    -fx-border-radius: 10px;
-    -fx-text-fill: #555555;
-    -fx-font-size: 11px;
-    -fx-font-weight: bold;
-    -fx-cursor: hand;
-    -fx-focus-color: transparent;
-    -fx-faint-focus-color: transparent;
-""";
         // button focus off
         zoomInButton.setFocusTraversable(false);
         zoomOutButton.setFocusTraversable(false);
@@ -238,6 +265,7 @@ public class View {
         spaceWrapper.setPrefWidth(this.sampleSpaceWidth);
         spaceWrapper.setMaxWidth(this.sampleSpaceWidth);
         tickContainer.getChildren().add(spaceWrapper);
+        this.ticksWrapper.setPrefHeight(40);
         tickContainer.getChildren().add(ticksWrapper);
         ticksWrapper.setOnMouseEntered(e -> ticksWrapper.setCursor(Cursor.HAND));
         ticksWrapper.setOnMouseExited(e -> ticksWrapper.setCursor(Cursor.DEFAULT));
@@ -278,6 +306,7 @@ public class View {
         this.closeSidePaneButton.setDisable(false);
         this.regionField.setDisable(false);
         this.chromComboBox.setDisable(false);
+        this.processRegionButton.setDisable(false);
         double bottomOfTickContainerY = tickContainer.getLayoutY() + tickContainer.getLayoutBounds().getHeight();
         sidePane.setTranslateY(bottomOfTickContainerY);
     }
@@ -298,6 +327,7 @@ public class View {
         this.growTrackHeightButton.setDisable(true);
         this.sidePaneButton.setDisable(true);
         this.closeSidePaneButton.setDisable(true);
+        this.processRegionButton.setDisable(true);
     }
 
     public Scene getScene() {
@@ -415,28 +445,27 @@ public class View {
         this.callsPanel.setPannable(true);   // Optional: enables mouse drag scrolling
     }
 
-    public void showCalls(Chromosome region, ArrayList<Sample> samples, double zoomLevel, int originalTrackHeight) {
+    public void showCalls(Chromosome chromosome, ArrayList<Sample> samples, double zoomLevel, int originalTrackHeight) {
         /**
          * Pre-conditions/assumptions: Gets call pane for each sample by looking up the ID
          */
-        this.samplePanel.setMinWidth(region.getLength() * zoomLevel);
-        this.samplePanel.setMaxWidth(region.getLength() * zoomLevel);
+        this.samplePanel.setMinWidth(chromosome.getLength() * zoomLevel);
+        this.samplePanel.setMaxWidth(chromosome.getLength() * zoomLevel);
 
-        System.out.println("CURRENT REGION FROM SHOWCALLS IS " + region.getName());
+        System.out.println("CURRENT REGION FROM SHOWCALLS IS " + chromosome.getName());
         // loops through each sample and gets the sample pane to update, access order does not matter
         for (Sample sample : samples) {
             Pane currentCalls = (Pane) this.samplesContainer.lookup("#" + sample.getName());
             currentCalls.getChildren().clear();
-            currentCalls.setMinWidth(region.getLength() * zoomLevel);
-            currentCalls.setPrefWidth(region.getLength() * zoomLevel);
-            currentCalls.setMaxWidth(region.getLength() * zoomLevel);
+            currentCalls.setMinWidth(chromosome.getLength() * zoomLevel);
+            currentCalls.setPrefWidth(chromosome.getLength() * zoomLevel);
+            currentCalls.setMaxWidth(chromosome.getLength() * zoomLevel);
             // loop through each call
-            for (int j=0; j<sample.getRegionCalls(region.getName()).size(); j++) {
+            for (int j=0; j<sample.getChromosomeCalls(chromosome.getName()).size(); j++) {
                 // get the current Call and set its id for the call and rectangle
-                Call currentCall = sample.getRegionCalls(region.getName()).get(j);
-                System.out.println(currentCall.toString());
+                Call currentCall = sample.getChromosomeCalls(chromosome.getName()).get(j);
                 Rectangle callRect;
-                if (Objects.equals(region.getName(), "<ALL>")) {
+                if (Objects.equals(chromosome.getName(), "<ALL>")) {
                     callRect = new Rectangle(currentCall.getAbsoluteStart()*zoomLevel, 1, currentCall.getLength()*zoomLevel, originalTrackHeight-2);
                 }
                 else {
@@ -480,33 +509,89 @@ public class View {
         }
     }
 
-    public double initZoomAndCoordsWG(Chromosome region, int refLength, int tickSpacing) {
+    /**
+     * Calculate the appropriate zoom level to show entire reference at startup
+     * @param refLength int length of the entire reference
+     * @return the zoom level
+     */
+    public double initZoomWG(int refLength) {
         this.ticksWrapper.getChildren().clear();
         // calculate zoom level such that whole genome is in view
-        double zoomLevel = callsPanel.getViewportBounds().getWidth() / refLength;
-        System.out.println("THE BASE LEVEL IS:" + zoomLevel);
-        // display ticks
-//        for (int x = 0; x <= refLength; x += tickSpacing) {
-//            // coordinate
-//            Text text = new Text(String.valueOf(x));
-//            double textWidth = text.getLayoutBounds().getWidth();
-//            text.setX((x*zoomLevel) - textWidth / 2);
-//            text.setY(20);
-//            // tick
-//            Line tick = new Line(x*zoomLevel, 0, x*zoomLevel, 5);
-//            // add to pane
-//            this.ticksWrapper.getChildren().add(tick);
-//            this.ticksWrapper.getChildren().add(text);
-//        }
-        updateMarkerOnViewportScaleOrZoom(region, refLength, zoomLevel);
-        return zoomLevel;
+        return callsPanel.getViewportBounds().getWidth() / refLength;
     }
 
-    public void showRegion(Chromosome region, double zoomLevel, int totalRefLength, int originalTrackHeight) {
-        showCalls(region, sampleOrder, zoomLevel, originalTrackHeight);
-        updateMarkerOnViewportScaleOrZoom(region, totalRefLength, zoomLevel);
+    public void showCoords(Chromosome chromosome, int tickSpacing, double zoomLevel, LinkedHashMap<String, Chromosome> refContigs) {
+        this.ticksWrapper.getChildren().clear();
+        // display ticks for chromosome names
+        if (Objects.equals(chromosome.getName(), "<ALL>")) {
+            for (Map.Entry<String, Chromosome> refContig : refContigs.entrySet()) {
+                if (Objects.equals(refContig.getKey(), "<ALL>")) {
+                    // do nothing
+                }
+                else {
+                    double pos = refContig.getValue().getAbsoluteStart();
+                    Text text = new Text(String.valueOf(refContig.getValue().getName()));
+                    double textWidth = text.getLayoutBounds().getWidth();
+                    text.setX((pos*zoomLevel) - textWidth / 2);
+                    text.setY(25);
+                    // tick
+                    Line tick = new Line(pos*zoomLevel, 30, pos*zoomLevel, 40);
+                    // add to pane
+                    this.ticksWrapper.getChildren().add(tick);
+                    this.ticksWrapper.getChildren().add(text);
+                }
+            }
+        }
+        // display ticks for increment
+        else {
+            for (int x = 0; x <= chromosome.getLength(); x += tickSpacing) {
+                Text text = new Text(String.valueOf(x));
+                // base (b) range
+                if (x < 1000) {
+                    text = new Text(x + " b");
+                }
+                // kilobase (KB) range
+                else if (x >= 1000 && x < 1000000) {
+                    double truncatedX = (double) x / 1000;
+                    if (truncatedX % 1 == 0) {
+                        text = new Text(String.format("%.0f", truncatedX) + " kb");
+                    }
+                    else {
+                        text = new Text(String.format("%.1f", truncatedX) + " kb");
+                    }
+                }
+                // megabase (MB) range
+                else if (x >= 1000000) {
+                    double truncatedX = (double) x / 1000000;
+                    if (truncatedX % 1 == 0) {
+                        text = new Text(String.format("%.0f", truncatedX) + " Mb");
+                    }
+                    else {
+                        text = new Text(String.format("%.1f", truncatedX) + " Mb");
+                    }
+                }
+                else {
+                    // do nothing
+                }
+                double textWidth = text.getLayoutBounds().getWidth();
+                text.setX((x*zoomLevel) - textWidth / 2);
+                text.setY(25);
+                // tick
+                Line tick = new Line(x*zoomLevel, 30, x*zoomLevel, 40);
+                // add to pane
+                this.ticksWrapper.getChildren().add(tick);
+                this.ticksWrapper.getChildren().add(text);
+            }
+        }
     }
 
+
+    /**
+     * Gets the width of the vertical scrollbar (on Scrollpane callsPanel), this method does not assume
+     * the scrollbar is visible it can be called if visible or not
+     *
+     * @return the width if visible, or 0 if not visible or null
+     */
     public double getVerticalSBWidth() {
         ScrollBar vBar = (ScrollBar) this.callsPanel.lookup(".scroll-bar:vertical");
         if (vBar == null || !vBar.isVisible()) {
@@ -515,6 +600,16 @@ public class View {
         else {
             return vBar.getWidth();
         }
+    }
+
+    /**
+     * Checks if the vertical scrollbar (on Scrollpane callsPanel) is visible or not
+     *
+     * @return true if visible, false otherwise
+     */
+    public boolean isVerticalSBVisible() {
+        ScrollBar vBar = (ScrollBar) this.callsPanel.lookup(".scroll-bar:vertical");
+        return vBar.isVisible();
     }
 
     // *************************************************************** TRACK CREATION FUNCTIONS ************************************************************************
@@ -618,17 +713,34 @@ public class View {
 
 
     // sync scrollpane scroll with marker and coordinate ticks
-    public void syncScroll(Number newVal, Chromosome currentRegion) {
+    public void syncScroll(Number newVal, Chromosome currentChrom) {
         // oldVal = old scroll position (between 0 and 1)
         // newVal = new scroll position (between 0 and 1)
         // getContent() gets node scrollpane is scrolling, getboundsinlocal gets actual width and height of node, so maxX is the maximum distance that can be scrolled
+        System.out.println("NEW VAL IN SYNC SCROLL IS " + newVal);
         double maxX = callsPanel.getContent().getBoundsInLocal().getWidth()
                 - callsPanel.getViewportBounds().getWidth();
         double translateX = -newVal.doubleValue() * maxX;
         ticksWrapper.setTranslateX(translateX);
-        double max = currentRegion.getPixelWidth() - marker.getWidth();
-        double scrollX = currentRegion.getPixelAbsoluteOffset() + (newVal.doubleValue() * max);
+        double max = currentChrom.getPixelWidth() - marker.getWidth();
+        double scrollX = currentChrom.getPixelAbsoluteOffset() + (newVal.doubleValue() * max);
+        System.out.println("SCROLLX " + scrollX);
         marker.setLayoutX(scrollX);
+    }
+
+    public double setScroll(int start, Chromosome chrom, double zoomLevel) {
+        //System.out.println("SET SCROLL PERCENT IS " + percent);
+        this.callsPanel.layout();
+        double contentWidth = callsPanel.getContent().getBoundsInLocal().getWidth();
+        double viewportWidth = callsPanel.getViewportBounds().getWidth();
+        double maxScroll = contentWidth - viewportWidth;
+
+        double scale = contentWidth / chrom.getLength();
+        double targetPixelX = start * scale;
+        double hvalue = targetPixelX / maxScroll;
+        System.out.println("HVALUE IS " + hvalue);
+        this.callsPanel.setHvalue(hvalue);
+        return hvalue;
     }
 
     public void ticksPressed(MouseEvent e) {
@@ -680,20 +792,28 @@ public class View {
         }
     }
 
-    public void updateMarkerOnViewportScaleOrZoom(Chromosome region, int refLength, double zoomLevel) {
-        // set width
-        double contentWidth = region.getLength() * zoomLevel;
+    /**
+     *
+     * @param chromosome
+     * @param zoomLevel
+     * @param length
+     */
+    public void updateMarkerWidth(Chromosome chromosome, double zoomLevel, double length) {
         callsPanel.layout();
-        double viewportWidth = callsPanel.getViewportBounds().getWidth();
-        double proportionVisible = viewportWidth / contentWidth;
-        marker.setWidth(region.getPixelWidth() * proportionVisible);
-        System.out.println("REGION PIXEL WIDTH IS " + region.getPixelWidth());
-        System.out.println("CONTENT WIDTH IS " + contentWidth);
-        System.out.println("VIEWPORT WIDTH IS " + viewportWidth);
-        System.out.println("PROPORTION VISISBLE IS " + proportionVisible);
-        System.out.println("-------------- MARKER WIDTH IS ----------------- " + marker.getWidth());
-        // set offset
-        marker.setLayoutX(region.getPixelAbsoluteOffset());
+        double visibleWidth = length * zoomLevel;
+        double contentWidth = chromosome.getLength() * zoomLevel;
+        double proportionVisible = visibleWidth/contentWidth;
+        // set width
+        marker.setWidth(chromosome.getPixelWidth() * proportionVisible);
+    }
+
+    /**
+     *
+     * @param chromosome
+     * @param offset in pixels
+     */
+    public void updateMarkerPos(Chromosome chromosome, double offset) {
+        marker.setLayoutX(chromosome.getPixelAbsoluteOffset() + offset);
     }
 
     public double getBaseCallPanelHeight() {
@@ -863,21 +983,7 @@ public class View {
         }
     }
 
-    public void updateZoom(Chromosome region, ArrayList<Sample> samples, double zoomLevel, int refLength, ArrayList<Selection> selections, int tickSpacing, int originalTrackHeight) {
-//            // Create and show an information alert
-//            Alert alert = new Alert(Alert.AlertType.INFORMATION);
-//            alert.setTitle("Information");
-//            alert.setHeaderText(null);  // Optional: no header text
-//            alert.setContentText("Cannot zoom out further!");
-//            alert.showAndWait();
-        this.showCalls(region, samples, zoomLevel, originalTrackHeight);
-        //this.initZoomAndCoordsWG(region, refLength, tickSpacing);
-        this.updateSelections(selections, zoomLevel);
-        // update marker width
-        updateMarkerOnViewportScaleOrZoom(region, refLength, zoomLevel);
-    }
-
-    public void updateMarkerOnDrag(MouseEvent event, Chromosome currentRegion) {
+    public void updateMarkerOnDrag(MouseEvent event, Chromosome currentChrom) {
         /**
          * Deal with moving
          */
@@ -886,8 +992,8 @@ public class View {
         // Convert scene X to local X of the markerPane
         double localX = markerWrapper.sceneToLocal(mouseX, 0).getX();
 
-        double startX = currentRegion.getPixelAbsoluteOffset();
-        double endX = currentRegion.getPixelAbsoluteOffset() + currentRegion.getPixelWidth();
+        double startX = currentChrom.getPixelAbsoluteOffset();
+        double endX = currentChrom.getPixelAbsoluteOffset() + currentChrom.getPixelWidth();
         double clampedX = Math.max(startX, Math.min(localX, endX));
         if (localX >= (endX - marker.getWidth())) {
             marker.setLayoutX(clampedX-marker.getWidth());
@@ -899,6 +1005,24 @@ public class View {
         double percent = (clampedX - startX) / (endX - startX);
         System.out.printf("Marker at X: %.2f (%.1f%%)%n", clampedX, percent * 100);
         this.callsPanel.setHvalue(percent);
+    }
+
+    public String getTextFieldRegion() {
+        return this.regionField.getText();
+    }
+
+    public void clearRegionField() {
+        this.regionField.clear();
+        regionField.getParent().requestFocus();
+    }
+
+    public void showInvalidRegionAlert(String regionText) {
+        // create and show alert for invalid region
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Invalid region");
+        alert.setHeaderText(null);
+        alert.setContentText(regionText + " is an invalid region.");
+        alert.showAndWait();
     }
 
 
@@ -935,18 +1059,20 @@ public class View {
     public void closeSidePaneListener(EventHandler<ActionEvent> handler) {
         closeSidePaneButton.setOnAction(handler);
     }
-
     public void chromComboBoxListener(EventHandler<ActionEvent> handler) {
         chromComboBox.setOnAction(handler);
     }
-
-    public void viewportWidthChange(EventHandler<ActionEvent> handler) {
-        callsPanel.viewportBoundsProperty().addListener((obs, oldBounds, newBounds) -> {
-            if (oldBounds == null || newBounds == null || oldBounds.getWidth() != newBounds.getWidth()) {
-                handler.handle(new ActionEvent(this, null));
-            }
-        });
+    public void processRegionButtonListener(EventHandler<ActionEvent> handler) {
+        processRegionButton.setOnAction(handler);
     }
+
+//    public void viewportWidthChange(EventHandler<ActionEvent> handler) {
+//        callsPanel.viewportBoundsProperty().addListener((obs, oldBounds, newBounds) -> {
+//            if (oldBounds == null || newBounds == null || oldBounds.getWidth() != newBounds.getWidth()) {
+//                handler.handle(new ActionEvent(this, null));
+//            }
+//        });
+//    }
 
     public void scrollChange(ChangeListener<Number> listener) {
         this.callsPanel.hvalueProperty().addListener(listener);

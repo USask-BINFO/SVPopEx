@@ -10,7 +10,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 
 public class Model {
-    private Chromosome currentRegion = null;
+    private Chromosome currentChrom = null;
     private LinkedHashMap<String,Chromosome> refChromosomes = new LinkedHashMap<>();
     private int refTotalLength;
     private ArrayList<Sample> samples = new ArrayList<>();
@@ -18,7 +18,7 @@ public class Model {
     private ArrayList<Call> calls = new ArrayList<>();
     private ArrayList<Selection> selections = new ArrayList<>();
     private double zoomLevel = 0.2;
-    private ArrayList<Integer> increments = new ArrayList<>(Arrays.asList(100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000, 500000, 1000000, 2000000, 5000000, 10000000, 20000000, 50000000, 100000000));
+    private ArrayList<Integer> increments = new ArrayList<>(Arrays.asList(100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000, 500000, 1000000, 2000000, 5000000, 10000000, 20000000, 50000000));
     private int coordIncrementIndex = 3;
     private double trackHeightScale = 1;
     private final double baseFontSize = 12;
@@ -33,15 +33,15 @@ public class Model {
         this.sampleColors.clear();
         this.calls.clear();
         this.selections.clear();
-        setCurrentRegion(null);
+        setCurrentChrom(null);
     }
 
-    public Chromosome getCurrentRegion() {
-        return this.currentRegion;
+    public Chromosome getCurrentChrom() {
+        return this.currentChrom;
     }
 
-    public void setCurrentRegion(Chromosome region) {
-        this.currentRegion = region;
+    public void setCurrentChrom(Chromosome chrom) {
+        this.currentChrom = chrom;
     }
 
     public String loadFile(java.io.File file) throws java.io.IOException {
@@ -53,14 +53,14 @@ public class Model {
         return this.zoomLevel;
     }
 
-    public double updateZoomLevelByFactor(double factor, Chromosome region, double viewportWidth, double verticalSBWidth) {
+    public double updateZoomLevelByFactor(double factor, Chromosome chrom, double viewportWidth, double verticalSBWidth) {
         double testZoomLevel = this.zoomLevel * factor;
         // test what the content width would be
-        double contentWidth = region.getLength() * testZoomLevel;
+        double contentWidth = chrom.getLength() * testZoomLevel;
         double proportionVisible = viewportWidth / contentWidth;
         double selectedZoom;
         if (proportionVisible > 1) {
-            selectedZoom = (viewportWidth + verticalSBWidth) / region.getLength();
+            selectedZoom = (viewportWidth + verticalSBWidth) / chrom.getLength();
         }
         else {
             selectedZoom = testZoomLevel;
@@ -82,8 +82,22 @@ public class Model {
         this.zoomLevel = level;
     }
 
-    public void updateZoomLevelByRegion(Chromosome region, double viewportWidth) {
-       this.zoomLevel = viewportWidth / region.getLength();
+    /**
+     * Updates attribute zoomLevel to show one chromosome
+     * @param length length of chromosome/region to show
+     * @param viewportWidth double value of current scrollpane viewport width
+     * @param isSBVisible boolean value for whether the scrollpane vertical scrollbar is currently visible
+     * @param SBwidth double value of the width of the scrollpane vertical scrollbar
+     */
+    public void updateZoomLevelByRegion(int length, double viewportWidth, boolean isSBVisible, double SBwidth) {
+        // if scrollbar is visible, update zoomLevel taking into account the viewport width needs to include the scrollbar width
+        if (isSBVisible) {
+            this.zoomLevel = (viewportWidth + SBwidth) / length;
+        }
+        // otherwise the entire viewport width is showing and calculate normally
+        else {
+            this.zoomLevel = viewportWidth / length;
+        }
     }
 
     public int getNumAnnotationsShown() {
@@ -345,6 +359,34 @@ public class Model {
         }
     }
 
+    public boolean checkIfValidRegion(String regionText) {
+        System.out.println("CHECK IF VALID REGION TEXT " + regionText);
+        String regex = "(.+):(\\d+)-(\\d+)";
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(regionText);
+        if (matcher.find()) {
+            String chrom = matcher.group(1);
+            int start = Integer.parseInt(matcher.group(2));
+            int end = Integer.parseInt(matcher.group(3));
+            // check if chromosome exists
+            if (refChromosomes.containsKey(chrom)) {
+                // check if positions are in range
+                if (start > 0 && end <= refChromosomes.get(chrom).getLength()) {
+                    return true;
+                }
+                else {
+                    return false;
+                }
+            }
+            else {
+                return false;
+            }
+        }
+        else {
+            return false;
+        }
+    }
+
     public double getTrackHeightScale() {
         return this.trackHeightScale;
     }
@@ -420,42 +462,45 @@ public class Model {
         }
     }
 
-    public void createSamples(String[] sampleNames, LinkedHashMap<String, Chromosome> regions) {
+    public void createSamples(String[] sampleNames, LinkedHashMap<String, Chromosome> refContigs) {
         for (int i=0; i<sampleNames.length; i++) {
-            Sample sample = new Sample(sampleNames[i], regions);
+            Sample sample = new Sample(sampleNames[i], refContigs);
             this.samples.add(sample);
             this.sampleColors.put(samples.get(i).getName(), this.getRandomColor());
         }
     }
 
-    public void updateCoordIncrement(double viewportWidth) {
-        int tickSpacing = increments.get(coordIncrementIndex);
-        //double rawStep = viewportWidth/
-        int lowerThreshold = 150;
-        int upperThreshold = 350;
-        // distance from first to second tick because first tick will be at 0
-        double tickDist = tickSpacing*zoomLevel;
-        // increase increment
-        if (tickDist < lowerThreshold) {
-            if (coordIncrementIndex+1 == increments.size()) {
-                // do nothing, already at largest
-            }
-            else {
-                coordIncrementIndex++;
-            }
+    public void updateCoordIncrement(double viewportWidth, Chromosome chrom) {
+        double genomicProportion = getGenomicProportion(viewportWidth, chrom);
+        if (genomicProportion < 100000000) {
+            double ideal = genomicProportion / 7;
+            this.coordIncrementIndex = getClosestIntegerValue(ideal, increments);
         }
-        // lower increment
-        else if (tickDist > upperThreshold) {
-            if (coordIncrementIndex == 0) {
-                // do nothing, already at lowest
-            }
-            else {
-                coordIncrementIndex--;
-            }
-        }
+        // last increment which corresponds to 100 MB
         else {
-            // do nothing, tick increments stay the same
+            this.coordIncrementIndex = this.increments.size() - 1;
         }
+    }
+
+    public double getGenomicProportion(double viewportWidth, Chromosome chrom) {
+        double contentWidth = chrom.getLength() * zoomLevel;
+        double proportionVisible = viewportWidth / contentWidth;
+        return proportionVisible * chrom.getLength();
+    }
+
+    public int getClosestIntegerValue(double idealSpacing, ArrayList<Integer> definedIncrements) {
+        int closestIndex = 0;
+        double minDiff = Math.abs(definedIncrements.getFirst() - idealSpacing);
+
+        for (int i = 1; i < definedIncrements.size(); i++) {
+            double diff = Math.abs(definedIncrements.get(i) - idealSpacing);
+            if (diff < minDiff) {
+                minDiff = diff;
+                closestIndex = i;
+            }
+        }
+
+        return closestIndex;
     }
 
     public int getTickSpacing() {

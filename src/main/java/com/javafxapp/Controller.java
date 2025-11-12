@@ -3,8 +3,11 @@ package com.javafxapp;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javafx.scene.Node;
+import javafx.scene.control.Button;
 import javafx.scene.input.MouseEvent;
 import javafx.stage.FileChooser;
 import javafx.event.ActionEvent;
@@ -20,10 +23,14 @@ public class Controller {
             this.importFile();
         });
         view.zoomInListener(e -> {
-            this.updateZoomIn();
+            Button source = (Button) e.getSource();
+            String text = source.getText();
+            this.updateZoom(text);
         });
         view.zoomOutListener(e -> {
-            this.updateZoomOut();
+            Button source = (Button) e.getSource();
+            String text = source.getText();
+            this.updateZoom(text);
         });
         view.clearSelectionsListener(e -> {
             this.clearSelections();
@@ -51,7 +58,10 @@ public class Controller {
         });
         view.chromComboBoxListener(e -> {
             String selectedChrom = view.chromComboBox.getValue();
-            this.showRegion(selectedChrom);
+            this.showChromosome(selectedChrom, 1, 0);
+        });
+        view.processRegionButtonListener(e -> {
+           this.processCustomRegion(view.getTextFieldRegion());
         });
     }
 
@@ -81,16 +91,19 @@ public class Controller {
             this.model.reset();
             this.view.reset();
             model.processFile(fileContent);
-            model.setCurrentRegion(model.getRefChromosomes().get("<ALL>"));
+            model.setCurrentChrom(model.getRefChromosomes().get("<ALL>"));
             view.initReference(model.getRefChromosomes(), model.getRefTotalLength());
-            model.setZoom(view.initZoomAndCoordsWG(model.getCurrentRegion(), model.getRefTotalLength(), model.getTickSpacing()));
+            model.setZoom(view.initZoomWG(model.getRefTotalLength()));
+            view.showCoords(model.getCurrentChrom(), -1, model.getZoomLevel(), model.getRefChromosomes());
+            view.updateMarkerWidth(model.getCurrentChrom(), model.getZoomLevel(), model.getCurrentChrom().getLength());
+            view.updateMarkerPos(model.getCurrentChrom(), 0);
             view.initSidePane(model.getSamples(), model.getSampleColors(), model::getNumAnnotationsShown);
             view.initSamples(model.getSamples(), model.getRefTotalLength(), model.getZoomLevel(), model.getBaseFontSize(), model.getOriginalTrackHeight());
             view.showCalls(model.getRefChromosomes().get("<ALL>"), model.getSamples(), model.getZoomLevel(), model.getOriginalTrackHeight());
             view.enableControls();
-            view.viewportWidthChange(e -> {
-                this.processViewportWidthChange();
-            });
+//            view.viewportWidthChange(e -> {
+//                this.processViewportWidthChange();
+//            });
             view.scrollChange((obs,oldVal, newVal) -> {
                this.processScrollChange(newVal.doubleValue());
             });
@@ -105,27 +118,32 @@ public class Controller {
         }
     }
 
-    public void updateZoomIn() {
-        System.out.println("***************** IN *********************");
-        if (Objects.equals(model.getCurrentRegion().getName(), "<ALL>")) {
+    public void updateZoom(String text) {
+        if (Objects.equals(model.getCurrentChrom().getName(), "<ALL>")) {
             // not meant to zoom in on <ALL> region so do nothing
         }
         else {
-            double level = model.updateZoomLevelByFactor(1.3, model.getCurrentRegion(), view.getViewportWidth(), view.getVerticalSBWidth());
-            model.updateCoordIncrement(view.getViewportWidth());
-            view.updateZoom(model.getCurrentRegion(), model.getSamples(), level, model.getRefTotalLength(), model.getSelections(), model.getTickSpacing(), model.getOriginalTrackHeight());
-        }
-    }
-
-    public void updateZoomOut() {
-        System.out.println("***************** OUT *********************");
-        if (Objects.equals(model.getCurrentRegion().getName(), "<ALL>")) {
-            // not meant to zoom out on <ALL> region so do nothing
-        }
-        else {
-            double level = model.updateZoomLevelByFactor(0.7, model.getCurrentRegion(), view.getViewportWidth(), view.getVerticalSBWidth());
-            model.updateCoordIncrement(view.getViewportWidth());
-            view.updateZoom(model.getCurrentRegion(), model.getSamples(), level, model.getRefTotalLength(), model.getSelections(), model.getTickSpacing(), model.getOriginalTrackHeight());
+            double factor;
+            if (Objects.equals(text, "+")) {
+                factor = 1.3;
+            }
+            else if (Objects.equals(text, "-")) {
+                factor = 0.7;
+            }
+            else {
+                throw new IllegalArgumentException("Unexpected zoom button text " + text);
+            }
+            // update zoom level
+            double level = model.updateZoomLevelByFactor(factor, model.getCurrentChrom(), view.getViewportWidth(), view.getVerticalSBWidth());
+            // update coord increment
+            model.updateCoordIncrement(view.getViewportWidth(), model.getCurrentChrom());
+            // show coords
+            view.showCoords(model.getCurrentChrom(), model.getTickSpacing(), model.getZoomLevel(), model.getRefChromosomes());
+            // show calls
+            view.showCalls(model.getCurrentChrom(), model.getSamples(), level, model.getOriginalTrackHeight());
+            view.updateSelections(model.getSelections(), level);
+            view.updateMarkerWidth(model.getCurrentChrom(), level, model.getGenomicProportion(view.getViewportWidth(), model.getCurrentChrom()));
+            //view.updateMarkerPos(model.getCurrentChrom(), )
         }
     }
 
@@ -157,23 +175,84 @@ public class Controller {
         view.redrawSampleInfoAfterScale(model.getSamples(), model.getBaseFontSize(), model.getTrackHeightScale(), model.getOriginalTrackHeight());
     }
 
-    public void showRegion(String selectedChrom) {
-        Chromosome region = model.getRefChromosomes().get(selectedChrom);
-        model.setCurrentRegion(region);
-        System.out.println("CURRENT REGION IS " + model.getCurrentRegion().getName());
-        model.updateZoomLevelByRegion(region, view.getViewportWidth());
-        view.showRegion(region, model.getZoomLevel(), model.getRefTotalLength(), model.getOriginalTrackHeight());
+    public void showChromosome(String selectedChrom, double proportion, double offset) {
+        // set new chromosome
+        Chromosome chrom = model.getRefChromosomes().get(selectedChrom);
+        model.setCurrentChrom(chrom);
+        // update zoom level
+        model.updateZoomLevelByRegion(chrom.getLength(), view.getViewportWidth(), view.isVerticalSBVisible(), view.getVerticalSBWidth());
+        // update coord increment
+        model.updateCoordIncrement(view.getViewportWidth(), model.getCurrentChrom());
+        // show coords
+        view.showCoords(model.getCurrentChrom(), model.getTickSpacing(), model.getZoomLevel(), model.getRefChromosomes());
+        // show calls
+        view.showCalls(chrom, view.getSampleOrderInView(), model.getZoomLevel(), model.getOriginalTrackHeight());
+        view.updateMarkerWidth(chrom, model.getZoomLevel(), chrom.getLength());
+        view.updateMarkerPos(chrom, 0);
     }
 
-    public void processViewportWidthChange() {
-        view.updateMarkerOnViewportScaleOrZoom(model.getCurrentRegion(), model.getRefTotalLength(), model.getZoomLevel());
-    }
+//    public void processViewportWidthChange() {
+//        System.out.println("PROCESSING VIEWPORT WIDTH CHANGE");
+//        //view.updateMarkerOnViewportScaleOrZoom(model.getCurrentChrom(), model.getRefTotalLength(), model.getZoomLevel());
+//    }
 
     public void processScrollChange(double newVal) {
-        view.syncScroll(newVal, model.getCurrentRegion());
+        System.out.println("PROCESSING SCROLL CHANGE");
+        System.out.println("PROCESSING SCROLL CHANGE CURRENT CHROM IS " + model.getCurrentChrom().getName());
+        System.out.println("NEW VAL IN PROCESS SCROLL CHANGE " + newVal);
+        view.syncScroll(newVal, model.getCurrentChrom());
     }
 
     public void processMarkerDragged(MouseEvent e) {
-        view.updateMarkerOnDrag(e, model.getCurrentRegion());
+        view.updateMarkerOnDrag(e, model.getCurrentChrom());
+    }
+
+    public void processCustomRegion(String regionText) {
+        System.out.println("PROCESSING REGION");
+        // if region entered is empty, reset text field
+        if (Objects.equals(regionText, "")) {
+            view.clearRegionField();
+            System.out.println("REGION IS EMPTY"); 
+        }
+        // otherwise
+        else {
+            // check if input is valid
+            if (model.checkIfValidRegion(regionText)) {
+                String regex = "(.+):(\\d+)-(\\d+)";
+                Pattern pattern = Pattern.compile(regex);
+                Matcher matcher = pattern.matcher(regionText);
+                if (matcher.find()) {
+                    String selectedChrom = matcher.group(1);
+                    int start = Integer.parseInt(matcher.group(2));
+                    int end = Integer.parseInt(matcher.group(3));
+                    int length = end-start;
+                    // set new chromosome
+                    Chromosome chrom = model.getRefChromosomes().get(selectedChrom);
+                    model.setCurrentChrom(chrom);
+                    // update zoom level
+                    model.updateZoomLevelByRegion(length, view.getViewportWidth(), view.isVerticalSBVisible(), view.getVerticalSBWidth());
+                    // update coord increment
+                    model.updateCoordIncrement(view.getViewportWidth(), model.getCurrentChrom());
+                    // show coords
+                    view.showCoords(model.getCurrentChrom(), model.getTickSpacing(), model.getZoomLevel(), model.getRefChromosomes());
+                    // show calls
+                    view.showCalls(chrom, view.getSampleOrderInView(), model.getZoomLevel(), model.getOriginalTrackHeight());
+                    double proportion = (double) length/chrom.getLength();
+                    double offset = ((double) start / chrom.getLength()) * chrom.getPixelWidth();
+                    double newVal = view.setScroll(start, chrom, model.getZoomLevel());
+                    view.updateMarkerWidth(chrom, model.getZoomLevel(), length);
+                    view.updateMarkerPos(chrom, offset);
+                    //view.syncScroll(newVal, chrom);
+                }
+                else {
+                    view.showInvalidRegionAlert(regionText);
+                }
+            }
+            else {
+                view.showInvalidRegionAlert(regionText);
+            }
+        }
+        System.out.println(regionText);
+        view.clearRegionField();
     }
 }
