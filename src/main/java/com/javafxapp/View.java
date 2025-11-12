@@ -160,6 +160,13 @@ public class View {
         // ---------- DROPDOWN CHROM CONTAINER ----
         dropdownChromContainer.setAlignment(Pos.CENTER);
         regionField.setPromptText("Show region: chrom1:0-100");
+        regionField.setStyle("""
+        -fx-focus-color: transparent;
+        -fx-faint-focus-color: transparent;
+        -fx-border-color: #AAAAAA;
+        -fx-border-radius: 3px;
+        -fx-border-width: 1px;
+        """);
         processRegionButton.setDisable(true);
         processRegionButton.setFocusTraversable(false);
         processRegionButton.setStyle("""
@@ -710,13 +717,30 @@ public class View {
         // oldVal = old scroll position (between 0 and 1)
         // newVal = new scroll position (between 0 and 1)
         // getContent() gets node scrollpane is scrolling, getboundsinlocal gets actual width and height of node, so maxX is the maximum distance that can be scrolled
+        System.out.println("NEW VAL IN SYNC SCROLL IS " + newVal);
         double maxX = callsPanel.getContent().getBoundsInLocal().getWidth()
                 - callsPanel.getViewportBounds().getWidth();
         double translateX = -newVal.doubleValue() * maxX;
         ticksWrapper.setTranslateX(translateX);
         double max = currentChrom.getPixelWidth() - marker.getWidth();
         double scrollX = currentChrom.getPixelAbsoluteOffset() + (newVal.doubleValue() * max);
+        System.out.println("SCROLLX " + scrollX);
         marker.setLayoutX(scrollX);
+    }
+
+    public double setScroll(int start, Chromosome chrom, double zoomLevel) {
+        //System.out.println("SET SCROLL PERCENT IS " + percent);
+        this.callsPanel.layout();
+        double contentWidth = callsPanel.getContent().getBoundsInLocal().getWidth();
+        double viewportWidth = callsPanel.getViewportBounds().getWidth();
+        double maxScroll = contentWidth - viewportWidth;
+
+        double scale = contentWidth / chrom.getLength();
+        double targetPixelX = start * scale;
+        double hvalue = targetPixelX / maxScroll;
+        System.out.println("HVALUE IS " + hvalue);
+        this.callsPanel.setHvalue(hvalue);
+        return hvalue;
     }
 
     public void ticksPressed(MouseEvent e) {
@@ -768,15 +792,28 @@ public class View {
         }
     }
 
-    public void updateMarkerOnViewportScaleOrZoom(Chromosome chromosome, int refLength, double zoomLevel) {
-        // set width
-        double contentWidth = chromosome.getLength() * zoomLevel;
+    /**
+     *
+     * @param chromosome
+     * @param zoomLevel
+     * @param length
+     */
+    public void updateMarkerWidth(Chromosome chromosome, double zoomLevel, double length) {
         callsPanel.layout();
-        double viewportWidth = callsPanel.getViewportBounds().getWidth();
-        double proportionVisible = viewportWidth / contentWidth;
+        double visibleWidth = length * zoomLevel;
+        double contentWidth = chromosome.getLength() * zoomLevel;
+        double proportionVisible = visibleWidth/contentWidth;
+        // set width
         marker.setWidth(chromosome.getPixelWidth() * proportionVisible);
-        // set offset
-        marker.setLayoutX(chromosome.getPixelAbsoluteOffset());
+    }
+
+    /**
+     *
+     * @param chromosome
+     * @param offset in pixels
+     */
+    public void updateMarkerPos(Chromosome chromosome, double offset) {
+        marker.setLayoutX(chromosome.getPixelAbsoluteOffset() + offset);
     }
 
     public double getBaseCallPanelHeight() {
@@ -970,6 +1007,24 @@ public class View {
         this.callsPanel.setHvalue(percent);
     }
 
+    public String getTextFieldRegion() {
+        return this.regionField.getText();
+    }
+
+    public void clearRegionField() {
+        this.regionField.clear();
+        regionField.getParent().requestFocus();
+    }
+
+    public void showInvalidRegionAlert(String regionText) {
+        // create and show alert for invalid region
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Invalid region");
+        alert.setHeaderText(null);
+        alert.setContentText(regionText + " is an invalid region.");
+        alert.showAndWait();
+    }
+
 
     public void importListener(EventHandler<ActionEvent> handler) {
         importVCFItem.setOnAction(handler);
@@ -1004,18 +1059,20 @@ public class View {
     public void closeSidePaneListener(EventHandler<ActionEvent> handler) {
         closeSidePaneButton.setOnAction(handler);
     }
-
     public void chromComboBoxListener(EventHandler<ActionEvent> handler) {
         chromComboBox.setOnAction(handler);
     }
-
-    public void viewportWidthChange(EventHandler<ActionEvent> handler) {
-        callsPanel.viewportBoundsProperty().addListener((obs, oldBounds, newBounds) -> {
-            if (oldBounds == null || newBounds == null || oldBounds.getWidth() != newBounds.getWidth()) {
-                handler.handle(new ActionEvent(this, null));
-            }
-        });
+    public void processRegionButtonListener(EventHandler<ActionEvent> handler) {
+        processRegionButton.setOnAction(handler);
     }
+
+//    public void viewportWidthChange(EventHandler<ActionEvent> handler) {
+//        callsPanel.viewportBoundsProperty().addListener((obs, oldBounds, newBounds) -> {
+//            if (oldBounds == null || newBounds == null || oldBounds.getWidth() != newBounds.getWidth()) {
+//                handler.handle(new ActionEvent(this, null));
+//            }
+//        });
+//    }
 
     public void scrollChange(ChangeListener<Number> listener) {
         this.callsPanel.hvalueProperty().addListener(listener);

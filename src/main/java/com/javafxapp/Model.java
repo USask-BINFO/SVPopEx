@@ -84,19 +84,19 @@ public class Model {
 
     /**
      * Updates attribute zoomLevel to show one chromosome
-     * @param chrom Chromosome to show
+     * @param length length of chromosome/region to show
      * @param viewportWidth double value of current scrollpane viewport width
      * @param isSBVisible boolean value for whether the scrollpane vertical scrollbar is currently visible
      * @param SBwidth double value of the width of the scrollpane vertical scrollbar
      */
-    public void updateZoomLevelByChrom(Chromosome chrom, double viewportWidth, boolean isSBVisible, double SBwidth) {
+    public void updateZoomLevelByRegion(int length, double viewportWidth, boolean isSBVisible, double SBwidth) {
         // if scrollbar is visible, update zoomLevel taking into account the viewport width needs to include the scrollbar width
         if (isSBVisible) {
-            this.zoomLevel = (viewportWidth + SBwidth) / chrom.getLength();
+            this.zoomLevel = (viewportWidth + SBwidth) / length;
         }
         // otherwise the entire viewport width is showing and calculate normally
         else {
-            this.zoomLevel = viewportWidth / chrom.getLength();
+            this.zoomLevel = viewportWidth / length;
         }
     }
 
@@ -356,6 +356,34 @@ public class Model {
             this.trackHeightScale += increment;
             // round to 1 decimal place
             this.trackHeightScale = Math.round(this.trackHeightScale * 10) / 10.0;
+        }
+    }
+
+    public boolean checkIfValidRegion(String regionText) {
+        System.out.println("CHECK IF VALID REGION TEXT " + regionText);
+        String regex = "(.+):(\\d+)-(\\d+)";
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(regionText);
+        if (matcher.find()) {
+            String chrom = matcher.group(1);
+            int start = Integer.parseInt(matcher.group(2));
+            int end = Integer.parseInt(matcher.group(3));
+            // check if chromosome exists
+            if (refChromosomes.containsKey(chrom)) {
+                // check if positions are in range
+                if (start > 0 && end <= refChromosomes.get(chrom).getLength()) {
+                    return true;
+                }
+                else {
+                    return false;
+                }
+            }
+            else {
+                return false;
+            }
+        }
+        else {
+            return false;
         }
     }
 
