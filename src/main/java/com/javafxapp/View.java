@@ -743,6 +743,22 @@ public class View {
         return hvalue;
     }
 
+    public double getHValue() {
+        return this.callsPanel.getHvalue();
+    }
+
+    public double getStartFromHVal(double hval, Chromosome currentChrom) {
+        double contentWidth = callsPanel.getContent().getBoundsInLocal().getWidth();
+        double viewportWidth = callsPanel.getViewportBounds().getWidth();
+        double maxScroll = contentWidth - viewportWidth;
+        double start = hval * maxScroll * currentChrom.getLength() / contentWidth;
+        return start;
+    }
+
+    public double getContentWidth() {
+        return callsPanel.getContent().getBoundsInLocal().getWidth();
+    }
+
     public void ticksPressed(MouseEvent e) {
         double startX = e.getX();
         Rectangle tickRect = new Rectangle(startX, 0, 0, ticksWrapper.getHeight());

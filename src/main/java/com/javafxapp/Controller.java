@@ -133,8 +133,23 @@ public class Controller {
             else {
                 throw new IllegalArgumentException("Unexpected zoom button text " + text);
             }
+            double oldProportion = model.getGenomicProportion(view.getViewportWidth(), model.getCurrentChrom(), model.getZoomLevel());
+            double start = view.getStartFromHVal(view.getHValue(), model.getCurrentChrom());
+            int intStart = (int) start;
+            int centerStart = intStart + (int) oldProportion/2;
+            int end = (int) (start + oldProportion);
+            System.out.println("***************************************************************");
+            System.out.println("PROPORTION IS " + oldProportion);
+            System.out.println("START IS " + start);
+            System.out.println("INT START IS " + intStart);
+            System.out.println("CENTER START IS " + centerStart);
+            System.out.println("END IS " + end);
+
             // update zoom level
-            double level = model.updateZoomLevelByFactor(factor, model.getCurrentChrom(), view.getViewportWidth(), view.getVerticalSBWidth());
+            Pair<String, Double> result = model.updateZoomLevelByFactor(factor, model.getCurrentChrom(), view.getViewportWidth(), view.getVerticalSBWidth(), start, oldProportion);
+            double level = result.y;
+            String anchor = result.x;
+
             // update coord increment
             model.updateCoordIncrement(view.getViewportWidth(), model.getCurrentChrom());
             // show coords
@@ -142,8 +157,29 @@ public class Controller {
             // show calls
             view.showCalls(model.getCurrentChrom(), model.getSamples(), level, model.getOriginalTrackHeight());
             view.updateSelections(model.getSelections(), level);
-            view.updateMarkerWidth(model.getCurrentChrom(), level, model.getGenomicProportion(view.getViewportWidth(), model.getCurrentChrom()));
-            //view.updateMarkerPos(model.getCurrentChrom(), )
+
+            // update newStart based on result
+            System.out.println("---------------ANCHOR IS " + anchor);
+            double newProportion = model.getGenomicProportion(view.getViewportWidth(), model.getCurrentChrom(), model.getZoomLevel());
+            int newStart = centerStart - (int) (newProportion/2);
+            if (Objects.equals(anchor, "ABSOLUTE CENTER")) {
+                newStart = 1;
+            }
+            else if (Objects.equals(anchor, "CENTER")) {
+                newStart = centerStart - (int) (newProportion/2);
+            }
+            else if (Objects.equals(anchor, "LEFT")) {
+                newStart = 1;
+            }
+            else if (Objects.equals(anchor, "RIGHT")) {
+                newStart = model.getCurrentChrom().getLength() - (int) newProportion;
+            }
+            double offset = ((double) newStart / model.getCurrentChrom().getLength()) * model.getCurrentChrom().getPixelWidth();
+
+            // update scroll and marker based on newStart and offset (calculated from newStart)
+            view.setScroll(newStart, model.getCurrentChrom(), model.getZoomLevel());
+            view.updateMarkerWidth(model.getCurrentChrom(), level, model.getGenomicProportion(view.getViewportWidth(), model.getCurrentChrom(), model.getZoomLevel()));
+            view.updateMarkerPos(model.getCurrentChrom(), offset);
         }
     }
 
