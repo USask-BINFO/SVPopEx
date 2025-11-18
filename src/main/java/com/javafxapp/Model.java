@@ -449,7 +449,6 @@ public class Model {
                     int absoluteStart = refChromosomes.get(fields[0]).getAbsoluteStart() + Integer.parseInt(fields[1]);
                     Call currentCall = new Call(infoMatcher.group(1), Integer.parseInt(infoMatcher.group(2)), fields[0], Integer.parseInt(fields[1]), absoluteStart, fields[2], genotypes);
                     calls.add(currentCall);
-                    System.out.println(currentCall);
                     for (Sample sample : this.samples) {
                         String genotypeRegex = "(./.):";
                         Pattern genotypePattern = Pattern.compile(genotypeRegex);

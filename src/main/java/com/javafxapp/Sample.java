@@ -22,7 +22,6 @@ public class Sample {
     }
 
     public void addCall(String chromosomeName, Call call) {
-        System.out.println(" ADDING CALLS FOR CHROMOSOME " + chromosomeName);
         this.calls.add(call);
         callsByChromosome.get(chromosomeName).add(call);
     }

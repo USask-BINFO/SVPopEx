@@ -93,6 +93,7 @@ public class Controller {
             model.processFile(fileContent);
             model.setCurrentChrom(model.getRefChromosomes().get("<ALL>"));
             view.initReference(model.getRefChromosomes(), model.getRefTotalLength());
+            view.drawReference(model.getRefChromosomes(), "<ALL>");
             model.setZoom(view.initZoomWG(model.getRefTotalLength()));
             view.showCoords(model.getCurrentChrom(), -1, model.getZoomLevel(), model.getRefChromosomes());
             view.updateMarkerWidth(model.getCurrentChrom(), model.getZoomLevel(), model.getCurrentChrom().getLength());
@@ -138,12 +139,6 @@ public class Controller {
             int intStart = (int) start;
             int centerStart = intStart + (int) oldProportion/2;
             int end = (int) (start + oldProportion);
-            System.out.println("***************************************************************");
-            System.out.println("PROPORTION IS " + oldProportion);
-            System.out.println("START IS " + start);
-            System.out.println("INT START IS " + intStart);
-            System.out.println("CENTER START IS " + centerStart);
-            System.out.println("END IS " + end);
 
             // update zoom level
             Pair<String, Double> result = model.updateZoomLevelByFactor(factor, model.getCurrentChrom(), view.getViewportWidth(), view.getVerticalSBWidth(), start, oldProportion);
@@ -174,7 +169,7 @@ public class Controller {
             else if (Objects.equals(anchor, "RIGHT")) {
                 newStart = model.getCurrentChrom().getLength() - (int) newProportion;
             }
-            double offset = ((double) newStart / model.getCurrentChrom().getLength()) * model.getCurrentChrom().getPixelWidth();
+            double offset = ((double) newStart / model.getCurrentChrom().getLength()) * view.getMarkerWrapperWidth();
 
             // update scroll and marker based on newStart and offset (calculated from newStart)
             view.setScroll(newStart, model.getCurrentChrom(), model.getZoomLevel());
@@ -223,6 +218,7 @@ public class Controller {
         view.showCoords(model.getCurrentChrom(), model.getTickSpacing(), model.getZoomLevel(), model.getRefChromosomes());
         // show calls
         view.showCalls(chrom, view.getSampleOrderInView(), model.getZoomLevel(), model.getOriginalTrackHeight());
+        view.drawReference(model.getRefChromosomes(), model.getCurrentChrom().getName());
         view.updateMarkerWidth(chrom, model.getZoomLevel(), chrom.getLength());
         view.updateMarkerPos(chrom, 0);
     }
@@ -236,11 +232,11 @@ public class Controller {
         System.out.println("PROCESSING SCROLL CHANGE");
         System.out.println("PROCESSING SCROLL CHANGE CURRENT CHROM IS " + model.getCurrentChrom().getName());
         System.out.println("NEW VAL IN PROCESS SCROLL CHANGE " + newVal);
-        view.syncScroll(newVal, model.getCurrentChrom());
+        view.syncScroll(newVal);
     }
 
     public void processMarkerDragged(MouseEvent e) {
-        view.updateMarkerOnDrag(e, model.getCurrentChrom());
+        view.updateMarkerOnDrag(e);
     }
 
     public void processCustomRegion(String regionText) {
@@ -265,6 +261,7 @@ public class Controller {
                     // set new chromosome
                     Chromosome chrom = model.getRefChromosomes().get(selectedChrom);
                     model.setCurrentChrom(chrom);
+                    view.chromComboBox.setValue(selectedChrom);
                     // update zoom level
                     model.updateZoomLevelByRegion(length, view.getViewportWidth(), view.isVerticalSBVisible(), view.getVerticalSBWidth());
                     // update coord increment
@@ -273,12 +270,11 @@ public class Controller {
                     view.showCoords(model.getCurrentChrom(), model.getTickSpacing(), model.getZoomLevel(), model.getRefChromosomes());
                     // show calls
                     view.showCalls(chrom, view.getSampleOrderInView(), model.getZoomLevel(), model.getOriginalTrackHeight());
-                    double proportion = (double) length/chrom.getLength();
-                    double offset = ((double) start / chrom.getLength()) * chrom.getPixelWidth();
-                    double newVal = view.setScroll(start, chrom, model.getZoomLevel());
+                    view.drawReference(model.getRefChromosomes(), chrom.getName());
+                    double offset = ((double) start / chrom.getLength()) * view.getMarkerWrapperWidth();
+                    view.setScroll(start, chrom, model.getZoomLevel());
                     view.updateMarkerWidth(chrom, model.getZoomLevel(), length);
                     view.updateMarkerPos(chrom, offset);
-                    //view.syncScroll(newVal, chrom);
                 }
                 else {
                     view.showInvalidRegionAlert(regionText);
