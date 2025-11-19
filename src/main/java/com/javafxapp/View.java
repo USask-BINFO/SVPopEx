@@ -286,6 +286,7 @@ public class View {
         this.callsPanel.setPrefWidth(Screen.getPrimary().getBounds().getWidth() - sampleSpaceWidth);
         this.callsPanel.setMaxWidth(Screen.getPrimary().getBounds().getWidth() - sampleSpaceWidth);
         selectionWrapper.setPickOnBounds(false);
+        this.selectionContainer.setPickOnBounds(false);
         this.selectionContainer.getChildren().add(selectionWrapper);
         this.callsPanel.setFitToHeight(true);
     }
@@ -397,7 +398,6 @@ public class View {
         // add <ALL> as a chrom dropdown option and set as default
         chromComboBox.getItems().add("<ALL>");
         chromComboBox.setValue("<ALL>");
-        // add each chromosome from VCF to create chromosome representation
         double totalWidth = 0;
         for (Map.Entry<String, Chromosome> refContig : refContigs.entrySet()) {
             if (Objects.equals(refContig.getKey(), "<ALL>")) {
@@ -408,28 +408,61 @@ public class View {
                 chromComboBox.getItems().add(refContig.getKey());
                 // get percentage of total reference
                 double percent = ((float) refContig.getValue().getLength() / totalRefLength);
-                // add rectangle to referenceWrapper
-                Rectangle rect = new Rectangle();
-                rect.setX(currentX);
-                rect.setStroke(Color.DARKGRAY);
-                rect.setFill(Color.WHITE);
-                rect.setArcWidth(14);
-                rect.setArcHeight(14);
-                rect.setHeight(referenceWrapper.getHeight());
                 double chromWidth = referenceWrapper.getWidth() * percent;
-                rect.setWidth(chromWidth);
                 refContig.getValue().setPixelAbsoluteOffset(currentX);
                 refContig.getValue().setPixelWidth(chromWidth);
                 totalWidth += chromWidth;
-                referenceWrapper.getChildren().add(rect);
-                currentX += rect.getWidth();
+                currentX += chromWidth;
             }
         }
-        // add pixel offsets for <ALL>
         refContigs.get("<ALL>").setPixelAbsoluteOffset(0);
         refContigs.get("<ALL>").setPixelWidth(totalWidth);
-//        this.l1.setText(refName);
-//        this.l2.setText(String.valueOf(refLength) + " bp");
+    }
+
+    public void drawReference(LinkedHashMap<String, Chromosome> refContigs, String chrom) {
+        // reset reference wrapper and labels
+        referenceWrapper.getChildren().clear();
+        l1.setText("");
+        l2.setText("");
+        // draw all chromosomes
+        if (Objects.equals(chrom, "<ALL>")) {
+            // add each chromosome from VCF to create chromosome representation
+            double currentX = 0;
+            for (Map.Entry<String, Chromosome> refContig : refContigs.entrySet()) {
+                if (Objects.equals(refContig.getKey(), "<ALL>")) {
+                    // do nothing
+                }
+                else {
+                    // add rectangle to referenceWrapper
+                    Rectangle rect = new Rectangle();
+                    rect.setX(currentX);
+                    rect.setStroke(Color.DARKGRAY);
+                    rect.setFill(Color.WHITE);
+                    rect.setArcWidth(14);
+                    rect.setArcHeight(14);
+                    rect.setHeight(referenceWrapper.getHeight());
+                    rect.setWidth(refContig.getValue().getPixelWidth());
+                    referenceWrapper.getChildren().add(rect);
+                    currentX += rect.getWidth();
+                }
+            }
+        }
+        // draw a specific chromosome
+        else {
+            // add rectangle to referenceWrapper
+            Rectangle rect = new Rectangle();
+            rect.setX(0);
+            rect.setStroke(Color.DARKGRAY);
+            rect.setFill(Color.WHITE);
+            rect.setArcWidth(14);
+            rect.setArcHeight(14);
+            rect.setHeight(referenceWrapper.getHeight());
+            rect.setWidth(markerWrapper.getWidth());
+            referenceWrapper.getChildren().add(rect);
+            this.l1.setText(chrom);
+            String formattedLength = String.format("%,d", refContigs.get(chrom).getLength());
+            this.l2.setText(formattedLength + " bp");
+        }
     }
 
     public void initSamples(ArrayList<Sample> samples, int refLength, double zoomLevel, double baseFontSize, int originalTrackHeight) {
@@ -478,6 +511,7 @@ public class View {
                 callRect.setStrokeWidth(2);
                 callRect.setArcWidth(5);   // horizontal roundness
                 callRect.setArcHeight(5);
+                System.out.println("TYPE IS " + currentCall.getType());
                 if (Objects.equals(currentCall.getType(), "DUP")) {
                     callRect.setStroke(Color.rgb(40, 70, 160));
                     callRect.setOpacity(0.5);
@@ -505,6 +539,13 @@ public class View {
                     callRect.setFill(Color.BLACK);
                 }
                 currentCalls.getChildren().add(callRect);
+                callRect.setOnMouseEntered(e -> {
+                    callRect.setCursor(Cursor.HAND);
+                });
+                callRect.setOnMouseClicked(e -> {
+                    callRect.setStroke(Color.BLACK);
+                    System.out.println(currentCall.getChromosome() + " " + currentCall.getStart() + " " + currentCall.getId());
+                });
             }
         }
     }
@@ -713,7 +754,7 @@ public class View {
 
 
     // sync scrollpane scroll with marker and coordinate ticks
-    public void syncScroll(Number newVal, Chromosome currentChrom) {
+    public void syncScroll(Number newVal) {
         // oldVal = old scroll position (between 0 and 1)
         // newVal = new scroll position (between 0 and 1)
         // getContent() gets node scrollpane is scrolling, getboundsinlocal gets actual width and height of node, so maxX is the maximum distance that can be scrolled
@@ -722,8 +763,8 @@ public class View {
                 - callsPanel.getViewportBounds().getWidth();
         double translateX = -newVal.doubleValue() * maxX;
         ticksWrapper.setTranslateX(translateX);
-        double max = currentChrom.getPixelWidth() - marker.getWidth();
-        double scrollX = currentChrom.getPixelAbsoluteOffset() + (newVal.doubleValue() * max);
+        double max = markerWrapper.getWidth() - marker.getWidth();
+        double scrollX = newVal.doubleValue() * max;
         System.out.println("SCROLLX " + scrollX);
         marker.setLayoutX(scrollX);
     }
@@ -741,6 +782,22 @@ public class View {
         System.out.println("HVALUE IS " + hvalue);
         this.callsPanel.setHvalue(hvalue);
         return hvalue;
+    }
+
+    public double getHValue() {
+        return this.callsPanel.getHvalue();
+    }
+
+    public double getStartFromHVal(double hval, Chromosome currentChrom) {
+        double contentWidth = callsPanel.getContent().getBoundsInLocal().getWidth();
+        double viewportWidth = callsPanel.getViewportBounds().getWidth();
+        double maxScroll = contentWidth - viewportWidth;
+        double start = hval * maxScroll * currentChrom.getLength() / contentWidth;
+        return start;
+    }
+
+    public double getContentWidth() {
+        return callsPanel.getContent().getBoundsInLocal().getWidth();
     }
 
     public void ticksPressed(MouseEvent e) {
@@ -804,7 +861,8 @@ public class View {
         double contentWidth = chromosome.getLength() * zoomLevel;
         double proportionVisible = visibleWidth/contentWidth;
         // set width
-        marker.setWidth(chromosome.getPixelWidth() * proportionVisible);
+        marker.setWidth(markerWrapper.getWidth() * proportionVisible);
+        //marker.setWidth(chromosome.getPixelWidth() * proportionVisible);
     }
 
     /**
@@ -813,7 +871,12 @@ public class View {
      * @param offset in pixels
      */
     public void updateMarkerPos(Chromosome chromosome, double offset) {
-        marker.setLayoutX(chromosome.getPixelAbsoluteOffset() + offset);
+        //marker.setLayoutX(chromosome.getPixelAbsoluteOffset() + offset);
+        marker.setLayoutX(offset);
+    }
+
+    public double getMarkerWrapperWidth() {
+        return this.markerWrapper.getWidth();
     }
 
     public double getBaseCallPanelHeight() {
@@ -983,7 +1046,7 @@ public class View {
         }
     }
 
-    public void updateMarkerOnDrag(MouseEvent event, Chromosome currentChrom) {
+    public void updateMarkerOnDrag(MouseEvent event) {
         /**
          * Deal with moving
          */
@@ -992,8 +1055,8 @@ public class View {
         // Convert scene X to local X of the markerPane
         double localX = markerWrapper.sceneToLocal(mouseX, 0).getX();
 
-        double startX = currentChrom.getPixelAbsoluteOffset();
-        double endX = currentChrom.getPixelAbsoluteOffset() + currentChrom.getPixelWidth();
+        double startX = 0;
+        double endX = markerWrapper.getWidth();
         double clampedX = Math.max(startX, Math.min(localX, endX));
         if (localX >= (endX - marker.getWidth())) {
             marker.setLayoutX(clampedX-marker.getWidth());

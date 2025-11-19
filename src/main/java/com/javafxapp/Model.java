@@ -53,20 +53,39 @@ public class Model {
         return this.zoomLevel;
     }
 
-    public double updateZoomLevelByFactor(double factor, Chromosome chrom, double viewportWidth, double verticalSBWidth) {
+    public Pair<String, Double> updateZoomLevelByFactor(double factor, Chromosome chrom, double viewportWidth, double verticalSBWidth, double start, double oldProportion) {
         double testZoomLevel = this.zoomLevel * factor;
         // test what the content width would be
         double contentWidth = chrom.getLength() * testZoomLevel;
         double proportionVisible = viewportWidth / contentWidth;
         double selectedZoom;
+
+        int newProportion = (int) this.getGenomicProportion(viewportWidth, chrom, testZoomLevel);
+        int intStart = (int) start;
+        int centerStart = intStart + (int) oldProportion/2;
+        int end = (int) (start + oldProportion);
+
+        // protruding on both ends
         if (proportionVisible > 1) {
             selectedZoom = (viewportWidth + verticalSBWidth) / chrom.getLength();
+            this.zoomLevel = selectedZoom;
+            return new Pair("ABSOLUTE CENTER", selectedZoom);
         }
         else {
             selectedZoom = testZoomLevel;
+            this.zoomLevel = selectedZoom;
         }
-        this.zoomLevel = selectedZoom;
-        return this.zoomLevel;
+
+        // right edge is greater than end
+        if (centerStart + (int) (newProportion/2) >= chrom.getLength()) {
+            return new Pair("RIGHT", selectedZoom);
+        }
+        else if (centerStart - (int) (newProportion/2) <= 1) {
+            return new Pair("LEFT", selectedZoom);
+        }
+        else {
+            return new Pair("CENTER", selectedZoom);
+        }
     }
 
     public boolean isCallPanelHeightStored() {
@@ -430,7 +449,6 @@ public class Model {
                     int absoluteStart = refChromosomes.get(fields[0]).getAbsoluteStart() + Integer.parseInt(fields[1]);
                     Call currentCall = new Call(infoMatcher.group(1), Integer.parseInt(infoMatcher.group(2)), fields[0], Integer.parseInt(fields[1]), absoluteStart, fields[2], genotypes);
                     calls.add(currentCall);
-                    System.out.println(currentCall);
                     for (Sample sample : this.samples) {
                         String genotypeRegex = "(./.):";
                         Pattern genotypePattern = Pattern.compile(genotypeRegex);
@@ -471,7 +489,7 @@ public class Model {
     }
 
     public void updateCoordIncrement(double viewportWidth, Chromosome chrom) {
-        double genomicProportion = getGenomicProportion(viewportWidth, chrom);
+        double genomicProportion = getGenomicProportion(viewportWidth, chrom, this.zoomLevel);
         if (genomicProportion < 100000000) {
             double ideal = genomicProportion / 7;
             this.coordIncrementIndex = getClosestIntegerValue(ideal, increments);
@@ -482,7 +500,7 @@ public class Model {
         }
     }
 
-    public double getGenomicProportion(double viewportWidth, Chromosome chrom) {
+    public double getGenomicProportion(double viewportWidth, Chromosome chrom, double zoomLevel) {
         double contentWidth = chrom.getLength() * zoomLevel;
         double proportionVisible = viewportWidth / contentWidth;
         return proportionVisible * chrom.getLength();
