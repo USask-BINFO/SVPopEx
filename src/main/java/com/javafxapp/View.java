@@ -286,6 +286,7 @@ public class View {
         this.callsPanel.setPrefWidth(Screen.getPrimary().getBounds().getWidth() - sampleSpaceWidth);
         this.callsPanel.setMaxWidth(Screen.getPrimary().getBounds().getWidth() - sampleSpaceWidth);
         selectionWrapper.setPickOnBounds(false);
+        this.selectionContainer.setPickOnBounds(false);
         this.selectionContainer.getChildren().add(selectionWrapper);
         this.callsPanel.setFitToHeight(true);
     }
@@ -419,6 +420,7 @@ public class View {
     }
 
     public void drawReference(LinkedHashMap<String, Chromosome> refContigs, String chrom) {
+        // reset reference wrapper and labels
         referenceWrapper.getChildren().clear();
         l1.setText("");
         l2.setText("");
@@ -458,7 +460,8 @@ public class View {
             rect.setWidth(markerWrapper.getWidth());
             referenceWrapper.getChildren().add(rect);
             this.l1.setText(chrom);
-            this.l2.setText(refContigs.get(chrom).getLength() + " bp");
+            String formattedLength = String.format("%,d", refContigs.get(chrom).getLength());
+            this.l2.setText(formattedLength + " bp");
         }
     }
 
@@ -536,6 +539,13 @@ public class View {
                     callRect.setFill(Color.BLACK);
                 }
                 currentCalls.getChildren().add(callRect);
+                callRect.setOnMouseEntered(e -> {
+                    callRect.setCursor(Cursor.HAND);
+                });
+                callRect.setOnMouseClicked(e -> {
+                    callRect.setStroke(Color.BLACK);
+                    System.out.println(currentCall.getChromosome() + " " + currentCall.getStart() + " " + currentCall.getId());
+                });
             }
         }
     }
