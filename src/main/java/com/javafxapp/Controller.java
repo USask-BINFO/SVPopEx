@@ -51,10 +51,13 @@ public class Controller {
             this.updateReleaseSelection(e);
         });
         view.toggleSidePaneListener(e -> {
-            view.toggleSidePane();
+            // if opening is not successful, then close
+            if (!view.openSidePane()) {
+                view.closeSidePane();
+            }
         });
         view.closeSidePaneListener(e -> {
-            view.toggleSidePane();
+            view.closeSidePane();
         });
         view.chromComboBoxListener(e -> {
             String selectedChrom = view.chromComboBox.getValue();

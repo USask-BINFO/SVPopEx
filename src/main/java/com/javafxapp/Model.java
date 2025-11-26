@@ -438,16 +438,20 @@ public class Model {
                 int startCol = 9;
                 String[] fields = line.split("\t");
                 HashMap<String,String> genotypes = new HashMap<>();
-                // first regex for type and length
-                String infoRegex = "SVTYPE=(.+);SVLEN=(.+);END";
-                Pattern infoPattern = Pattern.compile(infoRegex);
-                Matcher infoMatcher = infoPattern.matcher(fields[7]);
-                if (!infoMatcher.find()) {
+                // first regex for type and length, use ? to make non greedy and match as little as possible (to the first semi colon)
+                String typeInfoRegex = "SVTYPE=(.+?);";
+                String lengthInfoRegex = "SVLEN=(.+?);";
+                Pattern typeInfoPattern = Pattern.compile(typeInfoRegex);
+                Pattern lengthInfoPattern = Pattern.compile(lengthInfoRegex);
+                Matcher typeInfoMatcher = typeInfoPattern.matcher(fields[7]);
+                Matcher lengthInfoMatcher = lengthInfoPattern.matcher(fields[7]);
+                if (!typeInfoMatcher.find() || !lengthInfoMatcher.find()) {
                     System.err.println("Error: Could not find type or length in expected VCF format for call. Ignoring call.");
                 }
                 else {
+                    System.out.println(lengthInfoMatcher.group(1));
                     int absoluteStart = refChromosomes.get(fields[0]).getAbsoluteStart() + Integer.parseInt(fields[1]);
-                    Call currentCall = new Call(infoMatcher.group(1), Integer.parseInt(infoMatcher.group(2)), fields[0], Integer.parseInt(fields[1]), absoluteStart, fields[2], genotypes);
+                    Call currentCall = new Call(typeInfoMatcher.group(1), Integer.parseInt(lengthInfoMatcher.group(1)), fields[0], Integer.parseInt(fields[1]), absoluteStart, fields[2], genotypes);
                     calls.add(currentCall);
                     for (Sample sample : this.samples) {
                         String genotypeRegex = "(./.):";

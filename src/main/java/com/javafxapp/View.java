@@ -42,17 +42,19 @@ import java.util.function.Supplier;
 public class View {
     ArrayList<Sample> sampleOrder = new ArrayList<Sample>();
     // ----------- root and side pane ---------------
-    VBox sidePane = new VBox(20);
+    VBox selectionOptionsSideContainer = new VBox(20);
+    VBox callInfoSideContainer = new VBox(7);
+    StackPane sidePanePanel = new StackPane(callInfoSideContainer, selectionOptionsSideContainer);
     ArrayList<CheckBox> pinCheckboxes = new ArrayList<>();
     VBox comparators = new VBox();
     Button closeSidePaneButton = new Button("\u00D7");
     HBox closeButtonContainer = new HBox(closeSidePaneButton);
     Label regionSelectLabel = new Label("Provide a Region to Select");
     private final VBox layout = new VBox(3);
-    StackPane root = new StackPane(layout, sidePane);
+    StackPane root = new StackPane(layout, sidePanePanel);
     private final Stage primaryStage;
-    TranslateTransition slideIn = new TranslateTransition(Duration.millis(300), sidePane);
-    TranslateTransition slideOut = new TranslateTransition(Duration.millis(300), sidePane);
+    TranslateTransition slideIn = new TranslateTransition(Duration.millis(300), sidePanePanel);
+    TranslateTransition slideOut = new TranslateTransition(Duration.millis(300), sidePanePanel);
     // ---------- menuBar -------------
     private final MenuBar menuBar = new MenuBar();
     private final Menu fileMenu = new Menu("File");
@@ -113,19 +115,23 @@ public class View {
     -fx-faint-focus-color: transparent;
 """;
         // ---------- ROOT AND SIDE PANE ---------
+        String regularStyle = """
+                -fx-text-fill: #555555;
+                -fx-font-weight: bold;
+                """;
         this.primaryStage = primaryStage;
-        root.setAlignment(sidePane, Pos.CENTER_RIGHT);
-        sidePane.setMinWidth(300);
-        sidePane.setMaxWidth(300);
-        sidePane.setStyle("-fx-background-color: #e0e0e0;"
+        root.setAlignment(sidePanePanel, Pos.CENTER_RIGHT);
+        sidePanePanel.setMinWidth(300);
+        sidePanePanel.setMaxWidth(300);
+        sidePanePanel.setStyle("-fx-background-color: #e0e0e0;"
         + "-fx-background-radius: 5px;"
         + "-fx-border-color: #c0c0c0;"
         + "-fx-border-radius: 5px;"
         + "-fx-border-width: 1;");
-        sidePane.setTranslateX(300);
-        sidePane.setAlignment(Pos.TOP_CENTER);
+        sidePanePanel.setTranslateX(300);
         // close button
-        sidePane.getChildren().add(closeButtonContainer);
+        sidePanePanel.getChildren().add(closeButtonContainer);
+
         closeButtonContainer.setAlignment(Pos.TOP_RIGHT);
         // title
         Label title = new Label("Selection Options");
@@ -135,23 +141,69 @@ public class View {
                -fx-font-weight: bold;
                """;
         title.setStyle(style);
-        regionSelectLabel.setStyle("""
-                -fx-text-fill: #555555;
-               -fx-font-weight: bold;
-               """);
+        regionSelectLabel.setStyle(regularStyle);
+        Region spacer1 = new Region();
+        spacer1.setMinHeight(20);
+        Region spacer2 = new Region();
+        spacer2.setMinHeight(20);
+        selectionOptionsSideContainer.setAlignment(Pos.TOP_CENTER);
 
-        sidePane.getChildren().add(title);
+        selectionOptionsSideContainer.getChildren().add(spacer1);
+        selectionOptionsSideContainer.getChildren().add(title);
         // region
-        sidePane.getChildren().add(regionSelectLabel);
+        selectionOptionsSideContainer.getChildren().add(regionSelectLabel);
         Separator separator1 = new Separator();
-        sidePane.getChildren().add(separator1);
+        selectionOptionsSideContainer.getChildren().add(separator1);
         // pin checkboxes
-        sidePane.getChildren().add(comparators);
+        selectionOptionsSideContainer.getChildren().add(comparators);
         Separator separator2 = new Separator();
-        sidePane.getChildren().add(separator2);
+        selectionOptionsSideContainer.getChildren().add(separator2);
         // plots
-        sidePane.getChildren().add(processBlocksButton);
-        sidePane.getChildren().add(processButton);
+        selectionOptionsSideContainer.getChildren().add(processBlocksButton);
+        selectionOptionsSideContainer.getChildren().add(processButton);
+
+
+        callInfoSideContainer.setAlignment(Pos.TOP_LEFT);
+        callInfoSideContainer.setPadding(new Insets(0, 0, 0, 15));
+        callInfoSideContainer.getChildren().add(spacer2);
+        Label callTitle = new Label("Call Information");
+        callTitle.setStyle(style);
+        callInfoSideContainer.getChildren().add(callTitle);
+        callTitle.setWrapText(true);
+        callInfoSideContainer.getChildren().add(new Separator());
+
+        // create labels with ids to be filled with info when call is selected
+        Label chromFill = new Label("");
+        chromFill.setId("chrom");
+        Label posFill = new Label("");
+        posFill.setId("pos");
+        Label idFill = new Label("");
+        idFill.setId("id");
+        Label genotypesFill = new Label("");
+        genotypesFill.setId("genotypes");
+        // styling to set genotypes to the right
+        genotypesFill.setPadding(new Insets(0, 0, 0, 15));
+
+
+        Label chromLabel = new Label("CHROM: ");
+        chromLabel.setStyle(regularStyle);
+        Label posLabel = new Label("POS: ");
+        posLabel.setStyle(regularStyle);
+        Label idLabel = new Label("ID: ");
+        idLabel.setStyle(regularStyle);
+        Label genotypesLabel = new Label("GENOTYPES: ");
+        genotypesLabel.setStyle(regularStyle);
+
+        callInfoSideContainer.getChildren().add(new HBox(chromLabel, chromFill));
+        callInfoSideContainer.getChildren().add(new HBox(posLabel, posFill));
+        callInfoSideContainer.getChildren().add(new HBox(idLabel, idFill));
+        callInfoSideContainer.getChildren().add(genotypesLabel);
+        callInfoSideContainer.getChildren().add(genotypesFill);
+
+        selectionOptionsSideContainer.setVisible(true);
+        selectionOptionsSideContainer.setManaged(true);
+        callInfoSideContainer.setVisible(false);
+        callInfoSideContainer.setManaged(false);
 
 
         // ---------- MENU --------------
@@ -309,7 +361,7 @@ public class View {
         this.chromComboBox.setDisable(false);
         this.processRegionButton.setDisable(false);
         double bottomOfTickContainerY = tickContainer.getLayoutY() + tickContainer.getLayoutBounds().getHeight();
-        sidePane.setTranslateY(bottomOfTickContainerY);
+        sidePanePanel.setTranslateY(bottomOfTickContainerY);
     }
 
     /**
@@ -504,8 +556,6 @@ public class View {
                 else {
                     callRect = new Rectangle(currentCall.getStart()*zoomLevel, 1, currentCall.getLength()*zoomLevel, originalTrackHeight-2);
                 }
-                String callId = sample.getName() + "-" + j;
-                callRect.setId(callId);
                 // styling
                 callRect.setOpacity(1);
                 callRect.setStrokeWidth(2);
@@ -544,10 +594,39 @@ public class View {
                 });
                 callRect.setOnMouseClicked(e -> {
                     callRect.setStroke(Color.BLACK);
-                    System.out.println(currentCall.getChromosome() + " " + currentCall.getStart() + " " + currentCall.getId());
+                    this.showCallInformation(currentCall, samples);
+                    this.openSidePane();
                 });
             }
         }
+    }
+
+    void showCallInformation(Call call, ArrayList<Sample> samples) {
+        Label chromLabel = (Label) callInfoSideContainer.lookup("#chrom");
+        chromLabel.setText(call.getChromosome());
+        Label posLabel = (Label) callInfoSideContainer.lookup("#pos");
+        posLabel.setText(String.valueOf(call.getStart()));
+        Label idLabel = (Label) callInfoSideContainer.lookup("#id");
+        idLabel.setText(call.getId());
+        Label genotypeLabel = (Label) callInfoSideContainer.lookup("#genotypes");
+        // clear genotype label from previous calls
+        genotypeLabel.setText("");
+        int count = 0;
+        for (Sample sample : samples) {
+            if (count == 0) {
+                genotypeLabel.setText(sample.getName() + " = " + call.getGenotypes().get(sample.getName()));
+            }
+            else {
+                genotypeLabel.setText(genotypeLabel.getText() + "\n" + sample.getName() + " = " + call.getGenotypes().get(sample.getName()));
+            }
+            count += 1;
+        }
+
+        // set call info side pane to visible
+        callInfoSideContainer.setVisible(true);
+        callInfoSideContainer.setManaged(true);
+        selectionOptionsSideContainer.setVisible(false);
+        selectionOptionsSideContainer.setManaged(false);
     }
 
     /**
@@ -1036,13 +1115,35 @@ public class View {
         return this.sampleOrder;
     }
 
-    public void toggleSidePane() {
-        if (this.sidePane.getTranslateX() > 0) {
+
+    public boolean openSidePane() {
+        // if its closed (300), open it
+        if (this.sidePanePanel.getTranslateX() > 0) {
             slideIn.setToX(0);
             slideIn.play();
+            return true;
         } else {
+            return false;
+        }
+    }
+
+    public boolean closeSidePane() {
+        // if its visible (0), close it
+        if (this.sidePanePanel.getTranslateX() == 0) {
             slideOut.setToX(300);
+            // going to set selection info as present (default)
+            slideOut.setOnFinished(event -> {
+                selectionOptionsSideContainer.setVisible(true);
+                selectionOptionsSideContainer.setManaged(true);
+                callInfoSideContainer.setVisible(false);
+                callInfoSideContainer.setManaged(false);
+            });
             slideOut.play();
+            return true;
+        }
+        // otherwise do nothing because already closed
+        else {
+            return false;
         }
     }
 
