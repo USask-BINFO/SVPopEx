@@ -42,19 +42,20 @@ import java.util.function.Supplier;
 public class View {
     ArrayList<Sample> sampleOrder = new ArrayList<Sample>();
     // ----------- root and side pane ---------------
+    VBox sidePaneContainer = new VBox(0);
     VBox selectionOptionsSideContainer = new VBox(20);
     VBox callInfoSideContainer = new VBox(7);
-    StackPane sidePanePanel = new StackPane(callInfoSideContainer, selectionOptionsSideContainer);
+    StackPane sidePaneSwapPanel = new StackPane(callInfoSideContainer, selectionOptionsSideContainer);
     ArrayList<CheckBox> pinCheckboxes = new ArrayList<>();
     VBox comparators = new VBox();
     Button closeSidePaneButton = new Button("\u00D7");
     HBox closeButtonContainer = new HBox(closeSidePaneButton);
     Label regionSelectLabel = new Label("Provide a Region to Select");
     private final VBox layout = new VBox(3);
-    StackPane root = new StackPane(layout, sidePanePanel);
+    StackPane root = new StackPane(layout, sidePaneContainer);
     private final Stage primaryStage;
-    TranslateTransition slideIn = new TranslateTransition(Duration.millis(300), sidePanePanel);
-    TranslateTransition slideOut = new TranslateTransition(Duration.millis(300), sidePanePanel);
+    TranslateTransition slideIn = new TranslateTransition(Duration.millis(300), sidePaneContainer);
+    TranslateTransition slideOut = new TranslateTransition(Duration.millis(300), sidePaneContainer);
     // ---------- menuBar -------------
     private final MenuBar menuBar = new MenuBar();
     private final Menu fileMenu = new Menu("File");
@@ -120,17 +121,18 @@ public class View {
                 -fx-font-weight: bold;
                 """;
         this.primaryStage = primaryStage;
-        root.setAlignment(sidePanePanel, Pos.CENTER_RIGHT);
-        sidePanePanel.setMinWidth(300);
-        sidePanePanel.setMaxWidth(300);
-        sidePanePanel.setStyle("-fx-background-color: #e0e0e0;"
+        root.setAlignment(sidePaneContainer, Pos.CENTER_RIGHT);
+        sidePaneContainer.setMinWidth(300);
+        sidePaneContainer.setMaxWidth(300);
+        sidePaneContainer.setStyle("-fx-background-color: #e0e0e0;"
         + "-fx-background-radius: 5px;"
         + "-fx-border-color: #c0c0c0;"
         + "-fx-border-radius: 5px;"
         + "-fx-border-width: 1;");
-        sidePanePanel.setTranslateX(300);
+        sidePaneContainer.setTranslateX(300);
         // close button
-        sidePanePanel.getChildren().add(closeButtonContainer);
+        sidePaneContainer.getChildren().add(closeButtonContainer);
+        sidePaneContainer.getChildren().add(sidePaneSwapPanel);
 
         closeButtonContainer.setAlignment(Pos.TOP_RIGHT);
         // title
@@ -200,8 +202,10 @@ public class View {
         callInfoSideContainer.getChildren().add(genotypesLabel);
         callInfoSideContainer.getChildren().add(genotypesFill);
 
+        // upon creation the selection container is visible
         selectionOptionsSideContainer.setVisible(true);
         selectionOptionsSideContainer.setManaged(true);
+        // make sure call info container is not visible
         callInfoSideContainer.setVisible(false);
         callInfoSideContainer.setManaged(false);
 
@@ -361,7 +365,7 @@ public class View {
         this.chromComboBox.setDisable(false);
         this.processRegionButton.setDisable(false);
         double bottomOfTickContainerY = tickContainer.getLayoutY() + tickContainer.getLayoutBounds().getHeight();
-        sidePanePanel.setTranslateY(bottomOfTickContainerY);
+        sidePaneContainer.setTranslateY(bottomOfTickContainerY);
     }
 
     /**
@@ -1118,7 +1122,7 @@ public class View {
 
     public boolean openSidePane() {
         // if its closed (300), open it
-        if (this.sidePanePanel.getTranslateX() > 0) {
+        if (this.sidePaneContainer.getTranslateX() > 0) {
             slideIn.setToX(0);
             slideIn.play();
             return true;
@@ -1129,7 +1133,7 @@ public class View {
 
     public boolean closeSidePane() {
         // if its visible (0), close it
-        if (this.sidePanePanel.getTranslateX() == 0) {
+        if (this.sidePaneContainer.getTranslateX() == 0) {
             slideOut.setToX(300);
             // going to set selection info as present (default)
             slideOut.setOnFinished(event -> {
