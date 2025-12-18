@@ -240,6 +240,7 @@ public class Model {
         Preconditions: Assumes that sample order may have been manipulated by pinning
         Postconditions: Does NOT do any reordering
          */
+        System.out.println("TESTING ------------------");
         HashMap<Rectangle,Color> result = new HashMap<>();
         // if no selections are made, return empty hashmap
         if (this.selections.isEmpty()) {
@@ -274,9 +275,9 @@ public class Model {
                 // loop through each SV call
                 for (Call call : calls) {
                     // include the call if it is within the selection region (doesn't have to be completely within)
-                    if (call.getStart() > selectionStart && call.getEnd() < selectionEnd ||
+                    if ((call.getStart() > selectionStart && call.getEnd() < selectionEnd ||
                             call.getStart() < selectionStart && call.getEnd() > selectionStart ||
-                            call.getStart() < selectionEnd && call.getEnd() > selectionEnd) {
+                            call.getStart() < selectionEnd && call.getEnd() > selectionEnd) && Objects.equals(call.getChromosome(), selection.getChromosome())) {
                         System.out.println(call);
                         // loop through each sample in view order
                         for (int i=0; i<sampleOrder.size(); i++) {
@@ -449,7 +450,6 @@ public class Model {
                     System.err.println("Error: Could not find type or length in expected VCF format for call. Ignoring call.");
                 }
                 else {
-                    System.out.println(lengthInfoMatcher.group(1));
                     int absoluteStart = refChromosomes.get(fields[0]).getAbsoluteStart() + Integer.parseInt(fields[1]);
                     Call currentCall = new Call(typeInfoMatcher.group(1), Integer.parseInt(lengthInfoMatcher.group(1)), fields[0], Integer.parseInt(fields[1]), absoluteStart, fields[2], genotypes);
                     calls.add(currentCall);

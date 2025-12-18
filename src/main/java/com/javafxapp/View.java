@@ -565,7 +565,6 @@ public class View {
                 callRect.setStrokeWidth(2);
                 callRect.setArcWidth(5);   // horizontal roundness
                 callRect.setArcHeight(5);
-                System.out.println("TYPE IS " + currentCall.getType());
                 if (Objects.equals(currentCall.getType(), "DUP")) {
                     callRect.setStroke(Color.rgb(40, 70, 160));
                     callRect.setOpacity(0.5);

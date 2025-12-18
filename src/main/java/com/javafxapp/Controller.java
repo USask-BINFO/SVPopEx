@@ -61,7 +61,7 @@ public class Controller {
         });
         view.chromComboBoxListener(e -> {
             String selectedChrom = view.chromComboBox.getValue();
-            this.showChromosome(selectedChrom, 1, 0);
+            this.showChromosome(selectedChrom);
         });
         view.processRegionButtonListener(e -> {
            this.processCustomRegion(view.getTextFieldRegion());
@@ -129,10 +129,10 @@ public class Controller {
         else {
             double factor;
             if (Objects.equals(text, "+")) {
-                factor = 1.3;
+                factor = 1.5;
             }
             else if (Objects.equals(text, "-")) {
-                factor = 0.7;
+                factor = 0.5;
             }
             else {
                 throw new IllegalArgumentException("Unexpected zoom button text " + text);
@@ -153,7 +153,7 @@ public class Controller {
             // show coords
             view.showCoords(model.getCurrentChrom(), model.getTickSpacing(), model.getZoomLevel(), model.getRefChromosomes());
             // show calls
-            view.showCalls(model.getCurrentChrom(), model.getSamples(), level, model.getOriginalTrackHeight());
+            view.showCalls(model.getCurrentChrom(), view.getSampleOrderInView(), level, model.getOriginalTrackHeight());
             view.updateSelections(model.getSelections(), level);
 
             // update newStart based on result
@@ -195,7 +195,7 @@ public class Controller {
     }
 
     public void updateReleaseSelection(MouseEvent e) {
-        Selection selection = new Selection(view.getSelectionRectangle().getX(), e.getX(), model.getZoomLevel());
+        Selection selection = new Selection(view.getSelectionRectangle().getX(), e.getX(), model.getCurrentChrom().getName(), model.getZoomLevel());
         model.addSelection(selection);
         view.clearActiveSelection();
     }
@@ -209,7 +209,7 @@ public class Controller {
         view.redrawSampleInfoAfterScale(model.getSamples(), model.getBaseFontSize(), model.getTrackHeightScale(), model.getOriginalTrackHeight());
     }
 
-    public void showChromosome(String selectedChrom, double proportion, double offset) {
+    public void showChromosome(String selectedChrom) {
         // set new chromosome
         Chromosome chrom = model.getRefChromosomes().get(selectedChrom);
         model.setCurrentChrom(chrom);
