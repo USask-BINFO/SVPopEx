@@ -161,6 +161,7 @@ public class Model {
     public HashMap<Rectangle,Color> processPinnedSelections(ArrayList<Sample> sampleOrder, ArrayList<CheckBox> checkboxes) {
         ArrayList<Sample> checkedSamples = new ArrayList<>();
         HashMap<Rectangle, Color> result = new HashMap<>();
+        System.out.println("\n**** TESTING PROCESS PINNED SELECTIONS *****");
         for (int i=0; i<checkboxes.size(); i++) {
             if (checkboxes.get(i).isSelected()) {
                 checkedSamples.add(this.samples.get(i));
@@ -172,6 +173,7 @@ public class Model {
         }
         // if selections are made, process
         else {
+            System.out.println("SAMPLE ORDER IN VIEW:");
             for (int i=0; i<sampleOrder.size(); i++) {
                 System.out.println(sampleOrder.get(i).getName());
             }
@@ -179,11 +181,12 @@ public class Model {
             for (Selection selection : selections) {
                 double selectionStart = selection.getGenomicStart();
                 double selectionEnd = selection.getGenomicEnd();
+                System.out.println("PROCESSING CHECKED SAMPLES:");
                 // loop through samples
                 for (Sample checkedSample : checkedSamples) {
-                    System.out.println("___________" + checkedSample.getName());
-                    // loop through sample calls
-                    for (Call call : checkedSample.getCalls()) {
+                    System.out.println(checkedSample.getName());
+                    // loop through sample calls in the selection chromosome
+                    for (Call call : checkedSample.getChromosomeCalls(selection.getChromosome())) {
                         double calcStart = call.getStart() * zoomLevel;
                         double calcLength = call.getLength() * zoomLevel;
                         // if entire call is in selection area, then loop through genotypes
@@ -240,7 +243,6 @@ public class Model {
         Preconditions: Assumes that sample order may have been manipulated by pinning
         Postconditions: Does NOT do any reordering
          */
-        System.out.println("TESTING ------------------");
         HashMap<Rectangle,Color> result = new HashMap<>();
         // if no selections are made, return empty hashmap
         if (this.selections.isEmpty()) {
