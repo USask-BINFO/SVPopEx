@@ -175,6 +175,8 @@ public class View {
         callInfoSideContainer.getChildren().add(new Separator());
 
         // create labels with ids to be filled with info when call is selected
+        Label typeFill = new Label("");
+        typeFill.setId("type");
         Label chromFill = new Label("");
         chromFill.setId("chrom");
         Label posFill = new Label("");
@@ -186,7 +188,8 @@ public class View {
         // styling to set genotypes to the right
         genotypesFill.setPadding(new Insets(0, 0, 0, 15));
 
-
+        Label typeLabel = new Label("TYPE: ");
+        typeLabel.setStyle(regularStyle);
         Label chromLabel = new Label("CHROM: ");
         chromLabel.setStyle(regularStyle);
         Label posLabel = new Label("POS: ");
@@ -196,6 +199,7 @@ public class View {
         Label genotypesLabel = new Label("GENOTYPES: ");
         genotypesLabel.setStyle(regularStyle);
 
+        callInfoSideContainer.getChildren().add(new HBox(typeLabel, typeFill));
         callInfoSideContainer.getChildren().add(new HBox(chromLabel, chromFill));
         callInfoSideContainer.getChildren().add(new HBox(posLabel, posFill));
         callInfoSideContainer.getChildren().add(new HBox(idLabel, idFill));
@@ -643,6 +647,8 @@ public class View {
     }
 
     void showCallInformation(Call call, ArrayList<Sample> samples) {
+        Label typeLabel = (Label) callInfoSideContainer.lookup("#type");
+        typeLabel.setText(call.getType());
         Label chromLabel = (Label) callInfoSideContainer.lookup("#chrom");
         chromLabel.setText(call.getChromosome());
         Label posLabel = (Label) callInfoSideContainer.lookup("#pos");
