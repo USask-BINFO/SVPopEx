@@ -569,21 +569,59 @@ public class View {
                     callRect.setStroke(Color.rgb(40, 70, 160));
                     callRect.setOpacity(0.5);
                     callRect.setFill(Color.rgb(65, 105, 225));
+                    double percentageHeight = originalTrackHeight * 0.15;
+                    double percentageLength = currentCall.getLength()*zoomLevel * 0.1;
+                    double endX = currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - percentageLength;
+                    Line lineDup1 = new Line(currentCall.getStart()*zoomLevel + percentageLength, percentageHeight, endX, percentageHeight);
+                    System.out.println("NUM 1 " + currentCall.getStart()*zoomLevel + percentageLength);
+                    System.out.println("NUM 2 " + percentageHeight);
+                    System.out.println("NUM 3 " + (currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - percentageLength));
+                    System.out.println("NUM 4 " + percentageHeight);
+
+                    Line lineDup2 = new Line(currentCall.getStart()*zoomLevel + percentageLength, originalTrackHeight - percentageHeight, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - percentageLength, originalTrackHeight - percentageHeight);
+                    Line lineDup3 = new Line(currentCall.getStart()*zoomLevel + percentageLength, percentageHeight, currentCall.getStart()*zoomLevel + percentageLength, originalTrackHeight - percentageHeight);
+                    Line lineDup4 = new Line(currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - percentageLength, percentageHeight, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - percentageLength, originalTrackHeight - percentageHeight);
+                    lineDup1.setStroke(Color.rgb(40, 70, 160));
+                    lineDup2.setStroke(Color.rgb(40, 70, 160));
+                    lineDup3.setStroke(Color.rgb(40, 70, 160));
+                    lineDup4.setStroke(Color.rgb(40, 70, 160));
+                    currentCalls.getChildren().add(lineDup1);
+                    currentCalls.getChildren().add(lineDup2);
+                    currentCalls.getChildren().add(lineDup3);
+                    currentCalls.getChildren().add(lineDup4);
                 }
                 else if (Objects.equals(currentCall.getType(), "INV")) {
                     callRect.setStroke(Color.rgb(200, 140, 0));
                     callRect.setOpacity(0.5);
                     callRect.setFill(Color.rgb(255, 195, 0 ));
+                    Line lineInv1 = new Line(currentCall.getStart()*zoomLevel, 1, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, originalTrackHeight-2);
+                    Line lineInv2 = new Line(currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, 1, currentCall.getStart()*zoomLevel, originalTrackHeight-2);
+                    lineInv1.setStroke(Color.rgb(200, 140, 0));
+                    lineInv2.setStroke(Color.rgb(200, 140, 0));
+                    currentCalls.getChildren().add(lineInv1);
+                    currentCalls.getChildren().add(lineInv2);
                 }
                 else if (Objects.equals(currentCall.getType(), "DEL")) {
                     callRect.setStroke(Color.rgb(120, 30, 2));
                     callRect.setOpacity(0.5);
                     callRect.setFill(Color.rgb(164, 42, 4));
+                    Line lineDel1 = new Line(currentCall.getStart()*zoomLevel, 1, currentCall.getStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), originalTrackHeight-2);
+                    Line lineDel2 = new Line(currentCall.getStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), originalTrackHeight-2, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, 1);
+                    lineDel1.setStroke(Color.rgb(120, 30, 2));
+                    lineDel2.setStroke(Color.rgb(120, 30, 2));
+                    currentCalls.getChildren().add(lineDel1);
+                    currentCalls.getChildren().add(lineDel2);
                 }
                 else if (Objects.equals(currentCall.getType(), "INS")) {
                     callRect.setStroke(Color.rgb(100, 140, 80));
                     callRect.setOpacity(0.5);
                     callRect.setFill(Color.rgb(147, 197, 114));
+                    Line lineIns1 = new Line(currentCall.getStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), 1, currentCall.getStart()*zoomLevel, originalTrackHeight-2);
+                    Line lineIns2 = new Line(currentCall.getStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), 1, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, originalTrackHeight-2);
+                    lineIns1.setStroke(Color.rgb(100, 140, 80));
+                    lineIns2.setStroke(Color.rgb(100, 140, 80));
+                    currentCalls.getChildren().add(lineIns1);
+                    currentCalls.getChildren().add(lineIns2);
                 }
                 else {
                     System.out.println(currentCall.getType());
