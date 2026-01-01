@@ -47,6 +47,7 @@ public class View {
     VBox callInfoSideContainer = new VBox(7);
     StackPane sidePaneSwapPanel = new StackPane(callInfoSideContainer, selectionOptionsSideContainer);
     ArrayList<CheckBox> pinCheckboxes = new ArrayList<>();
+    HBox mateContainer = new HBox();
     VBox comparators = new VBox();
     Button closeSidePaneButton = new Button("\u00D7");
     HBox closeButtonContainer = new HBox(closeSidePaneButton);
@@ -183,6 +184,11 @@ public class View {
         posFill.setId("pos");
         Label idFill = new Label("");
         idFill.setId("id");
+
+        this.mateContainer.setId("bndContainer");
+        Label mateFill = new Label("");
+        mateFill.setId("mate");
+
         Label genotypesFill = new Label("");
         genotypesFill.setId("genotypes");
         // styling to set genotypes to the right
@@ -196,6 +202,8 @@ public class View {
         posLabel.setStyle(regularStyle);
         Label idLabel = new Label("ID: ");
         idLabel.setStyle(regularStyle);
+        Label mateLabel = new Label("MATE: ");
+        mateLabel.setStyle(regularStyle);
         Label genotypesLabel = new Label("GENOTYPES: ");
         genotypesLabel.setStyle(regularStyle);
 
@@ -203,6 +211,8 @@ public class View {
         callInfoSideContainer.getChildren().add(new HBox(chromLabel, chromFill));
         callInfoSideContainer.getChildren().add(new HBox(posLabel, posFill));
         callInfoSideContainer.getChildren().add(new HBox(idLabel, idFill));
+        mateContainer.getChildren().addAll(mateLabel, mateFill);
+        callInfoSideContainer.getChildren().add(mateContainer);
         callInfoSideContainer.getChildren().add(genotypesLabel);
         callInfoSideContainer.getChildren().add(genotypesFill);
 
@@ -602,6 +612,8 @@ public class View {
                     Line lineInv2 = new Line(currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, 1, currentCall.getStart()*zoomLevel, originalTrackHeight-2);
                     lineInv1.setStroke(Color.rgb(200, 140, 0));
                     lineInv2.setStroke(Color.rgb(200, 140, 0));
+                    lineInv1.setOpacity(0.6);
+                    lineInv2.setOpacity(0.6);
                     currentCalls.getChildren().add(lineInv1);
                     currentCalls.getChildren().add(lineInv2);
                 }
@@ -613,6 +625,8 @@ public class View {
                     Line lineDel2 = new Line(currentCall.getStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), originalTrackHeight-2, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, 1);
                     lineDel1.setStroke(Color.rgb(120, 30, 2));
                     lineDel2.setStroke(Color.rgb(120, 30, 2));
+                    lineDel1.setOpacity(0.4);
+                    lineDel2.setOpacity(0.4);
                     currentCalls.getChildren().add(lineDel1);
                     currentCalls.getChildren().add(lineDel2);
                 }
@@ -624,6 +638,8 @@ public class View {
                     Line lineIns2 = new Line(currentCall.getStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), 1, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, originalTrackHeight-2);
                     lineIns1.setStroke(Color.rgb(100, 140, 80));
                     lineIns2.setStroke(Color.rgb(100, 140, 80));
+                    lineIns1.setOpacity(0.5);
+                    lineIns2.setOpacity(0.5);
                     currentCalls.getChildren().add(lineIns1);
                     currentCalls.getChildren().add(lineIns2);
                 }
@@ -655,6 +671,30 @@ public class View {
         posLabel.setText(String.valueOf(call.getStart()));
         Label idLabel = (Label) callInfoSideContainer.lookup("#id");
         idLabel.setText(call.getId());
+
+        // try to look up mate container in side pane
+        HBox bndContainer = (HBox) callInfoSideContainer.lookup("#bndContainer");
+        // if call is a breakend type, check if it is present and add it if necessary
+        if (Objects.equals(call.getType(), "BND") || Objects.equals(call.getType(), "TRA")) {
+            // if not present, add node
+            if (bndContainer == null) {
+                callInfoSideContainer.getChildren().add(7, mateContainer);
+            }
+            // otherwise present
+            else {
+                // do nothing
+            }
+            Label mateLabel = (Label) callInfoSideContainer.lookup("#mate");
+            mateLabel.setText(call.getAlternate());
+        }
+        // call is not breakend type, make sure mate container node is removed
+        else {
+            // if not null already, remove it
+            if (bndContainer != null) {
+                callInfoSideContainer.getChildren().remove(bndContainer);
+            }
+        }
+
         Label genotypeLabel = (Label) callInfoSideContainer.lookup("#genotypes");
         // clear genotype label from previous calls
         genotypeLabel.setText("");
