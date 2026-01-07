@@ -48,6 +48,7 @@ public class View {
     StackPane sidePaneSwapPanel = new StackPane(callInfoSideContainer, selectionOptionsSideContainer);
     ArrayList<CheckBox> pinCheckboxes = new ArrayList<>();
     HBox mateContainer = new HBox();
+    Button showMateButton = new Button("Show");
     VBox comparators = new VBox();
     Button closeSidePaneButton = new Button("\u00D7");
     HBox closeButtonContainer = new HBox(closeSidePaneButton);
@@ -186,6 +187,7 @@ public class View {
         idFill.setId("id");
 
         this.mateContainer.setId("bndContainer");
+        this.mateContainer.setAlignment(Pos.CENTER_LEFT);
         Label mateFill = new Label("");
         mateFill.setId("mate");
 
@@ -211,7 +213,7 @@ public class View {
         callInfoSideContainer.getChildren().add(new HBox(chromLabel, chromFill));
         callInfoSideContainer.getChildren().add(new HBox(posLabel, posFill));
         callInfoSideContainer.getChildren().add(new HBox(idLabel, idFill));
-        mateContainer.getChildren().addAll(mateLabel, mateFill);
+        mateContainer.getChildren().addAll(mateLabel, mateFill, showMateButton);
         callInfoSideContainer.getChildren().add(mateContainer);
         callInfoSideContainer.getChildren().add(genotypesLabel);
         callInfoSideContainer.getChildren().add(genotypesFill);
