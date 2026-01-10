@@ -8,17 +8,19 @@ public class Selection {
     private double zoomLevel;
     private double genomicStart;
     private double genomicEnd;
-    public Selection(double startX, double endX, double zoomLevel) {
+    private String chromosome;
+    public Selection(double startX, double endX, String chromosome, double zoomLevel) {
         this.startX = startX;
         this.endX = endX;
         this.length = endX - startX;
         this.zoomLevel = zoomLevel;
         this.genomicStart = this.startX/this.zoomLevel;
         this.genomicEnd = this.endX/this.zoomLevel;
+        this.chromosome = chromosome;
     }
     public String toString() {
-        System.out.println("START: " + genomicStart);
-        System.out.println("END: " + genomicEnd);
+        System.out.println("START: " + String.format("%.0f", genomicStart));
+        System.out.println("END: " + String.format("%.0f", genomicEnd));
         return "Start: " + startX + " , End: " + endX;
     }
 
@@ -44,5 +46,9 @@ public class Selection {
 
     public double getZoomLevel() {
         return this.zoomLevel;
+    }
+
+    public String getChromosome() {
+        return this.chromosome;
     }
 }

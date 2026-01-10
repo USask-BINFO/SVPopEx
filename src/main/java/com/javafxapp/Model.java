@@ -161,6 +161,7 @@ public class Model {
     public HashMap<Rectangle,Color> processPinnedSelections(ArrayList<Sample> sampleOrder, ArrayList<CheckBox> checkboxes) {
         ArrayList<Sample> checkedSamples = new ArrayList<>();
         HashMap<Rectangle, Color> result = new HashMap<>();
+        System.out.println("\n**** TESTING PROCESS PINNED SELECTIONS *****");
         for (int i=0; i<checkboxes.size(); i++) {
             if (checkboxes.get(i).isSelected()) {
                 checkedSamples.add(this.samples.get(i));
@@ -172,6 +173,7 @@ public class Model {
         }
         // if selections are made, process
         else {
+            System.out.println("SAMPLE ORDER IN VIEW:");
             for (int i=0; i<sampleOrder.size(); i++) {
                 System.out.println(sampleOrder.get(i).getName());
             }
@@ -179,11 +181,12 @@ public class Model {
             for (Selection selection : selections) {
                 double selectionStart = selection.getGenomicStart();
                 double selectionEnd = selection.getGenomicEnd();
+                System.out.println("PROCESSING CHECKED SAMPLES:");
                 // loop through samples
                 for (Sample checkedSample : checkedSamples) {
-                    System.out.println("___________" + checkedSample.getName());
-                    // loop through sample calls
-                    for (Call call : checkedSample.getCalls()) {
+                    System.out.println(checkedSample.getName());
+                    // loop through sample calls in the selection chromosome
+                    for (Call call : checkedSample.getChromosomeCalls(selection.getChromosome())) {
                         double calcStart = call.getStart() * zoomLevel;
                         double calcLength = call.getLength() * zoomLevel;
                         // if entire call is in selection area, then loop through genotypes
@@ -274,9 +277,9 @@ public class Model {
                 // loop through each SV call
                 for (Call call : calls) {
                     // include the call if it is within the selection region (doesn't have to be completely within)
-                    if (call.getStart() > selectionStart && call.getEnd() < selectionEnd ||
+                    if ((call.getStart() > selectionStart && call.getEnd() < selectionEnd ||
                             call.getStart() < selectionStart && call.getEnd() > selectionStart ||
-                            call.getStart() < selectionEnd && call.getEnd() > selectionEnd) {
+                            call.getStart() < selectionEnd && call.getEnd() > selectionEnd) && Objects.equals(call.getChromosome(), selection.getChromosome())) {
                         System.out.println(call);
                         // loop through each sample in view order
                         for (int i=0; i<sampleOrder.size(); i++) {
@@ -449,9 +452,8 @@ public class Model {
                     System.err.println("Error: Could not find type or length in expected VCF format for call. Ignoring call.");
                 }
                 else {
-                    System.out.println(lengthInfoMatcher.group(1));
                     int absoluteStart = refChromosomes.get(fields[0]).getAbsoluteStart() + Integer.parseInt(fields[1]);
-                    Call currentCall = new Call(typeInfoMatcher.group(1), Integer.parseInt(lengthInfoMatcher.group(1)), fields[0], Integer.parseInt(fields[1]), absoluteStart, fields[2], genotypes);
+                    Call currentCall = new Call(typeInfoMatcher.group(1), Integer.parseInt(lengthInfoMatcher.group(1)), fields[0], Integer.parseInt(fields[1]), absoluteStart, fields[4], fields[2], genotypes);
                     calls.add(currentCall);
                     for (Sample sample : this.samples) {
                         String genotypeRegex = "(./.):";

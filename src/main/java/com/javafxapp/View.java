@@ -42,19 +42,22 @@ import java.util.function.Supplier;
 public class View {
     ArrayList<Sample> sampleOrder = new ArrayList<Sample>();
     // ----------- root and side pane ---------------
+    VBox sidePaneContainer = new VBox(0);
     VBox selectionOptionsSideContainer = new VBox(20);
     VBox callInfoSideContainer = new VBox(7);
-    StackPane sidePanePanel = new StackPane(callInfoSideContainer, selectionOptionsSideContainer);
+    StackPane sidePaneSwapPanel = new StackPane(callInfoSideContainer, selectionOptionsSideContainer);
     ArrayList<CheckBox> pinCheckboxes = new ArrayList<>();
+    HBox mateContainer = new HBox();
+    Button showMateButton = new Button("Show");
     VBox comparators = new VBox();
     Button closeSidePaneButton = new Button("\u00D7");
     HBox closeButtonContainer = new HBox(closeSidePaneButton);
     Label regionSelectLabel = new Label("Provide a Region to Select");
     private final VBox layout = new VBox(3);
-    StackPane root = new StackPane(layout, sidePanePanel);
+    StackPane root = new StackPane(layout, sidePaneContainer);
     private final Stage primaryStage;
-    TranslateTransition slideIn = new TranslateTransition(Duration.millis(300), sidePanePanel);
-    TranslateTransition slideOut = new TranslateTransition(Duration.millis(300), sidePanePanel);
+    TranslateTransition slideIn = new TranslateTransition(Duration.millis(300), sidePaneContainer);
+    TranslateTransition slideOut = new TranslateTransition(Duration.millis(300), sidePaneContainer);
     // ---------- menuBar -------------
     private final MenuBar menuBar = new MenuBar();
     private final Menu fileMenu = new Menu("File");
@@ -120,17 +123,18 @@ public class View {
                 -fx-font-weight: bold;
                 """;
         this.primaryStage = primaryStage;
-        root.setAlignment(sidePanePanel, Pos.CENTER_RIGHT);
-        sidePanePanel.setMinWidth(300);
-        sidePanePanel.setMaxWidth(300);
-        sidePanePanel.setStyle("-fx-background-color: #e0e0e0;"
+        root.setAlignment(sidePaneContainer, Pos.CENTER_RIGHT);
+        sidePaneContainer.setMinWidth(300);
+        sidePaneContainer.setMaxWidth(300);
+        sidePaneContainer.setStyle("-fx-background-color: #e0e0e0;"
         + "-fx-background-radius: 5px;"
         + "-fx-border-color: #c0c0c0;"
         + "-fx-border-radius: 5px;"
         + "-fx-border-width: 1;");
-        sidePanePanel.setTranslateX(300);
+        sidePaneContainer.setTranslateX(300);
         // close button
-        sidePanePanel.getChildren().add(closeButtonContainer);
+        sidePaneContainer.getChildren().add(closeButtonContainer);
+        sidePaneContainer.getChildren().add(sidePaneSwapPanel);
 
         closeButtonContainer.setAlignment(Pos.TOP_RIGHT);
         // title
@@ -173,35 +177,51 @@ public class View {
         callInfoSideContainer.getChildren().add(new Separator());
 
         // create labels with ids to be filled with info when call is selected
+        Label typeFill = new Label("");
+        typeFill.setId("type");
         Label chromFill = new Label("");
         chromFill.setId("chrom");
         Label posFill = new Label("");
         posFill.setId("pos");
         Label idFill = new Label("");
         idFill.setId("id");
+
+        this.mateContainer.setId("bndContainer");
+        this.mateContainer.setAlignment(Pos.CENTER_LEFT);
+        Label mateFill = new Label("");
+        mateFill.setId("mate");
+
         Label genotypesFill = new Label("");
         genotypesFill.setId("genotypes");
         // styling to set genotypes to the right
         genotypesFill.setPadding(new Insets(0, 0, 0, 15));
 
-
+        Label typeLabel = new Label("TYPE: ");
+        typeLabel.setStyle(regularStyle);
         Label chromLabel = new Label("CHROM: ");
         chromLabel.setStyle(regularStyle);
         Label posLabel = new Label("POS: ");
         posLabel.setStyle(regularStyle);
         Label idLabel = new Label("ID: ");
         idLabel.setStyle(regularStyle);
+        Label mateLabel = new Label("MATE: ");
+        mateLabel.setStyle(regularStyle);
         Label genotypesLabel = new Label("GENOTYPES: ");
         genotypesLabel.setStyle(regularStyle);
 
+        callInfoSideContainer.getChildren().add(new HBox(typeLabel, typeFill));
         callInfoSideContainer.getChildren().add(new HBox(chromLabel, chromFill));
         callInfoSideContainer.getChildren().add(new HBox(posLabel, posFill));
         callInfoSideContainer.getChildren().add(new HBox(idLabel, idFill));
+        mateContainer.getChildren().addAll(mateLabel, mateFill, showMateButton);
+        callInfoSideContainer.getChildren().add(mateContainer);
         callInfoSideContainer.getChildren().add(genotypesLabel);
         callInfoSideContainer.getChildren().add(genotypesFill);
 
+        // upon creation the selection container is visible
         selectionOptionsSideContainer.setVisible(true);
         selectionOptionsSideContainer.setManaged(true);
+        // make sure call info container is not visible
         callInfoSideContainer.setVisible(false);
         callInfoSideContainer.setManaged(false);
 
@@ -361,7 +381,7 @@ public class View {
         this.chromComboBox.setDisable(false);
         this.processRegionButton.setDisable(false);
         double bottomOfTickContainerY = tickContainer.getLayoutY() + tickContainer.getLayoutBounds().getHeight();
-        sidePanePanel.setTranslateY(bottomOfTickContainerY);
+        sidePaneContainer.setTranslateY(bottomOfTickContainerY);
     }
 
     /**
@@ -561,26 +581,69 @@ public class View {
                 callRect.setStrokeWidth(2);
                 callRect.setArcWidth(5);   // horizontal roundness
                 callRect.setArcHeight(5);
-                System.out.println("TYPE IS " + currentCall.getType());
                 if (Objects.equals(currentCall.getType(), "DUP")) {
                     callRect.setStroke(Color.rgb(40, 70, 160));
                     callRect.setOpacity(0.5);
                     callRect.setFill(Color.rgb(65, 105, 225));
+                    double percentageHeight = originalTrackHeight * 0.15;
+                    double percentageLength = currentCall.getLength()*zoomLevel * 0.1;
+                    double endX = currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - percentageLength;
+                    Line lineDup1 = new Line(currentCall.getStart()*zoomLevel + percentageLength, percentageHeight, endX, percentageHeight);
+                    System.out.println("NUM 1 " + currentCall.getStart()*zoomLevel + percentageLength);
+                    System.out.println("NUM 2 " + percentageHeight);
+                    System.out.println("NUM 3 " + (currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - percentageLength));
+                    System.out.println("NUM 4 " + percentageHeight);
+
+                    Line lineDup2 = new Line(currentCall.getStart()*zoomLevel + percentageLength, originalTrackHeight - percentageHeight, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - percentageLength, originalTrackHeight - percentageHeight);
+                    Line lineDup3 = new Line(currentCall.getStart()*zoomLevel + percentageLength, percentageHeight, currentCall.getStart()*zoomLevel + percentageLength, originalTrackHeight - percentageHeight);
+                    Line lineDup4 = new Line(currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - percentageLength, percentageHeight, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - percentageLength, originalTrackHeight - percentageHeight);
+                    lineDup1.setStroke(Color.rgb(40, 70, 160));
+                    lineDup2.setStroke(Color.rgb(40, 70, 160));
+                    lineDup3.setStroke(Color.rgb(40, 70, 160));
+                    lineDup4.setStroke(Color.rgb(40, 70, 160));
+                    currentCalls.getChildren().add(lineDup1);
+                    currentCalls.getChildren().add(lineDup2);
+                    currentCalls.getChildren().add(lineDup3);
+                    currentCalls.getChildren().add(lineDup4);
                 }
                 else if (Objects.equals(currentCall.getType(), "INV")) {
                     callRect.setStroke(Color.rgb(200, 140, 0));
                     callRect.setOpacity(0.5);
                     callRect.setFill(Color.rgb(255, 195, 0 ));
+                    Line lineInv1 = new Line(currentCall.getStart()*zoomLevel, 1, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, originalTrackHeight-2);
+                    Line lineInv2 = new Line(currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, 1, currentCall.getStart()*zoomLevel, originalTrackHeight-2);
+                    lineInv1.setStroke(Color.rgb(200, 140, 0));
+                    lineInv2.setStroke(Color.rgb(200, 140, 0));
+                    lineInv1.setOpacity(0.6);
+                    lineInv2.setOpacity(0.6);
+                    currentCalls.getChildren().add(lineInv1);
+                    currentCalls.getChildren().add(lineInv2);
                 }
                 else if (Objects.equals(currentCall.getType(), "DEL")) {
                     callRect.setStroke(Color.rgb(120, 30, 2));
                     callRect.setOpacity(0.5);
                     callRect.setFill(Color.rgb(164, 42, 4));
+                    Line lineDel1 = new Line(currentCall.getStart()*zoomLevel, 1, currentCall.getStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), originalTrackHeight-2);
+                    Line lineDel2 = new Line(currentCall.getStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), originalTrackHeight-2, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, 1);
+                    lineDel1.setStroke(Color.rgb(120, 30, 2));
+                    lineDel2.setStroke(Color.rgb(120, 30, 2));
+                    lineDel1.setOpacity(0.4);
+                    lineDel2.setOpacity(0.4);
+                    currentCalls.getChildren().add(lineDel1);
+                    currentCalls.getChildren().add(lineDel2);
                 }
                 else if (Objects.equals(currentCall.getType(), "INS")) {
                     callRect.setStroke(Color.rgb(100, 140, 80));
                     callRect.setOpacity(0.5);
                     callRect.setFill(Color.rgb(147, 197, 114));
+                    Line lineIns1 = new Line(currentCall.getStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), 1, currentCall.getStart()*zoomLevel, originalTrackHeight-2);
+                    Line lineIns2 = new Line(currentCall.getStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), 1, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, originalTrackHeight-2);
+                    lineIns1.setStroke(Color.rgb(100, 140, 80));
+                    lineIns2.setStroke(Color.rgb(100, 140, 80));
+                    lineIns1.setOpacity(0.5);
+                    lineIns2.setOpacity(0.5);
+                    currentCalls.getChildren().add(lineIns1);
+                    currentCalls.getChildren().add(lineIns2);
                 }
                 else {
                     System.out.println(currentCall.getType());
@@ -602,12 +665,38 @@ public class View {
     }
 
     void showCallInformation(Call call, ArrayList<Sample> samples) {
+        Label typeLabel = (Label) callInfoSideContainer.lookup("#type");
+        typeLabel.setText(call.getType());
         Label chromLabel = (Label) callInfoSideContainer.lookup("#chrom");
         chromLabel.setText(call.getChromosome());
         Label posLabel = (Label) callInfoSideContainer.lookup("#pos");
         posLabel.setText(String.valueOf(call.getStart()));
         Label idLabel = (Label) callInfoSideContainer.lookup("#id");
         idLabel.setText(call.getId());
+
+        // try to look up mate container in side pane
+        HBox bndContainer = (HBox) callInfoSideContainer.lookup("#bndContainer");
+        // if call is a breakend type, check if it is present and add it if necessary
+        if (Objects.equals(call.getType(), "BND") || Objects.equals(call.getType(), "TRA")) {
+            // if not present, add node
+            if (bndContainer == null) {
+                callInfoSideContainer.getChildren().add(7, mateContainer);
+            }
+            // otherwise present
+            else {
+                // do nothing
+            }
+            Label mateLabel = (Label) callInfoSideContainer.lookup("#mate");
+            mateLabel.setText(call.getAlternate());
+        }
+        // call is not breakend type, make sure mate container node is removed
+        else {
+            // if not null already, remove it
+            if (bndContainer != null) {
+                callInfoSideContainer.getChildren().remove(bndContainer);
+            }
+        }
+
         Label genotypeLabel = (Label) callInfoSideContainer.lookup("#genotypes");
         // clear genotype label from previous calls
         genotypeLabel.setText("");
@@ -759,15 +848,15 @@ public class View {
                     0, 0, 0, 1,      // startX, startY, endX, endY
                     true,            // proportional
                     CycleMethod.NO_CYCLE,
-                    new Stop(0.0, Color.RED),    // red from 0%...
-                    new Stop(0.05, Color.RED),   // ...to 5%
-                    new Stop(0.06, Color.GREEN),  // green at center
-                    new Stop(0.5, Color.GREEN),  // green at center
-                    new Stop(0.95, Color.RED),   // red starts again at 95%
-                    new Stop(1.0, Color.RED)     // red to bottom
+                    new Stop(0.0, Color.rgb(199, 92, 92, 0.8)),    // red from 0%...
+                    new Stop(0.05, Color.rgb(199, 92, 92, 0.8)),   // ...to 5%
+                    new Stop(0.25, Color.rgb(92, 156, 92, 0.6)),  // green at center
+                    new Stop(0.75, Color.rgb(92, 156, 92, 0.6)),  // green at center
+                    new Stop(0.95, Color.rgb(199, 92, 92, 0.8)),   // red starts again at 95%
+                    new Stop(1.0, Color.rgb(199, 92, 92, 0.8))     // red to bottom
             );
             BackgroundFill bgFill = new BackgroundFill(lg, CornerRadii.EMPTY, Insets.EMPTY);
-            //callsWrapper.setBackground(new Background(bgFill));
+            callsWrapper.setBackground(new Background(bgFill));
         }
         else {
             // do nothing
@@ -1118,7 +1207,7 @@ public class View {
 
     public boolean openSidePane() {
         // if its closed (300), open it
-        if (this.sidePanePanel.getTranslateX() > 0) {
+        if (this.sidePaneContainer.getTranslateX() > 0) {
             slideIn.setToX(0);
             slideIn.play();
             return true;
@@ -1129,7 +1218,7 @@ public class View {
 
     public boolean closeSidePane() {
         // if its visible (0), close it
-        if (this.sidePanePanel.getTranslateX() == 0) {
+        if (this.sidePaneContainer.getTranslateX() == 0) {
             slideOut.setToX(300);
             // going to set selection info as present (default)
             slideOut.setOnFinished(event -> {
