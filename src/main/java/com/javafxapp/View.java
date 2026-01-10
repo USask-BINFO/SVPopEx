@@ -848,15 +848,15 @@ public class View {
                     0, 0, 0, 1,      // startX, startY, endX, endY
                     true,            // proportional
                     CycleMethod.NO_CYCLE,
-                    new Stop(0.0, Color.RED),    // red from 0%...
-                    new Stop(0.05, Color.RED),   // ...to 5%
-                    new Stop(0.06, Color.GREEN),  // green at center
-                    new Stop(0.5, Color.GREEN),  // green at center
-                    new Stop(0.95, Color.RED),   // red starts again at 95%
-                    new Stop(1.0, Color.RED)     // red to bottom
+                    new Stop(0.0, Color.rgb(199, 92, 92, 0.8)),    // red from 0%...
+                    new Stop(0.05, Color.rgb(199, 92, 92, 0.8)),   // ...to 5%
+                    new Stop(0.25, Color.rgb(92, 156, 92, 0.6)),  // green at center
+                    new Stop(0.75, Color.rgb(92, 156, 92, 0.6)),  // green at center
+                    new Stop(0.95, Color.rgb(199, 92, 92, 0.8)),   // red starts again at 95%
+                    new Stop(1.0, Color.rgb(199, 92, 92, 0.8))     // red to bottom
             );
             BackgroundFill bgFill = new BackgroundFill(lg, CornerRadii.EMPTY, Insets.EMPTY);
-            //callsWrapper.setBackground(new Background(bgFill));
+            callsWrapper.setBackground(new Background(bgFill));
         }
         else {
             // do nothing
