@@ -24,7 +24,10 @@ import javafx.scene.transform.Scale;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import javafx.stage.Screen;
+import javafx.scene.shape.SVGPath;
 
+
+import java.sql.SQLOutput;
 import java.util.*;
 import java.util.function.Supplier;
 
@@ -435,11 +438,11 @@ public class View {
             checkBox.setOnAction(event -> {
                 if (checkBox.isSelected()) {
                     moveSample(sample, OGIndex, "TOP", numAnnotations.get());
-                    toggleSampleColorStrip(sample, sampleColors);
+                    toggleSampleLock(sample);
                 }
                 else {
                     moveSample(sample, OGIndex, "BOTTOM", numAnnotations.get());
-                    toggleSampleColorStrip(sample, sampleColors);
+                    toggleSampleLock(sample);
 
                 }
             });
@@ -537,7 +540,7 @@ public class View {
         }
     }
 
-    public void initSamples(ArrayList<Sample> samples, int refLength, double zoomLevel, double baseFontSize, int originalTrackHeight) {
+    public void initSamples(ArrayList<Sample> samples, HashMap<String, Color> sampleColors, int refLength, double zoomLevel, double baseFontSize, int originalTrackHeight) {
         /*
         Post-conditions: Samples added to sampleOrder ArrayList
          */
@@ -545,7 +548,7 @@ public class View {
         this.createNewAnnotationTrack(refLength, zoomLevel, "AF", baseFontSize, 100, "AF");
         for (Sample sample : samples) {
             sampleOrder.add(sample);
-            this.createNewCallTrack(refLength, zoomLevel, sample.getName(), baseFontSize, originalTrackHeight);
+            this.createNewCallTrack(sampleColors, refLength, zoomLevel, sample.getName(), baseFontSize, originalTrackHeight);
         }
         this.callsPanel.setPannable(true);   // Optional: enables mouse drag scrolling
     }
@@ -868,23 +871,28 @@ public class View {
         // create sample label
         Label sampleLabel = new Label(trackName);
         sampleLabel.setFont(Font.font("System", baseFontSize));
-        // create infoContainer to hold sample info
-        HBox labelContainer = new HBox();
-        // create visualContainer to hold sample info and color rectangle
-        VBox infoContainer = new VBox();
+
+        // create infoContainer to hold all sample graphics and info
+        HBox infoContainer = new HBox();
+        infoContainer.setAlignment(Pos.CENTER);
         infoContainer.setMinHeight(height);
         infoContainer.setMaxHeight(height);
-        infoContainer.getChildren().addAll(labelContainer);
-        infoContainer.setAlignment(Pos.CENTER);
-        // add sample label to infoContainer
+
+        // lock container to hold lock if applicable
+        VBox lockContainer = new VBox();
+
+        // label container to hold label and color rect if applicable
+        VBox labelContainer = new VBox();
         labelWrapper.getChildren().add(sampleLabel);
         labelContainer.getChildren().add(labelWrapper);
+
+        infoContainer.getChildren().addAll(lockContainer, labelContainer);
         this.samplesInfoContainer.getChildren().add(infoContainer);
         // add sampContainer to samplesContainer
         this.samplesContainer.getChildren().add(callsWrapper);
     }
 
-    public void createNewCallTrack(int refLength, double zoomLevel, String sampleName, double baseFontSize, int height) {
+    public void createNewCallTrack(HashMap<String, Color> sampleColors, int refLength, double zoomLevel, String sampleName, double baseFontSize, int height) {
         // create callsWrapper to hold sample calls
         Pane callsWrapper = new Pane();
         callsWrapper.setPrefWidth(refLength * zoomLevel);
@@ -893,23 +901,41 @@ public class View {
         callsWrapper.setMaxHeight(height);
         // create labelWrapper Pane to hold sample name
         StackPane labelWrapper = new StackPane();
-        labelWrapper.setMinWidth(this.sampleSpaceWidth);
-        labelWrapper.setMaxWidth(this.sampleSpaceWidth);
+        labelWrapper.setMinWidth(this.sampleSpaceWidth * 0.7);
+        labelWrapper.setMaxWidth(this.sampleSpaceWidth * 0.7);
         // create sample label
         Label sampleLabel = new Label(sampleName);
         sampleLabel.setFont(Font.font("System", baseFontSize));
-        // create infoContainer to hold sample info
-        HBox labelContainer = new HBox();
-        // create visualContainer to hold sample info and color rectangle
-        VBox infoContainer = new VBox();
+
+        // create infoContainer to hold all sample info and graphics
+        HBox infoContainer = new HBox();
+        infoContainer.setAlignment(Pos.CENTER);
         infoContainer.setMinHeight(height);
         infoContainer.setMaxHeight(height);
-        Rectangle colorRect = new Rectangle(40, 3, Color.TRANSPARENT);
-        infoContainer.getChildren().addAll(labelContainer, colorRect);
-        infoContainer.setAlignment(Pos.CENTER);
-        // add sample label to infoContainer
+
+        // lock container to hold lock if applicable
+        VBox lockContainer = new VBox();
+        SVGPath lockIcon = new SVGPath();
+        lockIcon.setContent(
+                "M20 12.0078 Q20 11.1797 19.4062 10.6016 Q18.8281 10.0078 18 10.0078 L17 10.0078 L17 7.0078 Q17 5.9766 16.625 5.0703 Q16.2188 4.1484 15.5312 3.4766 Q14.8594 2.7891 13.9531 2.3984 Q13.0312 1.9922 12 1.9922 Q10.9688 1.9922 10.0625 2.3984 Q9.1406 2.7891 8.4531 3.4766 Q7.7812 4.1484 7.3906 5.0703 Q7.0156 5.9766 7.0156 7.0078 L7.0156 10.0078 L6 10.0078 Q5.1875 10.0078 4.5938 10.6016 Q4.0156 11.1797 4.0156 12.0078 L4.0156 19.9922 Q4.0156 20.8359 4.5938 21.4297 Q5.1875 22.0078 6 22.0078 L18 22.0078 Q18.8281 22.0078 19.4062 21.4297 Q20 20.8359 20 19.9922 L20 12.0078 ZM9 7.0078 Q9 5.7734 9.875 4.8984 Q10.7656 4.0078 12 4.0078 Q13.25 4.0078 14.125 4.8984 Q15 5.7734 15 7.0078 L15 10.0078 L9 10.0078 L9 7.0078 Z"
+        );
+        lockIcon.setFill(Color.TRANSPARENT);
+        lockIcon.setScaleX(0.75);
+        lockIcon.setScaleY(0.75);
+        lockIcon.setId("lock");
+        lockContainer.getChildren().add(lockIcon);
+        lockContainer.setAlignment(Pos.CENTER_RIGHT);
+        lockContainer.setMinWidth(this.sampleSpaceWidth * 0.3);
+        lockContainer.setMinWidth(this.sampleSpaceWidth * 0.3);
+
+        // label container to hold label and color rect if applicable
+        VBox labelContainer = new VBox();
+        labelContainer.setAlignment(Pos.CENTER);
         labelWrapper.getChildren().add(sampleLabel);
-        labelContainer.getChildren().add(labelWrapper);
+        Rectangle colorRect = new Rectangle(40, 2.5, sampleColors.get(sampleName));
+        labelContainer.getChildren().addAll(labelWrapper, colorRect);
+
+        infoContainer.getChildren().addAll(lockContainer, labelContainer);
         this.samplesInfoContainer.getChildren().add(infoContainer);
         // add sampContainer to samplesContainer
         this.samplesContainer.getChildren().add(callsWrapper);
@@ -1066,11 +1092,13 @@ public class View {
          * Pre-conditions/assumptions: Gets info pane for each sample by looking up the ID
          */
         for (Sample sample : samples) {
-            VBox container = (VBox) samplesInfoContainer.lookup("#" + sample.getName());
+            HBox container = (HBox) samplesInfoContainer.lookup("#" + sample.getName());
             container.setMinHeight(originalTrackHeight * trackHeightScale);
             container.setMaxHeight(originalTrackHeight * trackHeightScale);
-            HBox infoContainer = (HBox) container.getChildren().get(0);
-            Pane labelWrapper = (Pane) infoContainer.getChildren().get(1);
+            // get second vbox (labelcontainer)
+            VBox labelContainer = (VBox) container.getChildren().get(1);
+            // get the labelwrapper
+            Pane labelWrapper = (Pane) labelContainer.getChildren().getFirst();
             Label sampleLabel = (Label) labelWrapper.getChildren().getFirst();
             sampleLabel.setFont(Font.font(sampleLabel.getFont().getFamily(), baseFontSize));
         }
@@ -1124,14 +1152,15 @@ public class View {
         }
     }
 
-    public void toggleSampleColorStrip(Sample sample, HashMap<String, Color> sampleColors) {
-        VBox visualContainer = (VBox) this.samplesInfoContainer.lookup("#" + sample.getName());
-        Rectangle rectangle = (Rectangle) visualContainer.getChildren().get(1);
-        if (rectangle.getFill() == sampleColors.get(sample.getName())) {
-            rectangle.setFill(Color.TRANSPARENT);
+    public void toggleSampleLock(Sample sample) {
+        HBox visualContainer = (HBox) this.samplesInfoContainer.lookup("#" + sample.getName());
+        SVGPath lock = (SVGPath) visualContainer.lookup("#lock");
+        if (lock.getFill().equals(Color.TRANSPARENT)) {
+            System.out.println("LOCK IS TRANSPARENT");
+            lock.setFill(Color.rgb(105, 105, 105));
         }
         else {
-            rectangle.setFill(sampleColors.get(sample.getName()));
+            lock.setFill(Color.TRANSPARENT);
         }
     }
 
@@ -1189,7 +1218,7 @@ public class View {
 
         // get current nodes
         Pane calls = (Pane) this.samplesContainer.lookup("#" + sample.getName());
-        VBox container = (VBox) this.samplesInfoContainer.lookup("#" + sample.getName());
+        HBox container = (HBox) this.samplesInfoContainer.lookup("#" + sample.getName());
         // remove
         this.samplesContainer.getChildren().remove(calls);
         this.samplesInfoContainer.getChildren().remove(container);

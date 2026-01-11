@@ -102,7 +102,7 @@ public class Controller {
             view.updateMarkerWidth(model.getCurrentChrom(), model.getZoomLevel(), model.getCurrentChrom().getLength());
             view.updateMarkerPos(model.getCurrentChrom(), 0);
             view.initSidePane(model.getSamples(), model.getSampleColors(), model::getNumAnnotationsShown);
-            view.initSamples(model.getSamples(), model.getRefTotalLength(), model.getZoomLevel(), model.getBaseFontSize(), model.getOriginalTrackHeight());
+            view.initSamples(model.getSamples(), model.getSampleColors(), model.getRefTotalLength(), model.getZoomLevel(), model.getBaseFontSize(), model.getOriginalTrackHeight());
             view.showCalls(model.getRefChromosomes().get("<ALL>"), model.getSamples(), model.getZoomLevel(), model.getOriginalTrackHeight());
             view.enableControls();
 //            view.viewportWidthChange(e -> {
