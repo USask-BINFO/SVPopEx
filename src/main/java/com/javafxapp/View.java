@@ -653,6 +653,7 @@ public class View {
                     callRect.setStroke(Color.BLACK);
                     callRect.setOpacity(0.7);
                     callRect.setFill(Color.BLACK);
+                    callRect.getStrokeDashArray().setAll(12.0, 6.0);
                 }
                 currentCalls.getChildren().add(callRect);
                 callRect.setOnMouseEntered(e -> {
@@ -1156,7 +1157,6 @@ public class View {
         HBox visualContainer = (HBox) this.samplesInfoContainer.lookup("#" + sample.getName());
         SVGPath lock = (SVGPath) visualContainer.lookup("#lock");
         if (lock.getFill().equals(Color.TRANSPARENT)) {
-            System.out.println("LOCK IS TRANSPARENT");
             lock.setFill(Color.rgb(105, 105, 105));
         }
         else {
