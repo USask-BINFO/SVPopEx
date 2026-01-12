@@ -507,8 +507,11 @@ public class Model {
     }
 
     public double getGenomicProportion(double viewportWidth, Chromosome chrom, double zoomLevel) {
+        // content width in pixels
         double contentWidth = chrom.getLength() * zoomLevel;
+        // proportion of viewport width to entire content width
         double proportionVisible = viewportWidth / contentWidth;
+        // get length of genomic proportion in view
         return proportionVisible * chrom.getLength();
     }
 

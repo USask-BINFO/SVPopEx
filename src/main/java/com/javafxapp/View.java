@@ -48,6 +48,7 @@ public class View {
     VBox sidePaneContainer = new VBox(0);
     VBox selectionOptionsSideContainer = new VBox(20);
     VBox callInfoSideContainer = new VBox(7);
+    Call liveCall = null;
     StackPane sidePaneSwapPanel = new StackPane(callInfoSideContainer, selectionOptionsSideContainer);
     ArrayList<CheckBox> pinCheckboxes = new ArrayList<>();
     HBox mateContainer = new HBox();
@@ -281,6 +282,7 @@ public class View {
         growTrackHeightButton.setDisable(true);
         sidePaneButton.setDisable(true);
         closeSidePaneButton.setDisable(true);
+        showMateButton.setDisable(true);
         zoomInButton.setMinSize(35, 25);
         zoomInButton.setMaxSize(35, 25);
         zoomOutButton.setMinSize(35, 25);
@@ -306,6 +308,7 @@ public class View {
         growTrackHeightButton.setFocusTraversable(false);
         sidePaneButton.setFocusTraversable(false);
         closeSidePaneButton.setFocusTraversable(false);
+        showMateButton.setFocusTraversable(false);
         // button style
         zoomInButton.setStyle(circularStyle);
         zoomOutButton.setStyle(circularStyle);
@@ -383,6 +386,7 @@ public class View {
         this.regionField.setDisable(false);
         this.chromComboBox.setDisable(false);
         this.processRegionButton.setDisable(false);
+        this.showMateButton.setDisable(false);
         double bottomOfTickContainerY = tickContainer.getLayoutY() + tickContainer.getLayoutBounds().getHeight();
         sidePaneContainer.setTranslateY(bottomOfTickContainerY);
     }
@@ -404,6 +408,7 @@ public class View {
         this.sidePaneButton.setDisable(true);
         this.closeSidePaneButton.setDisable(true);
         this.processRegionButton.setDisable(true);
+        this.showMateButton.setDisable(true);
     }
 
     public Scene getScene() {
@@ -662,10 +667,19 @@ public class View {
                 callRect.setOnMouseClicked(e -> {
                     callRect.setStroke(Color.BLACK);
                     this.showCallInformation(currentCall, samples);
+                    this.setLiveCall(currentCall);
                     this.openSidePane();
                 });
             }
         }
+    }
+
+    void setLiveCall(Call call) {
+        this.liveCall = call;
+    }
+
+    Call getLiveCall() {
+        return this.liveCall;
     }
 
     void showCallInformation(Call call, ArrayList<Sample> samples) {
@@ -1346,6 +1360,9 @@ public class View {
     }
     public void processRegionButtonListener(EventHandler<ActionEvent> handler) {
         processRegionButton.setOnAction(handler);
+    }
+    public void showMateButtonListener(EventHandler<ActionEvent> handler) {
+        showMateButton.setOnAction(handler);
     }
 
 //    public void viewportWidthChange(EventHandler<ActionEvent> handler) {
