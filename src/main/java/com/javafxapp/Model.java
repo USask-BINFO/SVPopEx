@@ -294,9 +294,19 @@ public class Model {
                                 // if it has no equivalence yet, loop through all samples above and check
                                 if (equiv.get(curName).isEmpty()) {
                                     for (int j=0; j<i; j++) {
-                                        // if same genotype, add equivalence for sample
-                                        if (Objects.equals(call.getGenotypes().get(sampleOrder.get(j).getName()), curGT)) {
-                                            equiv.get(curName).add(sampleOrder.get(j).getName());
+                                        // if same presence/absence, add equivalence for sample
+                                        // current contains 1 and comparative also contains 1
+                                        if (curGT.contains("1")) {
+                                            if (call.getGenotypes().get(sampleOrder.get(j).getName()).contains("1")) {
+                                                equiv.get(curName).add(sampleOrder.get(j).getName());
+                                            }
+                                        }
+                                        // current does not contain 1 and comparative also does not contain 1
+                                        else {
+                                            if (!call.getGenotypes().get(sampleOrder.get(j).getName()).contains("1")) {
+                                                equiv.get(curName).add(sampleOrder.get(j).getName());
+                                            }
+
                                         }
                                     }
                                     // if no equivalence found, add itself and lock
@@ -307,16 +317,30 @@ public class Model {
                                 }
                                 // if it has equivalences, loop through all equivalent samples and make sure still equivalent
                                 else {
+                                    System.out.println("TRIGGERED AT ELSE");
                                     ArrayList<String> removeNames = new ArrayList<String>();
                                     // loop through equivalent samples
                                     for (int j=0; j<equiv.get(curName).size(); j++) {
                                         // if same genotype do nothing
-                                        if (Objects.equals(call.getGenotypes().get(equiv.get(curName).get(j)), curGT)) {
-                                            // do nothing
+                                        if (curGT.contains("1")) {
+                                            // SAME do nothing
+                                            if (call.getGenotypes().get(equiv.get(curName).get(j)).contains("1")) {
+                                                // do nothing
+                                            }
+                                            // different, add to a list to remove the sample from equivalences
+                                            else {
+                                                removeNames.add(equiv.get(curName).get(j));
+                                            }
                                         }
-                                        // otherwise, add to a list to remove the sample from equivalences
+                                        // does not contain 1
                                         else {
-                                            removeNames.add(equiv.get(curName).get(j));
+                                            // also does not contain 1 (same), do nothing
+                                            if (!call.getGenotypes().get(equiv.get(curName).get(j)).contains("1")) {
+                                                // do nothing
+                                            }
+                                            else {
+                                                removeNames.add(equiv.get(curName).get(j));
+                                            }
                                         }
                                     }
                                     // remove no longer equivalent samples
@@ -461,20 +485,13 @@ public class Model {
                         Matcher genotypeMatcher = genotypePattern.matcher(fields[startCol]);
                         // assign reference length if match is found, otherwise exit
                         if (genotypeMatcher.find()) {
-                            // if missing, add as reference
-                            if (Objects.equals(genotypeMatcher.group(1), "./.")) {
-                                genotypes.put(sample.getName(), "0/0");
-                            }
-                            // otherwise add as itself
-                            else {
-                                genotypes.put(sample.getName(), genotypeMatcher.group(1));
-                                // if has the variant, add
-                                if (Objects.equals(genotypeMatcher.group(1), "0/1") || Objects.equals(genotypeMatcher.group(1), "1/1")) {
-                                    // add call for chromosome (in VCF)
-                                    sample.addCall(fields[0], currentCall);
-                                    // add call to <ALL>
-                                    sample.addCall("<ALL>", currentCall);
-                                }
+                            genotypes.put(sample.getName(), genotypeMatcher.group(1));
+                            // if has the variant, add
+                            if (Objects.equals(genotypeMatcher.group(1), "0/1") || Objects.equals(genotypeMatcher.group(1), "1/1")) {
+                                // add call for chromosome (in VCF)
+                                sample.addCall(fields[0], currentCall);
+                                // add call to <ALL>
+                                sample.addCall("<ALL>", currentCall);
                             }
                         } else {
                             System.err.println("Error: Could not find genotype for a sample on line:" + line + " . Ignoring call.");
