@@ -161,7 +161,6 @@ public class Model {
     public HashMap<Rectangle,Color> processPinnedSelections(ArrayList<Sample> sampleOrder, ArrayList<CheckBox> checkboxes) {
         ArrayList<Sample> checkedSamples = new ArrayList<>();
         HashMap<Rectangle, Color> result = new HashMap<>();
-        System.out.println("\n**** TESTING PROCESS PINNED SELECTIONS *****");
         for (int i=0; i<checkboxes.size(); i++) {
             if (checkboxes.get(i).isSelected()) {
                 checkedSamples.add(this.samples.get(i));
@@ -173,18 +172,12 @@ public class Model {
         }
         // if selections are made, process
         else {
-            System.out.println("SAMPLE ORDER IN VIEW:");
-            for (int i=0; i<sampleOrder.size(); i++) {
-                System.out.println(sampleOrder.get(i).getName());
-            }
             ArrayList<String> seenCallIds = new ArrayList<>();
             for (Selection selection : selections) {
                 double selectionStart = selection.getGenomicStart();
                 double selectionEnd = selection.getGenomicEnd();
-                System.out.println("PROCESSING CHECKED SAMPLES:");
                 // loop through samples
                 for (Sample checkedSample : checkedSamples) {
-                    System.out.println(checkedSample.getName());
                     // loop through sample calls in the selection chromosome
                     for (Call call : checkedSample.getChromosomeCalls(selection.getChromosome())) {
                         double calcStart = call.getStart() * zoomLevel;
@@ -200,9 +193,13 @@ public class Model {
                                 for (int i=0; i<sampleOrder.size(); i++) {
                                     // dealing with a sample past the current checked sample
                                     if (pastCurrent) {
-                                        if (Objects.equals(call.genotypes.get(sampleOrder.get(i).getName()), "1/1") || Objects.equals(call.genotypes.get(sampleOrder.get(i).getName()), "0/1")) {
+                                        // if it has the variant allele, add to result
+                                        if (call.genotypes.get(sampleOrder.get(i).getName()).contains("1")) {
                                             Rectangle newRect = new Rectangle(calcStart, i*100, calcLength, 100);
                                             result.put(newRect, sampleColors.get(checkedSample.getName()));
+                                        }
+                                        else {
+                                            // do nothing
                                         }
                                     }
                                     // if current sample is the current checked sample
@@ -231,7 +228,6 @@ public class Model {
                             // do nothing
                         }
                     }
-
                 }
             }
         }
