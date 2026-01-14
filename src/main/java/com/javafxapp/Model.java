@@ -494,6 +494,8 @@ public class Model {
                         }
                         startCol++;
                     }
+                    // after all calls added, calculate allele frequence
+                    currentCall.setAlleleFreq();
                 }
             }
         }
