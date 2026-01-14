@@ -66,6 +66,15 @@ public class Controller {
         view.processRegionButtonListener(e -> {
            this.processCustomRegion(view.getTextFieldRegion());
         });
+        view.showMateButtonListener(e -> {
+            String result = this.processShowMate();
+            if (result.equals("null")) {
+                // do nothing, some incorrect or error found
+            }
+            else {
+                this.processCustomRegion(result);
+            }
+        });
     }
 
     public void importFile() {
@@ -102,7 +111,7 @@ public class Controller {
             view.updateMarkerWidth(model.getCurrentChrom(), model.getZoomLevel(), model.getCurrentChrom().getLength());
             view.updateMarkerPos(model.getCurrentChrom(), 0);
             view.initSidePane(model.getSamples(), model.getSampleColors(), model::getNumAnnotationsShown);
-            view.initSamples(model.getSamples(), model.getRefTotalLength(), model.getZoomLevel(), model.getBaseFontSize(), model.getOriginalTrackHeight());
+            view.initSamples(model.getSamples(), model.getSampleColors(), model.getRefTotalLength(), model.getZoomLevel(), model.getBaseFontSize(), model.getOriginalTrackHeight());
             view.showCalls(model.getRefChromosomes().get("<ALL>"), model.getSamples(), model.getZoomLevel(), model.getOriginalTrackHeight());
             view.enableControls();
 //            view.viewportWidthChange(e -> {
@@ -230,6 +239,42 @@ public class Controller {
 //        System.out.println("PROCESSING VIEWPORT WIDTH CHANGE");
 //        //view.updateMarkerOnViewportScaleOrZoom(model.getCurrentChrom(), model.getRefTotalLength(), model.getZoomLevel());
 //    }
+
+    public String processShowMate() {
+        int length = (int) model.getGenomicProportion(view.getViewportWidth(), model.getCurrentChrom(), model.getZoomLevel());
+        String alternate = view.getLiveCall().getAlternate();
+        Pattern pattern = Pattern.compile("[\\[\\]](.+)[\\[\\]]");
+        Matcher altInfo = pattern.matcher(alternate);
+        if (altInfo.find()) {
+            Pattern regionPattern = Pattern.compile("(.+):(.+)");
+            Matcher region = regionPattern.matcher(altInfo.group(1));
+            if (region.find()) {
+                String chrom = region.group(1);
+                int coords = Integer.parseInt(region.group(2));
+                int start = coords - length;
+                int end = coords + length;
+
+                // make sure start is in range
+                if (start < 1) {
+                    start = 1;
+                }
+                else {
+                    // do nothing
+                }
+
+                // make sure end is in range
+                if (end > model.getRefChromosomes().get(chrom).getLength()) {
+                   end = model.getRefChromosomes().get(chrom).getLength();
+                }
+                else {
+                    // do nothing
+                }
+
+                return chrom + ":" + start + "-" + end;
+            }
+        }
+        return "null";
+    }
 
     public void processScrollChange(double newVal) {
         System.out.println("PROCESSING SCROLL CHANGE");

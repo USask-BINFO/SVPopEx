@@ -161,7 +161,6 @@ public class Model {
     public HashMap<Rectangle,Color> processPinnedSelections(ArrayList<Sample> sampleOrder, ArrayList<CheckBox> checkboxes) {
         ArrayList<Sample> checkedSamples = new ArrayList<>();
         HashMap<Rectangle, Color> result = new HashMap<>();
-        System.out.println("\n**** TESTING PROCESS PINNED SELECTIONS *****");
         for (int i=0; i<checkboxes.size(); i++) {
             if (checkboxes.get(i).isSelected()) {
                 checkedSamples.add(this.samples.get(i));
@@ -173,18 +172,12 @@ public class Model {
         }
         // if selections are made, process
         else {
-            System.out.println("SAMPLE ORDER IN VIEW:");
-            for (int i=0; i<sampleOrder.size(); i++) {
-                System.out.println(sampleOrder.get(i).getName());
-            }
             ArrayList<String> seenCallIds = new ArrayList<>();
             for (Selection selection : selections) {
                 double selectionStart = selection.getGenomicStart();
                 double selectionEnd = selection.getGenomicEnd();
-                System.out.println("PROCESSING CHECKED SAMPLES:");
                 // loop through samples
                 for (Sample checkedSample : checkedSamples) {
-                    System.out.println(checkedSample.getName());
                     // loop through sample calls in the selection chromosome
                     for (Call call : checkedSample.getChromosomeCalls(selection.getChromosome())) {
                         double calcStart = call.getStart() * zoomLevel;
@@ -200,9 +193,13 @@ public class Model {
                                 for (int i=0; i<sampleOrder.size(); i++) {
                                     // dealing with a sample past the current checked sample
                                     if (pastCurrent) {
-                                        if (Objects.equals(call.genotypes.get(sampleOrder.get(i).getName()), "1/1") || Objects.equals(call.genotypes.get(sampleOrder.get(i).getName()), "0/1")) {
+                                        // if it has the variant allele, add to result
+                                        if (call.genotypes.get(sampleOrder.get(i).getName()).contains("1")) {
                                             Rectangle newRect = new Rectangle(calcStart, i*100, calcLength, 100);
                                             result.put(newRect, sampleColors.get(checkedSample.getName()));
+                                        }
+                                        else {
+                                            // do nothing
                                         }
                                     }
                                     // if current sample is the current checked sample
@@ -231,7 +228,6 @@ public class Model {
                             // do nothing
                         }
                     }
-
                 }
             }
         }
@@ -294,9 +290,19 @@ public class Model {
                                 // if it has no equivalence yet, loop through all samples above and check
                                 if (equiv.get(curName).isEmpty()) {
                                     for (int j=0; j<i; j++) {
-                                        // if same genotype, add equivalence for sample
-                                        if (Objects.equals(call.getGenotypes().get(sampleOrder.get(j).getName()), curGT)) {
-                                            equiv.get(curName).add(sampleOrder.get(j).getName());
+                                        // if same presence/absence, add equivalence for sample
+                                        // current contains 1 and comparative also contains 1
+                                        if (curGT.contains("1")) {
+                                            if (call.getGenotypes().get(sampleOrder.get(j).getName()).contains("1")) {
+                                                equiv.get(curName).add(sampleOrder.get(j).getName());
+                                            }
+                                        }
+                                        // current does not contain 1 and comparative also does not contain 1
+                                        else {
+                                            if (!call.getGenotypes().get(sampleOrder.get(j).getName()).contains("1")) {
+                                                equiv.get(curName).add(sampleOrder.get(j).getName());
+                                            }
+
                                         }
                                     }
                                     // if no equivalence found, add itself and lock
@@ -307,16 +313,30 @@ public class Model {
                                 }
                                 // if it has equivalences, loop through all equivalent samples and make sure still equivalent
                                 else {
+                                    System.out.println("TRIGGERED AT ELSE");
                                     ArrayList<String> removeNames = new ArrayList<String>();
                                     // loop through equivalent samples
                                     for (int j=0; j<equiv.get(curName).size(); j++) {
                                         // if same genotype do nothing
-                                        if (Objects.equals(call.getGenotypes().get(equiv.get(curName).get(j)), curGT)) {
-                                            // do nothing
+                                        if (curGT.contains("1")) {
+                                            // SAME do nothing
+                                            if (call.getGenotypes().get(equiv.get(curName).get(j)).contains("1")) {
+                                                // do nothing
+                                            }
+                                            // different, add to a list to remove the sample from equivalences
+                                            else {
+                                                removeNames.add(equiv.get(curName).get(j));
+                                            }
                                         }
-                                        // otherwise, add to a list to remove the sample from equivalences
+                                        // does not contain 1
                                         else {
-                                            removeNames.add(equiv.get(curName).get(j));
+                                            // also does not contain 1 (same), do nothing
+                                            if (!call.getGenotypes().get(equiv.get(curName).get(j)).contains("1")) {
+                                                // do nothing
+                                            }
+                                            else {
+                                                removeNames.add(equiv.get(curName).get(j));
+                                            }
                                         }
                                     }
                                     // remove no longer equivalent samples
@@ -461,26 +481,21 @@ public class Model {
                         Matcher genotypeMatcher = genotypePattern.matcher(fields[startCol]);
                         // assign reference length if match is found, otherwise exit
                         if (genotypeMatcher.find()) {
-                            // if missing, add as reference
-                            if (Objects.equals(genotypeMatcher.group(1), "./.")) {
-                                genotypes.put(sample.getName(), "0/0");
-                            }
-                            // otherwise add as itself
-                            else {
-                                genotypes.put(sample.getName(), genotypeMatcher.group(1));
-                                // if has the variant, add
-                                if (Objects.equals(genotypeMatcher.group(1), "0/1") || Objects.equals(genotypeMatcher.group(1), "1/1")) {
-                                    // add call for chromosome (in VCF)
-                                    sample.addCall(fields[0], currentCall);
-                                    // add call to <ALL>
-                                    sample.addCall("<ALL>", currentCall);
-                                }
+                            genotypes.put(sample.getName(), genotypeMatcher.group(1));
+                            // if has the variant, add
+                            if (Objects.equals(genotypeMatcher.group(1), "0/1") || Objects.equals(genotypeMatcher.group(1), "1/1")) {
+                                // add call for chromosome (in VCF)
+                                sample.addCall(fields[0], currentCall);
+                                // add call to <ALL>
+                                sample.addCall("<ALL>", currentCall);
                             }
                         } else {
                             System.err.println("Error: Could not find genotype for a sample on line:" + line + " . Ignoring call.");
                         }
                         startCol++;
                     }
+                    // after all calls added, calculate allele frequence
+                    currentCall.setAlleleFreq();
                 }
             }
         }
@@ -507,8 +522,11 @@ public class Model {
     }
 
     public double getGenomicProportion(double viewportWidth, Chromosome chrom, double zoomLevel) {
+        // content width in pixels
         double contentWidth = chrom.getLength() * zoomLevel;
+        // proportion of viewport width to entire content width
         double proportionVisible = viewportWidth / contentWidth;
+        // get length of genomic proportion in view
         return proportionVisible * chrom.getLength();
     }
 

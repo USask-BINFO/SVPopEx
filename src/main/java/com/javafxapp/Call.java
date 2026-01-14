@@ -14,6 +14,7 @@ public class Call {
     private int end;
     private String alternate;
     private String id;
+    private Double alleleFreq;
     HashMap<String,String> genotypes = new HashMap<>();
     public Call(String type, int length, String chromosome, int start, int absoluteStart, String alternate, String id, HashMap<String,String> genotypes) {
         this.type = type;
@@ -30,6 +31,7 @@ public class Call {
         this.id = id;
         this.genotypes = genotypes;
         this.end = start + this.length;
+        this.alleleFreq = null;
     }
     public String toString() {
         return "TYPE " + this.type + " LENGTH " + this.length + "CHROMOSOME " + this.chromosome + " START " + this.start + "ABSOLUTESTART " + this.absoluteStart + " END " + this.end + " GENOTYPES " + genotypes.toString();
@@ -69,6 +71,52 @@ public class Call {
 
     public String getId() {
         return this.id;
+    }
+
+    public void setAlleleFreq() {
+        System.out.println("------------------------------------- ALLELES ARE ");
+        int refCount = 0;
+        int altCount = 0;
+        for (String genotype : genotypes.values()) {
+            String alleleRegex = "(.+)/(.+)";
+            Pattern allelePattern = Pattern.compile(alleleRegex);
+            Matcher alleleMatcher = allelePattern.matcher(genotype);
+            System.out.println("GENOTYPE IS " + genotype);
+            if (alleleMatcher.find()) {
+                // first allele
+                if (Objects.equals(alleleMatcher.group(1), ".")) {
+                    // do nothing
+                }
+                else if (Integer.parseInt(alleleMatcher.group(1)) == 0) {
+                    refCount++;
+                }
+                else if (Integer.parseInt(alleleMatcher.group(1)) == 1) {
+                    altCount++;
+                }
+                else {
+                    // unknown allele, do nothing
+                }
+                // second allele
+                if (Objects.equals(alleleMatcher.group(2), ".")) {
+                    // do nothing
+                }
+                else if (Integer.parseInt(alleleMatcher.group(2)) == 0) {
+                    refCount++;
+                }
+                else if (Integer.parseInt(alleleMatcher.group(2)) == 1) {
+                    altCount++;
+                }
+                else {
+                    // unknown allele, do nothing
+                }
+            }
+        }
+        double totalCount = refCount + altCount;
+        this.alleleFreq = altCount / totalCount;
+    }
+
+    public Double getAlleleFreq() {
+        return this.alleleFreq;
     }
 }
 
