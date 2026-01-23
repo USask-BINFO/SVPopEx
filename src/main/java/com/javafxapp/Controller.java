@@ -113,6 +113,7 @@ public class Controller {
             view.initSidePane(model.getSamples(), model.getSampleColors(), model::getNumAnnotationsShown);
             view.initSamples(model.getSamples(), model.getSampleColors(), model.getRefTotalLength(), model.getZoomLevel(), model.getBaseFontSize(), model.getOriginalTrackHeight());
             view.showCalls(model.getRefChromosomes().get("<ALL>"), model.getSamples(), model.getZoomLevel(), model.getOriginalTrackHeight());
+            view.showAlleleFreq(model.getRefChromosomes().get("<ALL>"), model.getZoomLevel(), model.getOriginalTrackHeight());
             view.enableControls();
 //            view.viewportWidthChange(e -> {
 //                this.processViewportWidthChange();
@@ -163,6 +164,7 @@ public class Controller {
             view.showCoords(model.getCurrentChrom(), model.getTickSpacing(), model.getZoomLevel(), model.getRefChromosomes());
             // show calls
             view.showCalls(model.getCurrentChrom(), view.getSampleOrderInView(), level, model.getOriginalTrackHeight());
+            view.showAlleleFreq(model.getCurrentChrom(), level, model.getOriginalTrackHeight());
             view.updateSelections(model.getSelections(), level);
 
             // update newStart based on result
@@ -230,6 +232,7 @@ public class Controller {
         view.showCoords(model.getCurrentChrom(), model.getTickSpacing(), model.getZoomLevel(), model.getRefChromosomes());
         // show calls
         view.showCalls(chrom, view.getSampleOrderInView(), model.getZoomLevel(), model.getOriginalTrackHeight());
+        view.showAlleleFreq(chrom, model.getZoomLevel(), model.getOriginalTrackHeight());
         view.drawReference(model.getRefChromosomes(), model.getCurrentChrom().getName());
         view.updateMarkerWidth(chrom, model.getZoomLevel(), chrom.getLength());
         view.updateMarkerPos(chrom, 0);
@@ -318,6 +321,7 @@ public class Controller {
                     view.showCoords(model.getCurrentChrom(), model.getTickSpacing(), model.getZoomLevel(), model.getRefChromosomes());
                     // show calls
                     view.showCalls(chrom, view.getSampleOrderInView(), model.getZoomLevel(), model.getOriginalTrackHeight());
+                    view.showAlleleFreq(chrom, model.getZoomLevel(), model.getOriginalTrackHeight());
                     view.drawReference(model.getRefChromosomes(), chrom.getName());
                     double offset = ((double) start / chrom.getLength()) * view.getMarkerWrapperWidth();
                     view.setScroll(start, chrom, model.getZoomLevel());

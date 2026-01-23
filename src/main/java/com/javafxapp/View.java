@@ -16,6 +16,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.CycleMethod;
 import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.Stop;
+import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
@@ -558,6 +559,29 @@ public class View {
         this.callsPanel.setPannable(true);   // Optional: enables mouse drag scrolling
     }
 
+    public void showAlleleFreq(Chromosome chromosome, double zoomLevel, int originalTrackHeight) {
+        Pane freqPane = (Pane) this.samplesContainer.lookup("#" + "AlleleFreq");
+        freqPane.getChildren().clear();
+        freqPane.setMinWidth(chromosome.getLength() * zoomLevel);
+        freqPane.setPrefWidth(chromosome.getLength() * zoomLevel);
+        freqPane.setMaxWidth(chromosome.getLength() * zoomLevel);
+        System.out.println("--------------- SHOWING ALLELE FREQUENCY FOR CHROMOSOME : " + chromosome.getName());
+        for (int i=0; i<chromosome.getAllCalls().size(); i++) {
+            Call currentCall = chromosome.getAllCalls().get(i);
+            double currentFreq = chromosome.getAllCalls().get(i).getAlleleFreq();
+            Circle circle;
+            if (Objects.equals(chromosome.getName(), "<ALL>")) {
+                circle = new Circle(currentCall.getAbsoluteStart()*zoomLevel, originalTrackHeight * currentFreq, 1);
+            }
+            else {
+                circle = new Circle(currentCall.getStart()*zoomLevel, originalTrackHeight * currentFreq, 1);
+            }
+            circle.setFill(Color.BLACK);
+            circle.setStroke(Color.BLACK);
+            freqPane.getChildren().add(circle);
+        }
+    }
+
     public void showCalls(Chromosome chromosome, ArrayList<Sample> samples, double zoomLevel, int originalTrackHeight) {
         /**
          * Pre-conditions/assumptions: Gets call pane for each sample by looking up the ID
@@ -852,6 +876,10 @@ public class View {
         callsWrapper.setMinHeight(height);
         callsWrapper.setMaxHeight(height);
         if (Objects.equals(key, "AF")) {
+            // set id
+            callsWrapper.setId("AlleleFreq");
+
+
             Line topLine = new Line();
             Line bottomLine = new Line();
 

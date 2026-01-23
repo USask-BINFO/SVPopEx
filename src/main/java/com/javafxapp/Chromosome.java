@@ -1,11 +1,14 @@
 package com.javafxapp;
 
+import java.util.ArrayList;
+
 public class Chromosome {
     private String name;
     private int length;
     private int absoluteStart;
     private double pixelWidth;
     private double pixelAbsoluteOffset;
+    private ArrayList<Call> allCalls;
 
     /**
      *
@@ -17,6 +20,7 @@ public class Chromosome {
         this.name = name;
         this.length = length;
         this.absoluteStart = absoluteStart;
+        this.allCalls = new ArrayList<>();
     }
 
     public int getAbsoluteStart() {
@@ -45,5 +49,13 @@ public class Chromosome {
 
     public double getPixelAbsoluteOffset() {
         return this.pixelAbsoluteOffset;
+    }
+
+    public void addCall(Call call) {
+        this.allCalls.add(call);
+    }
+
+    public ArrayList<Call> getAllCalls() {
+        return this.allCalls;
     }
 }
