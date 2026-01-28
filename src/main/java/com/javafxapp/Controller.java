@@ -112,8 +112,8 @@ public class Controller {
             view.updateMarkerPos(model.getCurrentChrom(), 0);
             view.initSidePane(model.getSamples(), model.getSampleColors(), model::getNumAnnotationsShown);
             view.initSamples(model.getSamples(), model.getSampleColors(), model.getRefTotalLength(), model.getZoomLevel(), model.getBaseFontSize(), model.getOriginalTrackHeight());
-            view.showCalls(model.getRefChromosomes().get("<ALL>"), model.getSamples(), model.getZoomLevel(), model.getOriginalTrackHeight());
-            view.showAlleleFreq(model.getRefChromosomes().get("<ALL>"), model.getZoomLevel(), model.getOriginalTrackHeight());
+            // triggers showChromosome()
+            view.setChromComboBoxValue("<ALL>");
             view.enableControls();
 //            view.viewportWidthChange(e -> {
 //                this.processViewportWidthChange();
@@ -151,7 +151,6 @@ public class Controller {
             double start = view.getStartFromHVal(view.getHValue(), model.getCurrentChrom());
             int intStart = (int) start;
             int centerStart = intStart + (int) oldProportion/2;
-            int end = (int) (start + oldProportion);
 
             // update zoom level
             Pair<String, Double> result = model.updateZoomLevelByFactor(factor, model.getCurrentChrom(), view.getViewportWidth(), view.getVerticalSBWidth(), start, oldProportion);
@@ -162,27 +161,34 @@ public class Controller {
             model.updateCoordIncrement(view.getViewportWidth(), model.getCurrentChrom());
             // show coords
             view.showCoords(model.getCurrentChrom(), model.getTickSpacing(), model.getZoomLevel(), model.getRefChromosomes());
-            // show calls
-            view.showCalls(model.getCurrentChrom(), view.getSampleOrderInView(), level, model.getOriginalTrackHeight());
-            view.showAlleleFreq(model.getCurrentChrom(), level, model.getOriginalTrackHeight());
+
             view.updateSelections(model.getSelections(), level);
 
             // update newStart based on result
             System.out.println("---------------ANCHOR IS " + anchor);
             double newProportion = model.getGenomicProportion(view.getViewportWidth(), model.getCurrentChrom(), model.getZoomLevel());
             int newStart = centerStart - (int) (newProportion/2);
+            int newEnd = centerStart + (int) (newProportion/2);
             if (Objects.equals(anchor, "ABSOLUTE CENTER")) {
                 newStart = 1;
+                newEnd = model.getCurrentChrom().getLength();
             }
             else if (Objects.equals(anchor, "CENTER")) {
                 newStart = centerStart - (int) (newProportion/2);
             }
             else if (Objects.equals(anchor, "LEFT")) {
                 newStart = 1;
+                newEnd = (int) (1 + newProportion);
             }
             else if (Objects.equals(anchor, "RIGHT")) {
                 newStart = model.getCurrentChrom().getLength() - (int) newProportion;
+                newEnd = model.getCurrentChrom().getLength();
             }
+
+            // show calls
+            System.out.println("UPDATED ZOOM SHOWING START: " + newStart + " and END : " + newEnd);
+            view.showTileCalls(model.getCurrentChrom(), view.getSampleOrderInView(), level, model.getOriginalTrackHeight(), model.getStartInterval((int) newStart), model.getEndInterval(newEnd));
+            view.showTileAlleleFreq(model.getCurrentChrom(), level, model.getOriginalTrackHeight(), model.getStartInterval((int) newStart), model.getEndInterval(newEnd));
             double offset = ((double) newStart / model.getCurrentChrom().getLength()) * view.getMarkerWrapperWidth();
 
             // update scroll and marker based on newStart and offset (calculated from newStart)
@@ -231,8 +237,8 @@ public class Controller {
         // show coords
         view.showCoords(model.getCurrentChrom(), model.getTickSpacing(), model.getZoomLevel(), model.getRefChromosomes());
         // show calls
-        view.showCalls(chrom, view.getSampleOrderInView(), model.getZoomLevel(), model.getOriginalTrackHeight());
-        view.showAlleleFreq(chrom, model.getZoomLevel(), model.getOriginalTrackHeight());
+        view.showChromosomeCalls(chrom, view.getSampleOrderInView(), model.getZoomLevel(), model.getOriginalTrackHeight());
+        view.showChromosomeAlleleFreq(chrom, model.getZoomLevel(), model.getOriginalTrackHeight());
         view.drawReference(model.getRefChromosomes(), model.getCurrentChrom().getName());
         view.updateMarkerWidth(chrom, model.getZoomLevel(), chrom.getLength());
         view.updateMarkerPos(chrom, 0);
@@ -280,9 +286,16 @@ public class Controller {
     }
 
     public void processScrollChange(double newVal) {
-        System.out.println("PROCESSING SCROLL CHANGE");
-        System.out.println("PROCESSING SCROLL CHANGE CURRENT CHROM IS " + model.getCurrentChrom().getName());
-        System.out.println("NEW VAL IN PROCESS SCROLL CHANGE " + newVal);
+        System.out.println("HVALUE FROM VIEW IS " + view.getHValue());
+        double start = view.getStartFromHVal(view.getHValue(), model.getCurrentChrom());
+        double proportion = model.getGenomicProportion(view.getViewportWidth(), model.getCurrentChrom(), model.getZoomLevel());
+        double end = start + proportion;
+        System.out.println("NEW VAL IS " + newVal);
+        System.out.println("START IS " + start);
+        System.out.println("END IS " + end);
+        System.out.println("START AND END INTERVALS IN PROCESSSCROLLCHANGE : START : " + model.getStartInterval((int) start) + " END " + model.getEndInterval((int) end));
+        view.showTileCalls(model.getCurrentChrom(), view.getSampleOrderInView(), model.getZoomLevel(), model.getOriginalTrackHeight(), model.getStartInterval((int) start), model.getEndInterval((int) end));
+        view.showTileAlleleFreq(model.getCurrentChrom(), model.getZoomLevel(), model.getOriginalTrackHeight(), model.getStartInterval((int) start), model.getEndInterval((int) end));
         view.syncScroll(newVal);
     }
 
@@ -320,8 +333,8 @@ public class Controller {
                     // show coords
                     view.showCoords(model.getCurrentChrom(), model.getTickSpacing(), model.getZoomLevel(), model.getRefChromosomes());
                     // show calls
-                    view.showCalls(chrom, view.getSampleOrderInView(), model.getZoomLevel(), model.getOriginalTrackHeight());
-                    view.showAlleleFreq(chrom, model.getZoomLevel(), model.getOriginalTrackHeight());
+                    view.showTileCalls(chrom, view.getSampleOrderInView(), model.getZoomLevel(), model.getOriginalTrackHeight(), model.getStartInterval((int) start), model.getEndInterval((int) end));
+                    view.showTileAlleleFreq(chrom, model.getZoomLevel(), model.getOriginalTrackHeight(), model.getStartInterval((int) start), model.getEndInterval((int) end));
                     view.drawReference(model.getRefChromosomes(), chrom.getName());
                     double offset = ((double) start / chrom.getLength()) * view.getMarkerWrapperWidth();
                     view.setScroll(start, chrom, model.getZoomLevel());

@@ -26,6 +26,7 @@ public class Model {
     private Double baseCallPanelHeight;
     // AF is shown by default
     private int numAnnotationsShown = 1;
+    private int tileSize = 2000000;
 
 
     public void reset() {
@@ -49,7 +50,6 @@ public class Model {
     }
 
     public double getZoomLevel() {
-        System.out.println("CURRENT ZOOM LEVEL IS " + this.zoomLevel);
         return this.zoomLevel;
     }
 
@@ -276,7 +276,6 @@ public class Model {
                     if ((call.getStart() > selectionStart && call.getEnd() < selectionEnd ||
                             call.getStart() < selectionStart && call.getEnd() > selectionStart ||
                             call.getStart() < selectionEnd && call.getEnd() > selectionEnd) && Objects.equals(call.getChromosome(), selection.getChromosome())) {
-                        System.out.println(call);
                         // loop through each sample in view order
                         for (int i=0; i<sampleOrder.size(); i++) {
                             String curName = sampleOrder.get(i).getName();
@@ -313,7 +312,6 @@ public class Model {
                                 }
                                 // if it has equivalences, loop through all equivalent samples and make sure still equivalent
                                 else {
-                                    System.out.println("TRIGGERED AT ELSE");
                                     ArrayList<String> removeNames = new ArrayList<String>();
                                     // loop through equivalent samples
                                     for (int j=0; j<equiv.get(curName).size(); j++) {
@@ -402,7 +400,6 @@ public class Model {
     }
 
     public boolean checkIfValidRegion(String regionText) {
-        System.out.println("CHECK IF VALID REGION TEXT " + regionText);
         String regex = "(.+):(\\d+)-(\\d+)";
         Pattern pattern = Pattern.compile(regex);
         Matcher matcher = pattern.matcher(regionText);
@@ -474,9 +471,6 @@ public class Model {
                 else {
                     int absoluteStart = refChromosomes.get(fields[0]).getAbsoluteStart() + Integer.parseInt(fields[1]);
                     Call currentCall = new Call(typeInfoMatcher.group(1), Integer.parseInt(lengthInfoMatcher.group(1)), fields[0], Integer.parseInt(fields[1]), absoluteStart, fields[4], fields[2], genotypes);
-                    calls.add(currentCall);
-                    refChromosomes.get(fields[0]).addCall(currentCall);
-                    refChromosomes.get("<ALL>").addCall(currentCall);
                     for (Sample sample : this.samples) {
                         String genotypeRegex = "(./.):";
                         Pattern genotypePattern = Pattern.compile(genotypeRegex);
@@ -488,6 +482,7 @@ public class Model {
                             if (Objects.equals(genotypeMatcher.group(1), "0/1") || Objects.equals(genotypeMatcher.group(1), "1/1")) {
                                 // add call for chromosome (in VCF)
                                 sample.addCall(fields[0], currentCall);
+                                sample.addToTiledCalls(fields[0], currentCall, this.tileSize);
                                 // add call to <ALL>
                                 sample.addCall("<ALL>", currentCall);
                             }
@@ -496,8 +491,13 @@ public class Model {
                         }
                         startCol++;
                     }
-                    // after all calls added, calculate allele frequence
+                    // after all calls added, calculate allele frequency
                     currentCall.setAlleleFreq();
+                    // add to structures
+                    calls.add(currentCall);
+                    refChromosomes.get(fields[0]).addTiledCall(currentCall, this.tileSize);
+                    refChromosomes.get("<ALL>").addCall(currentCall);
+                    refChromosomes.get(fields[0]).addCall(currentCall);
                 }
             }
         }
@@ -509,6 +509,14 @@ public class Model {
             this.samples.add(sample);
             this.sampleColors.put(samples.get(i).getName(), this.getRandomColor());
         }
+    }
+
+    public int getStartInterval(int start) {
+        return (start - 1) / this.tileSize + 1;
+    }
+
+    public int getEndInterval(int end) {
+        return (end - 1) / this.tileSize + 1;
     }
 
     public void updateCoordIncrement(double viewportWidth, Chromosome chrom) {

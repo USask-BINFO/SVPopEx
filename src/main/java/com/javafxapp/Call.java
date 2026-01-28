@@ -74,14 +74,12 @@ public class Call {
     }
 
     public void setAlleleFreq() {
-        System.out.println("------------------------------------- ALLELES ARE ");
         int refCount = 0;
         int altCount = 0;
         for (String genotype : genotypes.values()) {
             String alleleRegex = "(.+)/(.+)";
             Pattern allelePattern = Pattern.compile(alleleRegex);
             Matcher alleleMatcher = allelePattern.matcher(genotype);
-            System.out.println("GENOTYPE IS " + genotype);
             if (alleleMatcher.find()) {
                 // first allele
                 if (Objects.equals(alleleMatcher.group(1), ".")) {

@@ -478,7 +478,6 @@ public class View {
         double currentX = 0;
         // add <ALL> as a chrom dropdown option and set as default
         chromComboBox.getItems().add("<ALL>");
-        chromComboBox.setValue("<ALL>");
         double totalWidth = 0;
         for (Map.Entry<String, Chromosome> refContig : refContigs.entrySet()) {
             if (Objects.equals(refContig.getKey(), "<ALL>")) {
@@ -498,6 +497,10 @@ public class View {
         }
         refContigs.get("<ALL>").setPixelAbsoluteOffset(0);
         refContigs.get("<ALL>").setPixelWidth(totalWidth);
+    }
+
+    public void setChromComboBoxValue(String value) {
+        chromComboBox.setValue(value);
     }
 
     public void drawReference(LinkedHashMap<String, Chromosome> refContigs, String chrom) {
@@ -559,13 +562,12 @@ public class View {
         this.callsPanel.setPannable(true);   // Optional: enables mouse drag scrolling
     }
 
-    public void showAlleleFreq(Chromosome chromosome, double zoomLevel, int originalTrackHeight) {
+    public void showChromosomeAlleleFreq(Chromosome chromosome, double zoomLevel, int originalTrackHeight) {
         Pane freqPane = (Pane) this.samplesContainer.lookup("#" + "AlleleFreq");
         freqPane.getChildren().clear();
         freqPane.setMinWidth(chromosome.getLength() * zoomLevel);
         freqPane.setPrefWidth(chromosome.getLength() * zoomLevel);
         freqPane.setMaxWidth(chromosome.getLength() * zoomLevel);
-        System.out.println("--------------- SHOWING ALLELE FREQUENCY FOR CHROMOSOME : " + chromosome.getName());
         for (int i=0; i<chromosome.getAllCalls().size(); i++) {
             Call currentCall = chromosome.getAllCalls().get(i);
             double currentFreq = chromosome.getAllCalls().get(i).getAlleleFreq();
@@ -582,14 +584,33 @@ public class View {
         }
     }
 
-    public void showCalls(Chromosome chromosome, ArrayList<Sample> samples, double zoomLevel, int originalTrackHeight) {
+    public void showTileAlleleFreq(Chromosome chromosome, double zoomLevel, int originalTrackHeight, int startInterval, int endInterval) {
+        Pane freqPane = (Pane) this.samplesContainer.lookup("#" + "AlleleFreq");
+        freqPane.getChildren().clear();
+        freqPane.setMinWidth(chromosome.getLength() * zoomLevel);
+        freqPane.setPrefWidth(chromosome.getLength() * zoomLevel);
+        freqPane.setMaxWidth(chromosome.getLength() * zoomLevel);
+        // loop through each tile
+        for (int i=startInterval; i<endInterval+1; i++) {
+            // for each call
+            for (Call currentCall : chromosome.getTiledCallStarts().get(i)) {
+                double currentFreq = currentCall.getAlleleFreq();
+                Circle circle = new Circle(currentCall.getStart()*zoomLevel, originalTrackHeight * currentFreq, 1);
+                circle.setFill(Color.BLACK);
+                circle.setStroke(Color.BLACK);
+                freqPane.getChildren().add(circle);
+            }
+        }
+    }
+
+    public void showChromosomeCalls(Chromosome chromosome, ArrayList<Sample> samples, double zoomLevel, int originalTrackHeight) {
         /**
          * Pre-conditions/assumptions: Gets call pane for each sample by looking up the ID
          */
+
         this.samplePanel.setMinWidth(chromosome.getLength() * zoomLevel);
         this.samplePanel.setMaxWidth(chromosome.getLength() * zoomLevel);
 
-        System.out.println("CURRENT REGION FROM SHOWCALLS IS " + chromosome.getName());
         // loops through each sample and gets the sample pane to update, access order does not matter
         for (Sample sample : samples) {
             Pane currentCalls = (Pane) this.samplesContainer.lookup("#" + sample.getName());
@@ -621,11 +642,6 @@ public class View {
                     double percentageLength = currentCall.getLength()*zoomLevel * 0.1;
                     double endX = currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - percentageLength;
                     Line lineDup1 = new Line(currentCall.getStart()*zoomLevel + percentageLength, percentageHeight, endX, percentageHeight);
-                    System.out.println("NUM 1 " + currentCall.getStart()*zoomLevel + percentageLength);
-                    System.out.println("NUM 2 " + percentageHeight);
-                    System.out.println("NUM 3 " + (currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - percentageLength));
-                    System.out.println("NUM 4 " + percentageHeight);
-
                     Line lineDup2 = new Line(currentCall.getStart()*zoomLevel + percentageLength, originalTrackHeight - percentageHeight, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - percentageLength, originalTrackHeight - percentageHeight);
                     Line lineDup3 = new Line(currentCall.getStart()*zoomLevel + percentageLength, percentageHeight, currentCall.getStart()*zoomLevel + percentageLength, originalTrackHeight - percentageHeight);
                     Line lineDup4 = new Line(currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - percentageLength, percentageHeight, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - percentageLength, originalTrackHeight - percentageHeight);
@@ -678,7 +694,6 @@ public class View {
                     currentCalls.getChildren().add(lineIns2);
                 }
                 else {
-                    System.out.println(currentCall.getType());
                     callRect.setStroke(Color.BLACK);
                     callRect.setOpacity(0.7);
                     callRect.setFill(Color.BLACK);
@@ -694,6 +709,126 @@ public class View {
                     this.setLiveCall(currentCall);
                     this.openSidePane();
                 });
+            }
+        }
+    }
+
+    public void showTileCalls(Chromosome chromosome, ArrayList<Sample> samples, double zoomLevel, int originalTrackHeight, int startInterval, int endInterval) {
+        /**
+         * Pre-conditions/assumptions: Gets call pane for each sample by looking up the ID
+         */
+        this.samplePanel.setMinWidth(chromosome.getLength() * zoomLevel);
+        this.samplePanel.setMaxWidth(chromosome.getLength() * zoomLevel);
+
+        // loops through each sample and gets the sample pane to update, access order does not matter
+        for (Sample sample : samples) {
+            ArrayList<String> seenIds = new ArrayList<>();
+            Pane currentCalls = (Pane) this.samplesContainer.lookup("#" + sample.getName());
+            currentCalls.getChildren().clear();
+            currentCalls.setMinWidth(chromosome.getLength() * zoomLevel);
+            currentCalls.setPrefWidth(chromosome.getLength() * zoomLevel);
+            currentCalls.setMaxWidth(chromosome.getLength() * zoomLevel);
+            System.out.println("START AND END INTERVAL : " + startInterval + " , " + endInterval);
+            // loop through each tile
+            for (int i=startInterval; i<=endInterval; i++) {
+                System.out.println("I IS " + i);
+                // for each call
+                ArrayList<Call> calls = sample.getTiledCalls().get(chromosome.getName()).get(i);
+                if (calls == null) {
+                    System.err.println("NULL for key: " + chromosome.getName() + " " + " interval " + i);
+                }
+                for (Call currentCall : sample.getTiledCalls().get(chromosome.getName()).get(i)) {
+                    // already seen this call and added it
+                    if (seenIds.contains(currentCall.getId())) {
+                        // do nothing
+                    }
+                    // haven't added this call in any other tiles for this sample yet
+                    else {
+                        seenIds.add(currentCall.getId());
+                        Rectangle callRect;
+                        callRect = new Rectangle(currentCall.getStart()*zoomLevel, 1, currentCall.getLength()*zoomLevel, originalTrackHeight-2);
+                        // styling
+                        callRect.setOpacity(1);
+                        callRect.setStrokeWidth(2);
+                        callRect.setArcWidth(5);   // horizontal roundness
+                        callRect.setArcHeight(5);
+                        if (Objects.equals(currentCall.getType(), "DUP")) {
+                            callRect.setStroke(Color.rgb(40, 70, 160));
+                            callRect.setOpacity(0.5);
+                            callRect.setFill(Color.rgb(65, 105, 225));
+                            double percentageHeight = originalTrackHeight * 0.15;
+                            double percentageLength = currentCall.getLength()*zoomLevel * 0.1;
+                            double endX = currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - percentageLength;
+                            Line lineDup1 = new Line(currentCall.getStart()*zoomLevel + percentageLength, percentageHeight, endX, percentageHeight);
+                            Line lineDup2 = new Line(currentCall.getStart()*zoomLevel + percentageLength, originalTrackHeight - percentageHeight, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - percentageLength, originalTrackHeight - percentageHeight);
+                            Line lineDup3 = new Line(currentCall.getStart()*zoomLevel + percentageLength, percentageHeight, currentCall.getStart()*zoomLevel + percentageLength, originalTrackHeight - percentageHeight);
+                            Line lineDup4 = new Line(currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - percentageLength, percentageHeight, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - percentageLength, originalTrackHeight - percentageHeight);
+                            lineDup1.setStroke(Color.rgb(40, 70, 160));
+                            lineDup2.setStroke(Color.rgb(40, 70, 160));
+                            lineDup3.setStroke(Color.rgb(40, 70, 160));
+                            lineDup4.setStroke(Color.rgb(40, 70, 160));
+                            currentCalls.getChildren().add(lineDup1);
+                            currentCalls.getChildren().add(lineDup2);
+                            currentCalls.getChildren().add(lineDup3);
+                            currentCalls.getChildren().add(lineDup4);
+                        }
+                        else if (Objects.equals(currentCall.getType(), "INV")) {
+                            callRect.setStroke(Color.rgb(200, 140, 0));
+                            callRect.setOpacity(0.5);
+                            callRect.setFill(Color.rgb(255, 195, 0 ));
+                            Line lineInv1 = new Line(currentCall.getStart()*zoomLevel, 1, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, originalTrackHeight-2);
+                            Line lineInv2 = new Line(currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, 1, currentCall.getStart()*zoomLevel, originalTrackHeight-2);
+                            lineInv1.setStroke(Color.rgb(200, 140, 0));
+                            lineInv2.setStroke(Color.rgb(200, 140, 0));
+                            lineInv1.setOpacity(0.6);
+                            lineInv2.setOpacity(0.6);
+                            currentCalls.getChildren().add(lineInv1);
+                            currentCalls.getChildren().add(lineInv2);
+                        }
+                        else if (Objects.equals(currentCall.getType(), "DEL")) {
+                            callRect.setStroke(Color.rgb(120, 30, 2));
+                            callRect.setOpacity(0.5);
+                            callRect.setFill(Color.rgb(164, 42, 4));
+                            Line lineDel1 = new Line(currentCall.getStart()*zoomLevel, 1, currentCall.getStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), originalTrackHeight-2);
+                            Line lineDel2 = new Line(currentCall.getStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), originalTrackHeight-2, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, 1);
+                            lineDel1.setStroke(Color.rgb(120, 30, 2));
+                            lineDel2.setStroke(Color.rgb(120, 30, 2));
+                            lineDel1.setOpacity(0.4);
+                            lineDel2.setOpacity(0.4);
+                            currentCalls.getChildren().add(lineDel1);
+                            currentCalls.getChildren().add(lineDel2);
+                        }
+                        else if (Objects.equals(currentCall.getType(), "INS")) {
+                            callRect.setStroke(Color.rgb(100, 140, 80));
+                            callRect.setOpacity(0.5);
+                            callRect.setFill(Color.rgb(147, 197, 114));
+                            Line lineIns1 = new Line(currentCall.getStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), 1, currentCall.getStart()*zoomLevel, originalTrackHeight-2);
+                            Line lineIns2 = new Line(currentCall.getStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), 1, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, originalTrackHeight-2);
+                            lineIns1.setStroke(Color.rgb(100, 140, 80));
+                            lineIns2.setStroke(Color.rgb(100, 140, 80));
+                            lineIns1.setOpacity(0.5);
+                            lineIns2.setOpacity(0.5);
+                            currentCalls.getChildren().add(lineIns1);
+                            currentCalls.getChildren().add(lineIns2);
+                        }
+                        else {
+                            callRect.setStroke(Color.BLACK);
+                            callRect.setOpacity(0.7);
+                            callRect.setFill(Color.BLACK);
+                            callRect.getStrokeDashArray().setAll(12.0, 6.0);
+                        }
+                        currentCalls.getChildren().add(callRect);
+                        callRect.setOnMouseEntered(e -> {
+                            callRect.setCursor(Cursor.HAND);
+                        });
+                        callRect.setOnMouseClicked(e -> {
+                            callRect.setStroke(Color.BLACK);
+                            this.showCallInformation(currentCall, samples);
+                            this.setLiveCall(currentCall);
+                            this.openSidePane();
+                        });
+                    }
+                }
             }
         }
     }
@@ -995,14 +1130,12 @@ public class View {
         // oldVal = old scroll position (between 0 and 1)
         // newVal = new scroll position (between 0 and 1)
         // getContent() gets node scrollpane is scrolling, getboundsinlocal gets actual width and height of node, so maxX is the maximum distance that can be scrolled
-        System.out.println("NEW VAL IN SYNC SCROLL IS " + newVal);
         double maxX = callsPanel.getContent().getBoundsInLocal().getWidth()
                 - callsPanel.getViewportBounds().getWidth();
         double translateX = -newVal.doubleValue() * maxX;
         ticksWrapper.setTranslateX(translateX);
         double max = markerWrapper.getWidth() - marker.getWidth();
         double scrollX = newVal.doubleValue() * max;
-        System.out.println("SCROLLX " + scrollX);
         marker.setLayoutX(scrollX);
     }
 
@@ -1016,13 +1149,16 @@ public class View {
         double scale = contentWidth / chrom.getLength();
         double targetPixelX = start * scale;
         double hvalue = targetPixelX / maxScroll;
-        System.out.println("HVALUE IS " + hvalue);
         this.callsPanel.setHvalue(hvalue);
         return hvalue;
     }
 
     public double getHValue() {
         return this.callsPanel.getHvalue();
+    }
+
+    public void cleanUnusedNodes(Chromosome chromosome, int start, int end) {
+
     }
 
     public double getStartFromHVal(double hval, Chromosome currentChrom) {
