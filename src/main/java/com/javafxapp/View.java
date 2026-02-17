@@ -94,7 +94,7 @@ public class View {
     Button zoomInButton = new Button("+");
     Button zoomOutButton = new Button("-");
     Button clearButton = new Button("Clear");
-    Button processButton = new Button("Display Haplotypes");
+    Button processButton = new Button("Color by Haplotype");
     Button processBlocksButton = new Button("Display Variants in Unpinned");
     Button shrinkTrackHeightButton = new Button("- Track");
     Button growTrackHeightButton = new Button("+ Track");
@@ -554,7 +554,7 @@ public class View {
         Post-conditions: Samples added to sampleOrder ArrayList
          */
         // add additional track for allele frequency
-        this.createNewAnnotationTrack(refLength, zoomLevel, "AF", baseFontSize, 100, "AF");
+        this.createNewAnnotationTrack(refLength, zoomLevel, "Allele Freq.", baseFontSize, 100, "AF");
         for (Sample sample : samples) {
             sampleOrder.add(sample);
             this.createNewCallTrack(sampleColors, refLength, zoomLevel, sample.getName(), baseFontSize, originalTrackHeight);
@@ -847,7 +847,7 @@ public class View {
         Label chromLabel = (Label) callInfoSideContainer.lookup("#chrom");
         chromLabel.setText(call.getChromosome());
         Label posLabel = (Label) callInfoSideContainer.lookup("#pos");
-        posLabel.setText(String.valueOf(call.getStart()));
+        posLabel.setText(String.valueOf(String.format("%,d", call.getStart())));
         Label idLabel = (Label) callInfoSideContainer.lookup("#id");
         idLabel.setText(call.getId());
 
@@ -932,22 +932,8 @@ public class View {
         else {
             for (int x = 0; x <= chromosome.getLength(); x += tickSpacing) {
                 Text text = new Text(String.valueOf(x));
-                // base (b) range
-                if (x < 1000) {
-                    text = new Text(x + " b");
-                }
-                // kilobase (KB) range
-                else if (x >= 1000 && x < 1000000) {
-                    double truncatedX = (double) x / 1000;
-                    if (truncatedX % 1 == 0) {
-                        text = new Text(String.format("%.0f", truncatedX) + " kb");
-                    }
-                    else {
-                        text = new Text(String.format("%.1f", truncatedX) + " kb");
-                    }
-                }
-                // megabase (MB) range
-                else if (x >= 1000000) {
+                // if tick spacing is greater than 100,000 bp (100 kb), truncate
+                if (tickSpacing >= 100000) {
                     double truncatedX = (double) x / 1000000;
                     if (truncatedX % 1 == 0) {
                         text = new Text(String.format("%.0f", truncatedX) + " Mb");
@@ -956,9 +942,11 @@ public class View {
                         text = new Text(String.format("%.1f", truncatedX) + " Mb");
                     }
                 }
+                // otherwise, do not truncate, but add commas
                 else {
-                    // do nothing
+                    text = new Text(String.format("%,d", x) + " bp");
                 }
+
                 double textWidth = text.getLayoutBounds().getWidth();
                 text.setX((x*zoomLevel) - textWidth / 2);
                 text.setY(25);
@@ -1061,6 +1049,7 @@ public class View {
 
         // label container to hold label and color rect if applicable
         VBox labelContainer = new VBox();
+        labelContainer.setAlignment(Pos.CENTER);
         labelWrapper.getChildren().add(sampleLabel);
         labelContainer.getChildren().add(labelWrapper);
 

@@ -523,7 +523,9 @@ public class Model {
         double genomicProportion = getGenomicProportion(viewportWidth, chrom, this.zoomLevel);
         if (genomicProportion < 100000000) {
             double ideal = genomicProportion / 7;
+            System.out.println("IDEAL IS " + ideal);
             this.coordIncrementIndex = getClosestIntegerValue(ideal, increments);
+            System.out.println("THIS COORD INCREMENT IS " + increments.get(coordIncrementIndex));
         }
         // last increment which corresponds to 100 MB
         else {
