@@ -16,16 +16,13 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.CycleMethod;
 import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.Stop;
-import javafx.scene.shape.Circle;
-import javafx.scene.shape.Line;
-import javafx.scene.shape.Rectangle;
+import javafx.scene.shape.*;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.scene.transform.Scale;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import javafx.stage.Screen;
-import javafx.scene.shape.SVGPath;
 
 
 import java.sql.SQLOutput;
@@ -693,7 +690,7 @@ public class View {
                     currentCalls.getChildren().add(lineIns1);
                     currentCalls.getChildren().add(lineIns2);
                 }
-                else {
+                else if (Objects.equals(currentCall.getType(), "BND") || Objects.equals(currentCall.getType(), "TRA")){
                     callRect.setStroke(Color.BLACK);
                     callRect.setOpacity(0.7);
                     callRect.setFill(Color.BLACK);
@@ -745,8 +742,8 @@ public class View {
                     // haven't added this call in any other tiles for this sample yet
                     else {
                         seenIds.add(currentCall.getId());
-                        Rectangle callRect;
-                        callRect = new Rectangle(currentCall.getStart()*zoomLevel, 1, currentCall.getLength()*zoomLevel, originalTrackHeight-2);
+                        Rectangle callRect = new Rectangle(currentCall.getStart()*zoomLevel, 1, currentCall.getLength()*zoomLevel, originalTrackHeight-2);
+                        Polygon traPoly = new Polygon();
                         // styling
                         callRect.setOpacity(1);
                         callRect.setStrokeWidth(2);
@@ -811,18 +808,69 @@ public class View {
                             currentCalls.getChildren().add(lineIns1);
                             currentCalls.getChildren().add(lineIns2);
                         }
-                        else {
+                        else if (Objects.equals(currentCall.getType(), "BND") || Objects.equals(currentCall.getType(), "TRA")) {
+                            // direction at first character, means join before
+                            if (currentCall.getAlternate().charAt(0) ==  ']' || currentCall.getAlternate().charAt(0) == '[') {
+                                // joining sequence is in reverse direction
+                                if (currentCall.getAlternate().charAt(0) ==  ']') {
+                                    traPoly.getPoints().addAll(
+                                            currentCall.getStart()*zoomLevel, 1.0,
+                                            currentCall.getStart()*zoomLevel, (double) originalTrackHeight /3,
+                                            currentCall.getStart()*zoomLevel-7, (double) (originalTrackHeight / 3) /2
+                                    );
+                                }
+                                // joining sequence is in forward direction
+                                else {
+                                    traPoly.getPoints().addAll(
+                                            currentCall.getStart()*zoomLevel-7, 1.0,
+                                            currentCall.getStart()*zoomLevel-7, (double) originalTrackHeight /3,
+                                            currentCall.getStart()*zoomLevel, (double) (originalTrackHeight / 3) /2
+                                    );
+                                }
+                            }
+                            // otherwise other sequence joined after this ref char
+                            else {
+                                // joining sequence is in the reverse direction
+                                if (currentCall.getAlternate().charAt(currentCall.getAlternate().length() - 1) ==  ']') {
+                                    traPoly.getPoints().addAll(
+                                            currentCall.getStart()*zoomLevel+7, 1.0,
+                                            currentCall.getStart()*zoomLevel+7, (double) originalTrackHeight /3,
+                                            currentCall.getStart()*zoomLevel, (double) (originalTrackHeight / 3) /2
+                                    );
+                                }
+                                // joining sequence is in the forward direction
+                                else {
+                                    traPoly.getPoints().addAll(
+                                            currentCall.getStart()*zoomLevel, 1.0,
+                                            currentCall.getStart()*zoomLevel, (double) originalTrackHeight /3,
+                                            currentCall.getStart()*zoomLevel+7, (double) (originalTrackHeight / 3) /2
+                                    );
+                                }
+                            }
                             callRect.setStroke(Color.BLACK);
                             callRect.setOpacity(0.7);
                             callRect.setFill(Color.BLACK);
                             callRect.getStrokeDashArray().setAll(12.0, 6.0);
+                            callRect.setStrokeWidth(3);
                         }
+                        // for call rectangle
                         currentCalls.getChildren().add(callRect);
                         callRect.setOnMouseEntered(e -> {
                             callRect.setCursor(Cursor.HAND);
                         });
                         callRect.setOnMouseClicked(e -> {
                             callRect.setStroke(Color.BLACK);
+                            this.showCallInformation(currentCall, samples);
+                            this.setLiveCall(currentCall);
+                            this.openSidePane();
+                        });
+                        // for TRA polygon
+                        traPoly.setFill(Color.rgb(80, 80, 80));
+                        currentCalls.getChildren().add(traPoly);
+                        traPoly.setOnMouseEntered(e -> {
+                            traPoly.setCursor(Cursor.HAND);
+                        });
+                        traPoly.setOnMouseClicked(e -> {
                             this.showCallInformation(currentCall, samples);
                             this.setLiveCall(currentCall);
                             this.openSidePane();
