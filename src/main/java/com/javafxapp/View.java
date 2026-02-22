@@ -753,21 +753,43 @@ public class View {
                             callRect.setStroke(Color.rgb(40, 70, 160));
                             callRect.setOpacity(0.5);
                             callRect.setFill(Color.rgb(65, 105, 225));
-                            double percentageHeight = originalTrackHeight * 0.15;
-                            double percentageLength = currentCall.getLength()*zoomLevel * 0.1;
-                            double endX = currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - percentageLength;
-                            Line lineDup1 = new Line(currentCall.getStart()*zoomLevel + percentageLength, percentageHeight, endX, percentageHeight);
-                            Line lineDup2 = new Line(currentCall.getStart()*zoomLevel + percentageLength, originalTrackHeight - percentageHeight, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - percentageLength, originalTrackHeight - percentageHeight);
-                            Line lineDup3 = new Line(currentCall.getStart()*zoomLevel + percentageLength, percentageHeight, currentCall.getStart()*zoomLevel + percentageLength, originalTrackHeight - percentageHeight);
-                            Line lineDup4 = new Line(currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - percentageLength, percentageHeight, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - percentageLength, originalTrackHeight - percentageHeight);
-                            lineDup1.setStroke(Color.rgb(40, 70, 160));
-                            lineDup2.setStroke(Color.rgb(40, 70, 160));
-                            lineDup3.setStroke(Color.rgb(40, 70, 160));
-                            lineDup4.setStroke(Color.rgb(40, 70, 160));
-                            currentCalls.getChildren().add(lineDup1);
-                            currentCalls.getChildren().add(lineDup2);
-                            currentCalls.getChildren().add(lineDup3);
-                            currentCalls.getChildren().add(lineDup4);
+                            // if the duplication rectangle is currently big enough to show the inside lines, show
+                            // inset is the distance from inner border to outer border
+                            int inset = 5;
+                            if (currentCall.getLength()*zoomLevel > (inset*2) && originalTrackHeight > (inset*2)) {
+                                // lines for inner border
+                                double endX = currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - inset;
+                                Line lineDup1 = new Line(currentCall.getStart()*zoomLevel + inset, inset, endX, inset);
+                                Line lineDup2 = new Line(currentCall.getStart()*zoomLevel + inset, originalTrackHeight - inset, endX, originalTrackHeight - inset);
+                                Line lineDup3 = new Line(currentCall.getStart()*zoomLevel + inset, inset, currentCall.getStart()*zoomLevel + inset, originalTrackHeight - inset);
+                                Line lineDup4 = new Line(endX, inset, endX, originalTrackHeight - inset);
+                                lineDup1.setStroke(Color.rgb(40, 70, 160));
+                                lineDup2.setStroke(Color.rgb(40, 70, 160));
+                                lineDup3.setStroke(Color.rgb(40, 70, 160));
+                                lineDup4.setStroke(Color.rgb(40, 70, 160));
+                                lineDup1.setOpacity(0.5);
+                                lineDup2.setOpacity(0.5);
+                                lineDup3.setOpacity(0.5);
+                                lineDup4.setOpacity(0.5);
+                                currentCalls.getChildren().add(lineDup1);
+                                currentCalls.getChildren().add(lineDup2);
+                                currentCalls.getChildren().add(lineDup3);
+                                currentCalls.getChildren().add(lineDup4);
+                                // lines for duplication-insert portion
+                                double middleDupX = ((currentCall.getStart()*zoomLevel + inset)+endX)/2;
+                                Line lineDup5 = new Line(currentCall.getStart()*zoomLevel + inset, originalTrackHeight - inset, middleDupX, inset);
+                                Line lineDup6 = new Line(middleDupX, inset, endX, originalTrackHeight - inset);
+                                lineDup5.setStroke(Color.rgb(40, 70, 160));
+                                lineDup6.setStroke(Color.rgb(40, 70, 160));
+                                lineDup5.setOpacity(0.5);
+                                lineDup6.setOpacity(0.5);
+                                currentCalls.getChildren().add(lineDup5);
+                                currentCalls.getChildren().add(lineDup6);
+                            }
+                            // otherwise, don't add additional lines
+                            else {
+                                // do nothing!
+                            }
                         }
                         else if (Objects.equals(currentCall.getType(), "INV")) {
                             callRect.setStroke(Color.rgb(200, 140, 0));
