@@ -167,8 +167,8 @@ public class Controller {
             // update newStart based on result
             System.out.println("---------------ANCHOR IS " + anchor);
             double newProportion = model.getGenomicProportion(view.getViewportWidth(), model.getCurrentChrom(), model.getZoomLevel());
-            int newStart = centerStart - (int) (newProportion/2);
-            int newEnd = centerStart + (int) (newProportion/2);
+            long newStart = centerStart - (int) (newProportion/2);
+            long newEnd = centerStart + (int) (newProportion/2);
             if (Objects.equals(anchor, "ABSOLUTE CENTER")) {
                 newStart = 1;
                 newEnd = model.getCurrentChrom().getLength();
@@ -187,12 +187,12 @@ public class Controller {
 
             // show calls
             System.out.println("UPDATED ZOOM SHOWING START: " + newStart + " and END : " + newEnd);
-            view.showTileCalls(model.getCurrentChrom(), view.getSampleOrderInView(), level, model.getOriginalTrackHeight(), model.getStartInterval((int) newStart), model.getEndInterval(newEnd));
-            view.showTileAlleleFreq(model.getCurrentChrom(), level, model.getOriginalTrackHeight(), model.getStartInterval((int) newStart), model.getEndInterval(newEnd));
+            view.showTileCalls(model.getCurrentChrom(), view.getSampleOrderInView(), level, model.getOriginalTrackHeight(), model.getStartInterval((int) newStart), model.getEndInterval((int) newEnd));
+            view.showTileAlleleFreq(model.getCurrentChrom(), level, model.getOriginalTrackHeight(), model.getStartInterval((int) newStart), model.getEndInterval((int) newEnd));
             double offset = ((double) newStart / model.getCurrentChrom().getLength()) * view.getMarkerWrapperWidth();
 
             // update scroll and marker based on newStart and offset (calculated from newStart)
-            view.setScroll(newStart, model.getCurrentChrom(), model.getZoomLevel());
+            view.setScroll((int) newStart, model.getCurrentChrom(), model.getZoomLevel());
             view.updateMarkerWidth(model.getCurrentChrom(), level, model.getGenomicProportion(view.getViewportWidth(), model.getCurrentChrom(), model.getZoomLevel()));
             view.updateMarkerPos(model.getCurrentChrom(), offset);
         }
@@ -250,7 +250,7 @@ public class Controller {
 //    }
 
     public String processShowMate() {
-        int length = (int) model.getGenomicProportion(view.getViewportWidth(), model.getCurrentChrom(), model.getZoomLevel());
+        long length = (int) model.getGenomicProportion(view.getViewportWidth(), model.getCurrentChrom(), model.getZoomLevel());
         String alternate = view.getLiveCall().getAlternate();
         Pattern pattern = Pattern.compile("[\\[\\]](.+)[\\[\\]]");
         Matcher altInfo = pattern.matcher(alternate);
@@ -259,9 +259,9 @@ public class Controller {
             Matcher region = regionPattern.matcher(altInfo.group(1));
             if (region.find()) {
                 String chrom = region.group(1);
-                int coords = Integer.parseInt(region.group(2));
-                int start = coords - length;
-                int end = coords + length;
+                long coords = Integer.parseInt(region.group(2));
+                long start = coords - length;
+                long end = coords + length;
 
                 // make sure start is in range
                 if (start < 1) {

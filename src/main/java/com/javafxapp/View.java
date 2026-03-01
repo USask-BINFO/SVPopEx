@@ -460,7 +460,7 @@ public class View {
      *
      * Post Conditions: chromComboBox default set to < ALL >
      */
-    public void initReference(LinkedHashMap<String, Chromosome> refContigs, int totalRefLength) {
+    public void initReference(LinkedHashMap<String, Chromosome> refContigs, long totalRefLength) {
         referenceWrapper.setBackground(new Background(new BackgroundFill(Color.WHITE, CornerRadii.EMPTY, Insets.EMPTY)));
 //        referenceWrapper.setBorder(new Border(new BorderStroke(
 //                Color.BLACK,
@@ -546,7 +546,7 @@ public class View {
         }
     }
 
-    public void initSamples(ArrayList<Sample> samples, HashMap<String, Color> sampleColors, int refLength, double zoomLevel, double baseFontSize, int originalTrackHeight) {
+    public void initSamples(ArrayList<Sample> samples, HashMap<String, Color> sampleColors, long refLength, double zoomLevel, double baseFontSize, int originalTrackHeight) {
         /*
         Post-conditions: Samples added to sampleOrder ArrayList
          */
@@ -970,7 +970,7 @@ public class View {
      * @param refLength int length of the entire reference
      * @return the zoom level
      */
-    public double initZoomWG(int refLength) {
+    public double initZoomWG(long refLength) {
         this.ticksWrapper.getChildren().clear();
         // calculate zoom level such that whole genome is in view
         return callsPanel.getViewportBounds().getWidth() / refLength;
@@ -1058,7 +1058,7 @@ public class View {
 
     // *************************************************************** TRACK CREATION FUNCTIONS ************************************************************************
 
-    public void createNewAnnotationTrack(int refLength, double zoomLevel, String trackName, double baseFontSize, int height, String key) {
+    public void createNewAnnotationTrack(long refLength, double zoomLevel, String trackName, double baseFontSize, int height, String key) {
         // types
         // GENEREPEAT
         // AF
@@ -1129,7 +1129,7 @@ public class View {
         this.samplesContainer.getChildren().add(callsWrapper);
     }
 
-    public void createNewCallTrack(HashMap<String, Color> sampleColors, int refLength, double zoomLevel, String sampleName, double baseFontSize, int height) {
+    public void createNewCallTrack(HashMap<String, Color> sampleColors, long refLength, double zoomLevel, String sampleName, double baseFontSize, int height) {
         // create callsWrapper to hold sample calls
         Pane callsWrapper = new Pane();
         callsWrapper.setPrefWidth(refLength * zoomLevel);

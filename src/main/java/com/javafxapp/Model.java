@@ -12,7 +12,7 @@ import javafx.scene.shape.Rectangle;
 public class Model {
     private Chromosome currentChrom = null;
     private LinkedHashMap<String,Chromosome> refChromosomes = new LinkedHashMap<>();
-    private int refTotalLength;
+    private long refTotalLength;
     private ArrayList<Sample> samples = new ArrayList<>();
     HashMap<String, Color> sampleColors = new HashMap<>();
     private ArrayList<Call> calls = new ArrayList<>();
@@ -108,7 +108,7 @@ public class Model {
      * @param isSBVisible boolean value for whether the scrollpane vertical scrollbar is currently visible
      * @param SBwidth double value of the width of the scrollpane vertical scrollbar
      */
-    public void updateZoomLevelByRegion(int length, double viewportWidth, boolean isSBVisible, double SBwidth) {
+    public void updateZoomLevelByRegion(long length, double viewportWidth, boolean isSBVisible, double SBwidth) {
         // if scrollbar is visible, update zoomLevel taking into account the viewport width needs to include the scrollbar width
         if (isSBVisible) {
             this.zoomLevel = (viewportWidth + SBwidth) / length;
@@ -139,7 +139,7 @@ public class Model {
         return this.refChromosomes;
     }
 
-    public int getRefTotalLength() {
+    public long getRefTotalLength() {
         return this.refTotalLength;
     }
 
@@ -473,7 +473,7 @@ public class Model {
                 }
                 else {
                     // make sure chrom was processed earlier
-                    int absoluteStart = 0;
+                    long absoluteStart = 0;
                     try {
                         absoluteStart = refChromosomes.get(fields[0]).getAbsoluteStart() + Integer.parseInt(fields[1]);
                     }

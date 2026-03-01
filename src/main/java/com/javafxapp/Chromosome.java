@@ -5,8 +5,8 @@ import java.util.HashMap;
 
 public class Chromosome {
     private String name;
-    private int length;
-    private int absoluteStart;
+    private long length;
+    private long absoluteStart;
     private double pixelWidth;
     private double pixelAbsoluteOffset;
     private HashMap<Integer, ArrayList<Call>> tiledCallStarts;
@@ -18,7 +18,7 @@ public class Chromosome {
      * @param length
      * @param absoluteStart reflects the start position from the start of the REFERENCE
      */
-    public Chromosome(String name, int length, int absoluteStart) {
+    public Chromosome(String name, long length, long absoluteStart) {
         this.name = name;
         this.length = length;
         this.absoluteStart = absoluteStart;
@@ -26,11 +26,11 @@ public class Chromosome {
         this.allCalls = new ArrayList<>();
     }
 
-    public int getAbsoluteStart() {
+    public long getAbsoluteStart() {
         return this.absoluteStart;
     }
 
-    public int getLength() {
+    public long getLength() {
         return this.length;
     }
 
