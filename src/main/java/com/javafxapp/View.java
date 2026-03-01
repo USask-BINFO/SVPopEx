@@ -725,14 +725,11 @@ public class View {
             currentCalls.setMinWidth(chromosome.getLength() * zoomLevel);
             currentCalls.setPrefWidth(chromosome.getLength() * zoomLevel);
             currentCalls.setMaxWidth(chromosome.getLength() * zoomLevel);
-            System.out.println("START AND END INTERVAL : " + startInterval + " , " + endInterval);
             // loop through each tile
             for (int i=startInterval; i<=endInterval; i++) {
-                System.out.println("I IS " + i);
                 // for each call
-                ArrayList<Call> calls = sample.getTiledCalls().get(chromosome.getName()).get(i);
-                if (calls == null) {
-                    System.err.println("NULL for key: " + chromosome.getName() + " " + " interval " + i);
+                if (sample.getTiledCalls().get(chromosome.getName()).get(i) == null) {
+                    continue;
                 }
                 for (Call currentCall : sample.getTiledCalls().get(chromosome.getName()).get(i)) {
                     // already seen this call and added it

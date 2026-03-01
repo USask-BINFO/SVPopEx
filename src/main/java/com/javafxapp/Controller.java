@@ -1,7 +1,6 @@
 package com.javafxapp;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -237,7 +236,12 @@ public class Controller {
         // show coords
         view.showCoords(model.getCurrentChrom(), model.getTickSpacing(), model.getZoomLevel(), model.getRefChromosomes());
         // show calls
-        view.showChromosomeCalls(chrom, view.getSampleOrderInView(), model.getZoomLevel(), model.getOriginalTrackHeight());
+        if (Objects.equals(selectedChrom, "<ALL>")) {
+            view.showChromosomeCalls(chrom, view.getSampleOrderInView(), model.getZoomLevel(), model.getOriginalTrackHeight());
+        }
+        else {
+            view.showTileCalls(chrom, view.getSampleOrderInView(), model.getZoomLevel(), model.getOriginalTrackHeight(), model.getStartInterval(1), model.getEndInterval((int) chrom.getLength()));
+        }
         view.showChromosomeAlleleFreq(chrom, model.getZoomLevel(), model.getOriginalTrackHeight());
         view.drawReference(model.getRefChromosomes(), model.getCurrentChrom().getName());
         view.updateMarkerWidth(chrom, model.getZoomLevel(), chrom.getLength());
