@@ -465,11 +465,22 @@ public class Model {
                 Pattern lengthInfoPattern = Pattern.compile(lengthInfoRegex);
                 Matcher typeInfoMatcher = typeInfoPattern.matcher(fields[7]);
                 Matcher lengthInfoMatcher = lengthInfoPattern.matcher(fields[7]);
-                if (!typeInfoMatcher.find() || !lengthInfoMatcher.find()) {
-                    System.err.println("Error: Could not find type or length in expected VCF format for call. Ignoring call.");
+                if (!typeInfoMatcher.find()) {
+                    System.err.println("Error: Could not find type in expected VCF format for call. Ignoring call.");
+                }
+                else if (!lengthInfoMatcher.find()) {
+                    System.err.println("Error: Could not find length in expected VCF format for call. Ignoring call.");
                 }
                 else {
-                    int absoluteStart = refChromosomes.get(fields[0]).getAbsoluteStart() + Integer.parseInt(fields[1]);
+                    // make sure chrom was processed earlier
+                    int absoluteStart = 0;
+                    try {
+                        absoluteStart = refChromosomes.get(fields[0]).getAbsoluteStart() + Integer.parseInt(fields[1]);
+                    }
+                    catch (NullPointerException e) {
+                        //System.err.println("Could not identify Chromosome " + fields[0] + ". Ignoring call.");
+                        continue;
+                    }
                     Call currentCall = new Call(typeInfoMatcher.group(1), Integer.parseInt(lengthInfoMatcher.group(1)), fields[0], Integer.parseInt(fields[1]), absoluteStart, fields[4], fields[2], genotypes);
                     for (Sample sample : this.samples) {
                         String genotypeRegex = "(./.):";
