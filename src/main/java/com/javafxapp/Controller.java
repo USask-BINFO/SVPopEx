@@ -137,10 +137,10 @@ public class Controller {
         }
         else {
             double factor;
-            if (Objects.equals(text, "+")) {
+            if (Objects.equals(text, "Zoom +")) {
                 factor = 1.5;
             }
-            else if (Objects.equals(text, "-")) {
+            else if (Objects.equals(text, "Zoom -")) {
                 factor = 0.5;
             }
             else {

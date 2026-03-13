@@ -88,13 +88,14 @@ public class View {
     // ----------- controlContainer ---------
     private final HBox controlContainer = new HBox();
     Region controlContainerSpacer = new Region();
-    Button zoomInButton = new Button("+");
-    Button zoomOutButton = new Button("-");
+    Button zoomInButton = new Button("Zoom +");
+    Button zoomOutButton = new Button("Zoom -");
     Button clearButton = new Button("Clear");
     Button processButton = new Button("Color by Haplotype");
-    Button processBlocksButton = new Button("Display Variants in Unpinned");
-    Button shrinkTrackHeightButton = new Button("- Track");
-    Button growTrackHeightButton = new Button("+ Track");
+    Button showUniqButton = new Button("Show Unique Calls");
+    Button showDiffButton = new Button("Show Diff Calls");
+    Button shrinkTrackHeightButton = new Button("- Height");
+    Button growTrackHeightButton = new Button("+ Height");
     Button sidePaneButton = new Button("Selection Options");
     // ---------- callsPanel ----------
     Tooltip callInfoTooltip = new Tooltip();
@@ -165,7 +166,8 @@ public class View {
         Separator separator2 = new Separator();
         selectionOptionsSideContainer.getChildren().add(separator2);
         // plots
-        selectionOptionsSideContainer.getChildren().add(processBlocksButton);
+        selectionOptionsSideContainer.getChildren().add(showUniqButton);
+        selectionOptionsSideContainer.getChildren().add(showDiffButton);
         selectionOptionsSideContainer.getChildren().add(processButton);
 
 
@@ -274,20 +276,20 @@ public class View {
         zoomInButton.setDisable(true);
         zoomOutButton.setDisable(true);
         processButton.setDisable(true);
-        processBlocksButton.setDisable(true);
+        showUniqButton.setDisable(true);
+        showDiffButton.setDisable(true);
         clearButton.setDisable(true);
         shrinkTrackHeightButton.setDisable(true);
         growTrackHeightButton.setDisable(true);
         sidePaneButton.setDisable(true);
         closeSidePaneButton.setDisable(true);
         showMateButton.setDisable(true);
-        zoomInButton.setMinSize(35, 25);
-        zoomInButton.setMaxSize(35, 25);
-        zoomOutButton.setMinSize(35, 25);
-        zoomOutButton.setMaxSize(35, 25);
+        zoomInButton.setMinSize(70, 25);
+        zoomInButton.setMaxSize(70, 25);
+        zoomOutButton.setMinSize(70, 25);
+        zoomOutButton.setMaxSize(70, 25);
         clearButton.setMinSize(50,25);
         processButton.setMinSize(50,25);
-        processBlocksButton.setMinSize(75,25);
         shrinkTrackHeightButton.setMinSize(75,25);
         shrinkTrackHeightButton.setMaxSize(75,25);
         growTrackHeightButton.setMinSize(80,25);
@@ -301,7 +303,8 @@ public class View {
         zoomOutButton.setFocusTraversable(false);
         clearButton.setFocusTraversable(false);
         processButton.setFocusTraversable(false);
-        processBlocksButton.setFocusTraversable(false);
+        showUniqButton.setFocusTraversable(false);
+        showDiffButton.setFocusTraversable(false);
         shrinkTrackHeightButton.setFocusTraversable(false);
         growTrackHeightButton.setFocusTraversable(false);
         sidePaneButton.setFocusTraversable(false);
@@ -312,7 +315,8 @@ public class View {
         zoomOutButton.setStyle(circularStyle);
         clearButton.setStyle(circularStyle);
         processButton.setStyle(circularStyle);
-        processBlocksButton.setStyle(circularStyle);
+        showUniqButton.setStyle(circularStyle);
+        showDiffButton.setStyle(circularStyle);
         shrinkTrackHeightButton.setStyle(circularStyle);
         growTrackHeightButton.setStyle(circularStyle);
         sidePaneButton.setStyle(circularStyle);
@@ -375,7 +379,8 @@ public class View {
         this.zoomInButton.setDisable(false);
         this.zoomOutButton.setDisable(false);
         this.processButton.setDisable(false);
-        this.processBlocksButton.setDisable(false);
+        this.showUniqButton.setDisable(false);
+        this.showDiffButton.setDisable(false);
         this.clearButton.setDisable(false);
         this.shrinkTrackHeightButton.setDisable(false);
         this.growTrackHeightButton.setDisable(false);
@@ -399,7 +404,8 @@ public class View {
         this.zoomInButton.setDisable(true);
         this.zoomOutButton.setDisable(true);
         this.processButton.setDisable(true);
-        this.processBlocksButton.setDisable(true);
+        this.showUniqButton.setDisable(true);
+        this.showDiffButton.setDisable(true);
         this.clearButton.setDisable(true);
         this.shrinkTrackHeightButton.setDisable(true);
         this.growTrackHeightButton.setDisable(true);
@@ -1558,7 +1564,7 @@ public class View {
         processButton.setOnAction(handler);
     }
     public void processBlocksSelectionsListener(EventHandler<ActionEvent> handler) {
-        processBlocksButton.setOnAction(handler);
+        //processBlocksButton.setOnAction(handler);
     }
     public void shrinkTrackHeightListener(EventHandler<ActionEvent> handler) {
         shrinkTrackHeightButton.setOnAction(handler);
