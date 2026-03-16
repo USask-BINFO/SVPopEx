@@ -4,6 +4,7 @@ import javafx.animation.TranslateTransition;
 import javafx.beans.value.ChangeListener;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
@@ -83,12 +84,17 @@ public class View {
     // ----------- logoContainer ------------------
     private final HBox logoContainer = new HBox();
     Rectangle logoRectangle = new Rectangle(60,50);
-    // ----------- dropdownChromContainer --------
-    private final HBox dropdownChromContainer = new HBox(10);
+    // ----------- control container --------
+    private GridPane controlWrapper = new GridPane();
+    ColumnConstraints controlCol0 = new ColumnConstraints();
+    ColumnConstraints controlCol1 = new ColumnConstraints();
+    ColumnConstraints controlCol2 = new ColumnConstraints();
+    // nav container
+    private final HBox navContainer = new HBox(10);
     TextField regionField = new TextField();
     ComboBox<String> chromComboBox = new ComboBox<>();
     Button processRegionButton = new Button("Go");
-    // ----------- controlContainer ---------
+    // controls
     private final HBox controlContainer = new HBox();
     Region controlContainerSpacer = new Region();
     Button zoomInButton = new Button("Zoom +");
@@ -240,8 +246,22 @@ public class View {
         // ---------- LOGO CONTAINER --------------
         logoRectangle.setFill(Color.PINK);
         logoContainer.getChildren().add(logoRectangle);
-        // ---------- DROPDOWN CHROM CONTAINER ----
-        dropdownChromContainer.setAlignment(Pos.CENTER);
+
+        // ---------- CONTROL CONTAINER ----
+        // controlled width columns
+        controlCol0.setPercentWidth(33);
+        controlCol0.setHgrow(Priority.ALWAYS);
+        controlCol1.setPercentWidth(34);
+        controlCol1.setHgrow(Priority.ALWAYS);
+        controlCol2.setPercentWidth(33);
+        controlCol2.setHgrow(Priority.ALWAYS);
+        controlWrapper.getColumnConstraints().addAll(controlCol0, controlCol1, controlCol2);
+        // add hboxes
+        controlWrapper.add(navContainer, 1, 0);
+        controlWrapper.add(controlContainer, 2, 0);
+
+        // navigation
+        navContainer.setAlignment(Pos.CENTER);
         regionField.setPromptText("Show region: chrom1:0-100");
         regionField.setStyle("""
         -fx-focus-color: transparent;
@@ -260,7 +280,7 @@ public class View {
         -fx-border-width: 1px;
         -fx-cursor: hand;
         """);
-        dropdownChromContainer.getChildren().addAll(chromComboBox, regionField, processRegionButton);
+        navContainer.getChildren().addAll(chromComboBox, regionField, processRegionButton);
         chromComboBox.setStyle("""
         -fx-focus-color: transparent;
         -fx-faint-focus-color: transparent;
@@ -276,7 +296,7 @@ public class View {
         regionField.setMaxWidth(180);
         chromComboBox.setMinWidth(180);
         chromComboBox.setMaxWidth(180);
-        // ---------- CONTROL PANEL -----
+        // controls
         // push buttons right
         HBox.setHgrow(controlContainerSpacer, Priority.ALWAYS);
         // initially set buttons to disabled until file is loaded
@@ -346,7 +366,7 @@ public class View {
         markerWrapper.getChildren().add(marker);
         marker.setOnMouseEntered(e -> marker.setCursor(Cursor.HAND));
         marker.setOnMouseExited(e -> marker.setCursor(Cursor.DEFAULT));
-        layout.getChildren().addAll(menuBar, logoContainer, dropdownChromContainer, controlContainer, referenceContainer, tickContainer, callsContentContainer);
+        layout.getChildren().addAll(menuBar, logoContainer, controlWrapper, referenceContainer, tickContainer, callsContentContainer);
         // ---------- TICK PANEL ---------
         spaceWrapper.setMinWidth(this.sampleSpaceWidth);
         spaceWrapper.setPrefWidth(this.sampleSpaceWidth);
