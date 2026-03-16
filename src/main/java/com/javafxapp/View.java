@@ -77,6 +77,7 @@ public class View {
     StackPane rectangleWithLabels = new StackPane(referenceWrapper, labelsBox);
     StackPane rectWithMarker = new StackPane(rectangleWithLabels, markerWrapper);
     // ---------- tickContainer ----------
+    SVGPath handIcon = new SVGPath();
     private final HBox tickContainer = new HBox();
     private final Pane spaceWrapper = new Pane();
     private final Pane ticksWrapper = new Pane();
@@ -387,6 +388,15 @@ public class View {
         spaceWrapper.setMinWidth(this.sampleSpaceWidth);
         spaceWrapper.setPrefWidth(this.sampleSpaceWidth);
         spaceWrapper.setMaxWidth(this.sampleSpaceWidth);
+        // hand icon
+        handIcon.setContent(
+                "M12 1.5 Q11.2344 1.5 10.625 1.9844 Q10.0312 2.4531 9.8438 3.1875 Q9.4062 3 9 3 Q8.0938 3 7.4219 3.6719 Q6.75 4.3281 6.75 5.25 L6.75 13.3125 L6.0938 12.6562 Q5.4375 12 4.5 12 Q3.5625 12 2.9062 12.6562 Q2.25 13.3125 2.25 14.25 Q2.25 15.1875 2.9062 15.8438 L8 20.9219 Q8.7188 21.6406 9.5625 22.0625 Q10.5 22.5 11.5312 22.5 L15 22.5 Q16.4375 22.5 17.6406 21.7969 Q18.8438 21.0938 19.5469 19.8906 Q20.25 18.6719 20.25 17.25 L20.25 8.25 Q20.25 7.3281 19.5781 6.6719 Q18.9219 6 18 6 Q17.6562 6 17.25 6.1406 L17.25 5.25 Q17.25 4.3281 16.5781 3.6719 Q15.9219 3 15 3 Q14.6094 3 14.1562 3.1875 Q13.9688 2.4531 13.375 1.9844 Q12.7812 1.5 12 1.5 ZM12 3 Q12.3281 3 12.5312 3.2188 Q12.75 3.4219 12.75 3.75 L12.75 11.25 L14.25 11.25 L14.25 5.25 Q14.25 4.9219 14.4531 4.7188 Q14.6719 4.5 15 4.5 Q15.3281 4.5 15.5312 4.7188 Q15.75 4.9219 15.75 5.25 L15.75 11.25 L17.25 11.25 L17.25 8.25 Q17.25 7.9219 17.4531 7.7188 Q17.6719 7.5 18 7.5 Q18.3281 7.5 18.5312 7.7188 Q18.75 7.9219 18.75 8.25 L18.75 17.25 Q18.75 18.2812 18.25 19.1406 Q17.75 19.9844 16.8906 20.5 Q16.0312 21 15 21 L11.5312 21 Q10.2188 21 9.0781 19.8438 L3.9688 14.7812 Q3.7344 14.5469 3.7344 14.25 Q3.7344 13.9375 3.9688 13.7031 Q4.2031 13.4688 4.5 13.4688 Q4.8125 13.4688 5.0469 13.7031 L8.25 16.9375 L8.25 5.25 Q8.25 4.9219 8.4531 4.7188 Q8.6719 4.5 9 4.5 Q9.3281 4.5 9.5312 4.7188 Q9.75 4.9219 9.75 5.25 L9.75 11.25 L11.25 11.25 L11.25 3.75 Q11.25 3.4219 11.4531 3.2188 Q11.6719 3 12 3 Z"
+        );
+        handIcon.setFill(Color.TRANSPARENT);
+        handIcon.setScaleX(1);
+        handIcon.setScaleY(1);
+        handIcon.setId("handIcon");
+
         tickContainer.getChildren().add(spaceWrapper);
         this.ticksWrapper.setPrefHeight(40);
         tickContainer.getChildren().add(ticksWrapper);
@@ -510,6 +520,16 @@ public class View {
      * Post Conditions: chromComboBox default set to < ALL >
      */
     public void initReference(LinkedHashMap<String, Chromosome> refContigs, long totalRefLength) {
+        // add necessary icon as init reference
+        // display hand icon
+        handIcon.layoutXProperty().bind(spaceWrapper.widthProperty().subtract(handIcon.boundsInLocalProperty().get().getWidth()).subtract(spaceWrapper.widthProperty().multiply(0.25)));
+        handIcon.layoutYProperty().bind(
+                spaceWrapper.heightProperty()
+                        .subtract(spaceWrapper.heightProperty().multiply(0.1)) // 25% from bottom
+                        .subtract(handIcon.boundsInLocalProperty().get().getHeight()) // move icon top up
+        );
+        spaceWrapper.getChildren().add(handIcon);
+
         referenceWrapper.setBackground(new Background(new BackgroundFill(Color.WHITE, CornerRadii.EMPTY, Insets.EMPTY)));
 //        referenceWrapper.setBorder(new Border(new BorderStroke(
 //                Color.BLACK,
@@ -1070,8 +1090,18 @@ public class View {
 
     public void showCoords(Chromosome chromosome, int tickSpacing, double zoomLevel, LinkedHashMap<String, Chromosome> refContigs) {
         this.ticksWrapper.getChildren().clear();
+        // get status of hand icon
+        SVGPath handIcon = (SVGPath) this.spaceWrapper.lookup("#handIcon");
         // display ticks for chromosome names
         if (Objects.equals(chromosome.getName(), "<ALL>")) {
+            // update hand icon
+            if (handIcon.getFill().equals(Color.TRANSPARENT)) {
+                // do nothing
+            }
+            else {
+                handIcon.setFill(Color.TRANSPARENT);
+            }
+            // show names
             for (Map.Entry<String, Chromosome> refContig : refContigs.entrySet()) {
                 if (Objects.equals(refContig.getKey(), "<ALL>")) {
                     // do nothing
@@ -1092,6 +1122,13 @@ public class View {
         }
         // display ticks for increment
         else {
+            // update hand icon
+            if (handIcon.getFill().equals(Color.TRANSPARENT)) {
+                handIcon.setFill(Color.BLACK);
+            }
+            else {
+                // do nothing, already black
+            }
             for (int x = 0; x <= chromosome.getLength(); x += tickSpacing) {
                 Text text = new Text(String.valueOf(x));
                 // if tick spacing is greater than 100,000 bp (100 kb), truncate
