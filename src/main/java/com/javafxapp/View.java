@@ -80,6 +80,9 @@ public class View {
     private final Pane ticksWrapper = new Pane();
     private EventHandler<MouseEvent> releaseSelectionHandler;
     private final int sampleSpaceWidth = 90;
+    // ----------- logoContainer ------------------
+    private final HBox logoContainer = new HBox();
+    Rectangle logoRectangle = new Rectangle(60,50);
     // ----------- dropdownChromContainer --------
     private final HBox dropdownChromContainer = new HBox(10);
     TextField regionField = new TextField();
@@ -234,6 +237,9 @@ public class View {
         // ---------- MENU --------------
         fileMenu.getItems().add(importVCFItem);
         menuBar.getMenus().add(fileMenu);
+        // ---------- LOGO CONTAINER --------------
+        logoRectangle.setFill(Color.PINK);
+        logoContainer.getChildren().add(logoRectangle);
         // ---------- DROPDOWN CHROM CONTAINER ----
         dropdownChromContainer.setAlignment(Pos.CENTER);
         regionField.setPromptText("Show region: chrom1:0-100");
@@ -340,7 +346,7 @@ public class View {
         markerWrapper.getChildren().add(marker);
         marker.setOnMouseEntered(e -> marker.setCursor(Cursor.HAND));
         marker.setOnMouseExited(e -> marker.setCursor(Cursor.DEFAULT));
-        layout.getChildren().addAll(menuBar, dropdownChromContainer, controlContainer, referenceContainer, tickContainer, callsContentContainer);
+        layout.getChildren().addAll(menuBar, logoContainer, dropdownChromContainer, controlContainer, referenceContainer, tickContainer, callsContentContainer);
         // ---------- TICK PANEL ---------
         spaceWrapper.setMinWidth(this.sampleSpaceWidth);
         spaceWrapper.setPrefWidth(this.sampleSpaceWidth);
