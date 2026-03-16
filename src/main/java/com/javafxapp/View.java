@@ -7,6 +7,7 @@ import javafx.event.EventHandler;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.geometry.VPos;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -83,7 +84,7 @@ public class View {
     private final int sampleSpaceWidth = 90;
     // ----------- logoContainer ------------------
     private final HBox logoContainer = new HBox();
-    Rectangle logoRectangle = new Rectangle(60,50);
+    Rectangle logoRectangle = new Rectangle(120, 70);
     // ----------- control container --------
     private GridPane controlWrapper = new GridPane();
     ColumnConstraints controlCol0 = new ColumnConstraints();
@@ -95,16 +96,19 @@ public class View {
     ComboBox<String> chromComboBox = new ComboBox<>();
     Button processRegionButton = new Button("Go");
     // controls
-    private final HBox controlContainer = new HBox();
-    Region controlContainerSpacer = new Region();
+    private final HBox generalControlContainer = new HBox();
+    Region generalControlSpacer = new Region();
     Button zoomInButton = new Button("Zoom +");
     Button zoomOutButton = new Button("Zoom -");
-    Button clearButton = new Button("Clear");
     Button processButton = new Button("Color by Haplotype");
     Button showSameButton = new Button("Show Same Calls");
     Button showDiffButton = new Button("Show Diff Calls");
     Button shrinkTrackHeightButton = new Button("- Height");
     Button growTrackHeightButton = new Button("+ Height");
+    // ------------ selectionControlContainer ------------------
+    private final HBox selectionControlContainer = new HBox();
+    Region selectionControlSpacer = new Region();
+    Button clearButton = new Button("Clear");
     Button sidePaneButton = new Button("Selection Options");
     // ---------- callsPanel ----------
     Tooltip callInfoTooltip = new Tooltip();
@@ -257,8 +261,9 @@ public class View {
         controlCol2.setHgrow(Priority.ALWAYS);
         controlWrapper.getColumnConstraints().addAll(controlCol0, controlCol1, controlCol2);
         // add hboxes
+        controlWrapper.add(logoContainer, 0, 0);
         controlWrapper.add(navContainer, 1, 0);
-        controlWrapper.add(controlContainer, 2, 0);
+        controlWrapper.add(generalControlContainer, 2, 0);
 
         // navigation
         navContainer.setAlignment(Pos.CENTER);
@@ -298,7 +303,7 @@ public class View {
         chromComboBox.setMaxWidth(180);
         // controls
         // push buttons right
-        HBox.setHgrow(controlContainerSpacer, Priority.ALWAYS);
+        HBox.setHgrow(generalControlSpacer, Priority.ALWAYS);
         // initially set buttons to disabled until file is loaded
         zoomInButton.setDisable(true);
         zoomOutButton.setDisable(true);
@@ -350,13 +355,24 @@ public class View {
         closeSidePaneButton.setStyle(circularStyle);
         closeSidePaneButton.setStyle("-fx-font-size: 12px;");
         // add button
-        controlContainer.getChildren().add(controlContainerSpacer);
-        controlContainer.getChildren().add(zoomInButton);
-        controlContainer.getChildren().add(zoomOutButton);
-        controlContainer.getChildren().add(clearButton);
-        controlContainer.getChildren().add(shrinkTrackHeightButton);
-        controlContainer.getChildren().add(growTrackHeightButton);
-        controlContainer.getChildren().add(sidePaneButton);
+        generalControlContainer.setAlignment(Pos.CENTER_RIGHT);
+        generalControlContainer.getChildren().add(generalControlSpacer);
+        generalControlContainer.getChildren().add(zoomInButton);
+        generalControlContainer.getChildren().add(zoomOutButton);
+        generalControlContainer.getChildren().add(shrinkTrackHeightButton);
+        generalControlContainer.getChildren().add(growTrackHeightButton);
+
+        // -----------SELECTIONCONTROLCONTAINER --------------------
+        selectionControlContainer.setMinHeight(30);
+        selectionControlContainer.setMaxHeight(30);
+        selectionControlContainer.setPrefHeight(30);
+        selectionControlContainer.setAlignment(Pos.BOTTOM_RIGHT);
+        HBox.setHgrow(selectionControlSpacer, Priority.ALWAYS);
+        selectionControlContainer.getChildren().add(selectionControlSpacer);
+        selectionControlContainer.getChildren().add(clearButton);
+        selectionControlContainer.getChildren().add(sidePaneButton);
+
+
         // ---------- REF PANEL ---------
         referenceContainer.setStyle("-fx-background-color: white;");
         // reference rectangle
@@ -366,7 +382,7 @@ public class View {
         markerWrapper.getChildren().add(marker);
         marker.setOnMouseEntered(e -> marker.setCursor(Cursor.HAND));
         marker.setOnMouseExited(e -> marker.setCursor(Cursor.DEFAULT));
-        layout.getChildren().addAll(menuBar, logoContainer, controlWrapper, referenceContainer, tickContainer, callsContentContainer);
+        layout.getChildren().addAll(menuBar, controlWrapper, selectionControlContainer, referenceContainer, tickContainer, callsContentContainer);
         // ---------- TICK PANEL ---------
         spaceWrapper.setMinWidth(this.sampleSpaceWidth);
         spaceWrapper.setPrefWidth(this.sampleSpaceWidth);
