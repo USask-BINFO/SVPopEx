@@ -37,8 +37,11 @@ public class Controller {
         view.processSelectionsListener(e -> {
             this.processSelections();
         });
-        view.processBlocksSelectionsListener(e -> {
-            this.processBlockSelections();
+        view.processShowSameCallsListener(e -> {
+            this.processShowSameCalls();
+        });
+        view.processShowDiffCallsListener(e -> {
+            this.processShowDiffCalls();
         });
         view.shrinkTrackHeightListener(e -> {
             this.updateTrackHeight(-0.1);
@@ -206,8 +209,13 @@ public class Controller {
         view.showPlot(model.processHaplotypeSelections(view.getSampleOrderInView()));
     }
 
-    public void processBlockSelections() {
-        view.showPlot(model.processPinnedSelections(view.getSampleOrderInView(), view.getPinCheckboxes()));
+    public void processShowSameCalls() {
+        // want to show the same calls, so we are going to hide the different ones
+        view.hideCalls(view.getSampleOrderInView(), model.getDiffCallsFromPinned(view.getPinCheckboxes()));
+    }
+
+    public void processShowDiffCalls() {
+        view.hideCalls(view.getSampleOrderInView(), model.getSameCallsFromPinned(view.getPinCheckboxes()));
     }
 
     public void updateReleaseSelection(MouseEvent e) {
@@ -294,10 +302,10 @@ public class Controller {
         double start = view.getStartFromHVal(view.getHValue(), model.getCurrentChrom());
         double proportion = model.getGenomicProportion(view.getViewportWidth(), model.getCurrentChrom(), model.getZoomLevel());
         double end = start + proportion;
-        System.out.println("NEW VAL IS " + newVal);
-        System.out.println("START IS " + start);
-        System.out.println("END IS " + end);
-        System.out.println("START AND END INTERVALS IN PROCESSSCROLLCHANGE : START : " + model.getStartInterval((int) start) + " END " + model.getEndInterval((int) end));
+//        System.out.println("NEW VAL IS " + newVal);
+//        System.out.println("START IS " + start);
+//        System.out.println("END IS " + end);
+//        System.out.println("START AND END INTERVALS IN PROCESSSCROLLCHANGE : START : " + model.getStartInterval((int) start) + " END " + model.getEndInterval((int) end));
         view.showTileCalls(model.getCurrentChrom(), view.getSampleOrderInView(), model.getZoomLevel(), model.getOriginalTrackHeight(), model.getStartInterval((int) start), model.getEndInterval((int) end));
         view.showTileAlleleFreq(model.getCurrentChrom(), model.getZoomLevel(), model.getOriginalTrackHeight(), model.getStartInterval((int) start), model.getEndInterval((int) end));
         view.syncScroll(newVal);

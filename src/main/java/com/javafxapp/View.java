@@ -92,7 +92,7 @@ public class View {
     Button zoomOutButton = new Button("Zoom -");
     Button clearButton = new Button("Clear");
     Button processButton = new Button("Color by Haplotype");
-    Button showUniqButton = new Button("Show Unique Calls");
+    Button showSameButton = new Button("Show Same Calls");
     Button showDiffButton = new Button("Show Diff Calls");
     Button shrinkTrackHeightButton = new Button("- Height");
     Button growTrackHeightButton = new Button("+ Height");
@@ -106,6 +106,7 @@ public class View {
     private final Pane selectionWrapper = new Pane();
     private final StackPane samplePanel = new StackPane(samplesContainer, selectionContainer);
     private final ScrollPane callsPanel = new ScrollPane(samplePanel);
+    private final HashMap<String, ArrayList<Node>> nodeGroups = new HashMap<>();
 
 
     public View(Stage primaryStage) {
@@ -166,7 +167,7 @@ public class View {
         Separator separator2 = new Separator();
         selectionOptionsSideContainer.getChildren().add(separator2);
         // plots
-        selectionOptionsSideContainer.getChildren().add(showUniqButton);
+        selectionOptionsSideContainer.getChildren().add(showSameButton);
         selectionOptionsSideContainer.getChildren().add(showDiffButton);
         selectionOptionsSideContainer.getChildren().add(processButton);
 
@@ -276,7 +277,7 @@ public class View {
         zoomInButton.setDisable(true);
         zoomOutButton.setDisable(true);
         processButton.setDisable(true);
-        showUniqButton.setDisable(true);
+        showSameButton.setDisable(true);
         showDiffButton.setDisable(true);
         clearButton.setDisable(true);
         shrinkTrackHeightButton.setDisable(true);
@@ -303,7 +304,7 @@ public class View {
         zoomOutButton.setFocusTraversable(false);
         clearButton.setFocusTraversable(false);
         processButton.setFocusTraversable(false);
-        showUniqButton.setFocusTraversable(false);
+        showSameButton.setFocusTraversable(false);
         showDiffButton.setFocusTraversable(false);
         shrinkTrackHeightButton.setFocusTraversable(false);
         growTrackHeightButton.setFocusTraversable(false);
@@ -315,7 +316,7 @@ public class View {
         zoomOutButton.setStyle(circularStyle);
         clearButton.setStyle(circularStyle);
         processButton.setStyle(circularStyle);
-        showUniqButton.setStyle(circularStyle);
+        showSameButton.setStyle(circularStyle);
         showDiffButton.setStyle(circularStyle);
         shrinkTrackHeightButton.setStyle(circularStyle);
         growTrackHeightButton.setStyle(circularStyle);
@@ -379,7 +380,7 @@ public class View {
         this.zoomInButton.setDisable(false);
         this.zoomOutButton.setDisable(false);
         this.processButton.setDisable(false);
-        this.showUniqButton.setDisable(false);
+        this.showSameButton.setDisable(false);
         this.showDiffButton.setDisable(false);
         this.clearButton.setDisable(false);
         this.shrinkTrackHeightButton.setDisable(false);
@@ -404,7 +405,7 @@ public class View {
         this.zoomInButton.setDisable(true);
         this.zoomOutButton.setDisable(true);
         this.processButton.setDisable(true);
-        this.showUniqButton.setDisable(true);
+        this.showSameButton.setDisable(true);
         this.showDiffButton.setDisable(true);
         this.clearButton.setDisable(true);
         this.shrinkTrackHeightButton.setDisable(true);
@@ -716,6 +717,20 @@ public class View {
         }
     }
 
+    public void hideCalls(ArrayList<Sample> samples, ArrayList<Call> calls) {
+        // loop through each sample
+        for (Sample sample : samples) {
+            // get sample track
+            Pane currentCalls = (Pane) this.samplesContainer.lookup("#" + sample.getName());
+            // loop through calls to hide
+            for (Call call : calls) {
+                for (Node nodeToRemove : nodeGroups.get(call.getId())) {
+                    currentCalls.getChildren().remove(nodeToRemove);
+                }
+            }
+        }
+    }
+
     public void showTileCalls(Chromosome chromosome, ArrayList<Sample> samples, double zoomLevel, int originalTrackHeight, int startInterval, int endInterval) {
         /**
          * Pre-conditions/assumptions: Gets call pane for each sample by looking up the ID
@@ -745,6 +760,13 @@ public class View {
                     // haven't added this call in any other tiles for this sample yet
                     else {
                         seenIds.add(currentCall.getId());
+                        // make sure call is added to node groups
+                        if (!nodeGroups.containsKey(currentCall.getId())) {
+                            nodeGroups.put(currentCall.getId(), new ArrayList<>());
+                        }
+                        else {
+                            // do nothing
+                        }
                         Rectangle callRect = new Rectangle(currentCall.getStart()*zoomLevel, 1, currentCall.getLength()*zoomLevel, originalTrackHeight-2);
                         Polygon traPoly = new Polygon();
                         // styling
@@ -756,6 +778,7 @@ public class View {
                             callRect.setStroke(Color.rgb(40, 70, 160));
                             callRect.setOpacity(0.5);
                             callRect.setFill(Color.rgb(65, 105, 225));
+                            nodeGroups.get(currentCall.getId()).add(callRect);
                             // if the duplication rectangle is currently big enough to show the inside lines, show
                             // inset is the distance from inner border to outer border
                             int inset = 5;
@@ -788,6 +811,14 @@ public class View {
                                 lineDup6.setOpacity(0.5);
                                 currentCalls.getChildren().add(lineDup5);
                                 currentCalls.getChildren().add(lineDup6);
+                                // add to node groups
+                                nodeGroups.get(currentCall.getId()).add(lineDup1);
+                                nodeGroups.get(currentCall.getId()).add(lineDup2);
+                                nodeGroups.get(currentCall.getId()).add(lineDup3);
+                                nodeGroups.get(currentCall.getId()).add(lineDup4);
+                                nodeGroups.get(currentCall.getId()).add(lineDup5);
+                                nodeGroups.get(currentCall.getId()).add(lineDup6);
+
                             }
                             // otherwise, don't add additional lines
                             else {
@@ -806,6 +837,10 @@ public class View {
                             lineInv2.setOpacity(0.6);
                             currentCalls.getChildren().add(lineInv1);
                             currentCalls.getChildren().add(lineInv2);
+                            // add to node groups
+                            nodeGroups.get(currentCall.getId()).add(callRect);
+                            nodeGroups.get(currentCall.getId()).add(lineInv1);
+                            nodeGroups.get(currentCall.getId()).add(lineInv2);
                         }
                         else if (Objects.equals(currentCall.getType(), "DEL")) {
                             callRect.setStroke(Color.rgb(120, 30, 2));
@@ -819,6 +854,10 @@ public class View {
                             lineDel2.setOpacity(0.4);
                             currentCalls.getChildren().add(lineDel1);
                             currentCalls.getChildren().add(lineDel2);
+                            // add to node groups
+                            nodeGroups.get(currentCall.getId()).add(callRect);
+                            nodeGroups.get(currentCall.getId()).add(lineDel1);
+                            nodeGroups.get(currentCall.getId()).add(lineDel2);
                         }
                         else if (Objects.equals(currentCall.getType(), "INS")) {
                             callRect.setStroke(Color.rgb(100, 140, 80));
@@ -832,6 +871,10 @@ public class View {
                             lineIns2.setOpacity(0.5);
                             currentCalls.getChildren().add(lineIns1);
                             currentCalls.getChildren().add(lineIns2);
+                            // add to node groups
+                            nodeGroups.get(currentCall.getId()).add(callRect);
+                            nodeGroups.get(currentCall.getId()).add(lineIns1);
+                            nodeGroups.get(currentCall.getId()).add(lineIns2);
                         }
                         else if (Objects.equals(currentCall.getType(), "BND") || Objects.equals(currentCall.getType(), "TRA")) {
                             // direction at first character, means join before
@@ -877,6 +920,9 @@ public class View {
                             callRect.setFill(Color.BLACK);
                             callRect.getStrokeDashArray().setAll(12.0, 6.0);
                             callRect.setStrokeWidth(3);
+                            // add to node groups
+                            nodeGroups.get(currentCall.getId()).add(callRect);
+                            nodeGroups.get(currentCall.getId()).add(traPoly);
                         }
                         // for call rectangle
                         currentCalls.getChildren().add(callRect);
@@ -891,6 +937,7 @@ public class View {
                         });
                         // for TRA polygon
                         traPoly.setFill(Color.rgb(80, 80, 80));
+                        traPoly.setId("TRA" + currentCall.getId());
                         currentCalls.getChildren().add(traPoly);
                         traPoly.setOnMouseEntered(e -> {
                             traPoly.setCursor(Cursor.HAND);
@@ -1563,8 +1610,11 @@ public class View {
     public void processSelectionsListener(EventHandler<ActionEvent> handler) {
         processButton.setOnAction(handler);
     }
-    public void processBlocksSelectionsListener(EventHandler<ActionEvent> handler) {
-        //processBlocksButton.setOnAction(handler);
+    public void processShowSameCallsListener(EventHandler<ActionEvent> handler) {
+        showSameButton.setOnAction(handler);
+    }
+    public void processShowDiffCallsListener(EventHandler<ActionEvent> handler) {
+        showDiffButton.setOnAction(handler);
     }
     public void shrinkTrackHeightListener(EventHandler<ActionEvent> handler) {
         shrinkTrackHeightButton.setOnAction(handler);

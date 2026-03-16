@@ -158,6 +158,159 @@ public class Model {
         }
     }
 
+    public ArrayList<Call> getDiffCallsFromPinned(ArrayList<CheckBox> checkboxes) {
+        ArrayList<Sample> checkedSamples = new ArrayList<>();
+        ArrayList<Call> result = new ArrayList<>();
+        for (int i=0; i<checkboxes.size(); i++) {
+            if (checkboxes.get(i).isSelected()) {
+                checkedSamples.add(this.samples.get(i));
+            }
+        }
+        // if no selections are made or no samples are checked, return empty result
+        if (this.selections.isEmpty() || checkedSamples.isEmpty()) {
+            return result;
+        }
+        // otherwise, process
+        else {
+            for (Selection selection : selections) {
+                double selectionStart = selection.getGenomicStart();
+                double selectionEnd = selection.getGenomicEnd();
+                int startInterval = getStartInterval((int) selectionStart);
+                int endInterval = getEndInterval((int) selectionEnd);
+                // loop through each tile
+                for (int i = startInterval; i <= endInterval; i++) {
+                    ArrayList<String> pinnedCallIds = new ArrayList<>();
+                    // loop through calls for pinned samples
+                    for (Sample checkedSample : checkedSamples) {
+                        // if no tile interval for that sample then move to the next
+                        if (checkedSample.getTiledCalls().get(getCurrentChrom().getName()).get(i) == null) {
+                            continue;
+                        }
+                        // otherwise, loop through the calls
+                        for (Call currentCall : checkedSample.getTiledCalls().get(getCurrentChrom().getName()).get(i)) {
+                            // if in region
+                            if (currentCall.getStart() > selectionStart && currentCall.getEnd() < selectionEnd) {
+                                // if this call has already been seen with another pinned sample, do nothing
+                                if (pinnedCallIds.contains(currentCall.getId())) {
+                                    // do nothing
+                                } else {
+                                    pinnedCallIds.add(currentCall.getId());
+                                }
+                            }
+                            // outside of region
+                            else {
+                                // do nothing
+                            }
+                        }
+                    }
+                    // loop through calls for non pinned samples
+                    for (Sample sample : this.samples) {
+                        // if in checked samples, don't process
+                        if (checkedSamples.contains(sample)) {
+                            // do nothing
+                        }
+                        // otherwise an unchecked sample, process calls
+                        else {
+                            // if no tile interval for that sample then move to the next
+                            if (sample.getTiledCalls().get(getCurrentChrom().getName()).get(i) == null) {
+                                continue;
+                            }
+                            // otherwise, loop through the calls
+                            for (Call currentCall : sample.getTiledCalls().get(getCurrentChrom().getName()).get(i)) {
+                                System.out.println("ID IS " + currentCall.getId() + " at location " + currentCall.getStart());
+                                // if in region
+                                if (currentCall.getStart() > selectionStart && currentCall.getEnd() < selectionEnd) {
+                                    // if this call has already been seen with another pinned sample, do nothing
+                                    if (pinnedCallIds.contains(currentCall.getId())) {
+                                        System.out.println("IT IS IN PINNED IDS");
+                                        // do nothing
+                                    }
+                                    // otherwise it is different so add it to results
+                                    else {
+                                        // add it only if results doesn't contain it
+                                        if (result.contains(currentCall)) {
+                                            System.out.println("RESULTS ALREADY CONTAIN THE ID");
+                                            // do nothing
+                                        }
+                                        else {
+                                            System.out.println("ADDED CALL TO RESULTS");
+                                            result.add(currentCall);
+                                        }
+                                    }
+                                }
+                                // outside of region
+                                else {
+                                    // do nothing
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return result;
+        }
+    }
+
+
+    public ArrayList<Call> getSameCallsFromPinned(ArrayList<CheckBox> checkboxes) {
+        ArrayList<Sample> checkedSamples = new ArrayList<>();
+        ArrayList<Call> result = new ArrayList<>();
+        for (int i = 0; i < checkboxes.size(); i++) {
+            if (checkboxes.get(i).isSelected()) {
+                checkedSamples.add(this.samples.get(i));
+            }
+        }
+        // if no selections are made or no samples are checked, return empty result
+        if (this.selections.isEmpty() || checkedSamples.isEmpty()) {
+            return result;
+        }
+        // otherwise, process
+        else {
+            for (Selection selection : selections) {
+                double selectionStart = selection.getGenomicStart();
+                double selectionEnd = selection.getGenomicEnd();
+                int startInterval = getStartInterval((int) selectionStart);
+                int endInterval = getEndInterval((int) selectionEnd);
+                // loop through each tile
+                for (int i = startInterval; i <= endInterval; i++) {
+                    ArrayList<String> pinnedCallIds = new ArrayList<>();
+                    // loop through calls for pinned samples
+                    for (Sample checkedSample : checkedSamples) {
+                        // if no tile interval for that sample then move to the next
+                        if (checkedSample.getTiledCalls().get(getCurrentChrom().getName()).get(i) == null) {
+                            continue;
+                        }
+                        // otherwise, loop through the calls
+                        for (Call currentCall : checkedSample.getTiledCalls().get(getCurrentChrom().getName()).get(i)) {
+                            // if in region
+                            if (currentCall.getStart() > selectionStart && currentCall.getEnd() < selectionEnd) {
+                                // if this call has already been seen with another pinned sample, do nothing
+                                if (pinnedCallIds.contains(currentCall.getId())) {
+                                    // do nothing
+                                }
+                                // otherwise add it to seen and add it to results if not added already
+                                else {
+                                    pinnedCallIds.add(currentCall.getId());
+                                    if (result.contains(currentCall)) {
+                                        // do nothing
+                                    }
+                                    else {
+                                        result.add(currentCall);
+                                    }
+                                }
+                            }
+                            // outside of region
+                            else {
+                                // do nothing
+                            }
+                        }
+                    }
+                }
+            }
+            return result;
+        }
+    }
+
     public HashMap<Rectangle,Color> processPinnedSelections(ArrayList<Sample> sampleOrder, ArrayList<CheckBox> checkboxes) {
         ArrayList<Sample> checkedSamples = new ArrayList<>();
         HashMap<Rectangle, Color> result = new HashMap<>();
