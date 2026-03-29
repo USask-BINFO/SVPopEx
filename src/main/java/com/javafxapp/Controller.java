@@ -104,20 +104,27 @@ public class Controller {
 //            });
             this.model.reset();
             this.view.reset();
+            System.out.println("PROCESSING FILE...");
             model.processFile(fileContent);
+            System.out.println("INIT AND DRAW REFERENCE...");
             model.setCurrentChrom(model.getRefChromosomes().get("<ALL>"));
             view.initReference(model.getRefChromosomes(), model.getRefTotalLength());
             view.drawReference(model.getRefChromosomes(), "<ALL>");
+            System.out.println("SETTING ZOOM AND SHOWING MARKER AND COORDS...");
             model.setZoom(view.initZoomWG(model.getRefTotalLength()));
             view.showCoords(model.getCurrentChrom(), -1, model.getZoomLevel(), model.getRefChromosomes());
             view.updateMarkerWidth(model.getCurrentChrom(), model.getZoomLevel(), model.getCurrentChrom().getLength());
             view.updateMarkerPos(model.getCurrentChrom(), 0);
+            System.out.println("SHOW SIDE PANE...");
             view.initSidePane(model.getSamples(), model.getSampleColors(), model::getNumAnnotationsShown);
+            System.out.println("SHOW SAMPLES....");
             view.initSamples(model.getSamples(), model.getSampleColors(), model.getRefTotalLength(), model.getZoomLevel(), model.getBaseFontSize(), model.getOriginalTrackHeight());
+
+            System.out.println("ENABLE CONTROLS...");
+            view.enableControls();
             // triggers showChromosome()
             view.setChromComboBoxValue("<ALL>");
-            view.enableControls();
-//            view.viewportWidthChange(e -> {
+            //            view.viewportWidthChange(e -> {
 //                this.processViewportWidthChange();
 //            });
             view.scrollChange((obs,oldVal, newVal) -> {

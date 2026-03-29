@@ -1,6 +1,7 @@
 package com.javafxapp;
 
 import javafx.animation.TranslateTransition;
+import javafx.beans.binding.Bindings;
 import javafx.beans.value.ChangeListener;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -9,15 +10,14 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.Cursor;
+import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
-import javafx.scene.paint.Color;
-import javafx.scene.paint.CycleMethod;
-import javafx.scene.paint.LinearGradient;
-import javafx.scene.paint.Stop;
+import javafx.scene.paint.*;
 import javafx.scene.shape.*;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
@@ -85,7 +85,14 @@ public class View {
     private final int sampleSpaceWidth = 90;
     // ----------- logoContainer ------------------
     private final HBox logoContainer = new HBox();
-    Rectangle logoRectangle = new Rectangle(120, 70);
+    Rectangle logoRectangle = new Rectangle(158, 61);
+    Image logoImage = new Image("file:./src/main/resources/com/javafxapp/logo.png",
+            0, 0,
+            true,
+            true);
+    ImagePattern imagePattern = new ImagePattern(
+            logoImage
+    );
     // ----------- control container --------
     private GridPane controlWrapper = new GridPane();
     ColumnConstraints controlCol0 = new ColumnConstraints();
@@ -119,7 +126,9 @@ public class View {
     private final HBox selectionContainer = new HBox();
     private final Pane selectionWrapper = new Pane();
     private final StackPane samplePanel = new StackPane(samplesContainer, selectionContainer);
-    private final ScrollPane callsPanel = new ScrollPane(samplePanel);
+    VBox sampleGroup = new VBox(samplePanel);
+    private final ScrollPane samplesInfoPanel = new ScrollPane(samplesInfoContainer);
+    private final ScrollPane callsPanel = new ScrollPane(sampleGroup);
     private final HashMap<String, ArrayList<Node>> nodeGroups = new HashMap<>();
 
 
@@ -249,8 +258,9 @@ public class View {
         fileMenu.getItems().add(importVCFItem);
         menuBar.getMenus().add(fileMenu);
         // ---------- LOGO CONTAINER --------------
-        logoRectangle.setFill(Color.PINK);
+        logoRectangle.setFill(Color.TRANSPARENT);
         logoContainer.getChildren().add(logoRectangle);
+        logoRectangle.setFill(imagePattern);
 
         // ---------- CONTROL CONTAINER ----
         // controlled width columns
@@ -398,6 +408,8 @@ public class View {
         handIcon.setId("handIcon");
 
         tickContainer.getChildren().add(spaceWrapper);
+        this.tickContainer.setPrefHeight(40);
+        this.tickContainer.setMinHeight(40);
         this.ticksWrapper.setPrefHeight(40);
         tickContainer.getChildren().add(ticksWrapper);
         ticksWrapper.setOnMouseEntered(e -> ticksWrapper.setCursor(Cursor.HAND));
@@ -412,8 +424,12 @@ public class View {
             this.ticksReleased(e);
         });
         // ---------- CALLS PANEL -------
-        this.callsContentContainer.getChildren().add(samplesInfoContainer);
+        this.callsContentContainer.getChildren().add(samplesInfoPanel);
         this.callsContentContainer.getChildren().add(callsPanel);
+        samplesInfoPanel.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        samplesInfoPanel.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        samplesInfoPanel.vvalueProperty().bindBidirectional(callsPanel.vvalueProperty());
+        samplesInfoPanel.setStyle("-fx-background-color: transparent;");
         this.callsPanel.setStyle("-fx-focus-color: transparent; -fx-faint-focus-color: transparent;");
         this.callsPanel.setMinWidth(Screen.getPrimary().getBounds().getWidth() - sampleSpaceWidth);
         this.callsPanel.setPrefWidth(Screen.getPrimary().getBounds().getWidth() - sampleSpaceWidth);
@@ -421,7 +437,6 @@ public class View {
         selectionWrapper.setPickOnBounds(false);
         this.selectionContainer.setPickOnBounds(false);
         this.selectionContainer.getChildren().add(selectionWrapper);
-        this.callsPanel.setFitToHeight(true);
     }
 
     // *************************************************************** MAIN CONTROL FUNCTIONS ************************************************************************
@@ -445,6 +460,16 @@ public class View {
         this.showMateButton.setDisable(false);
         double bottomOfTickContainerY = tickContainer.getLayoutY() + tickContainer.getLayoutBounds().getHeight();
         sidePaneContainer.setTranslateY(bottomOfTickContainerY);
+
+        // 2. Get the total height of the window
+        double topOfPanelOnScreen = callsPanel.localToScreen(0, 0).getY();
+        double windowBottomOnScreen = callsPanel.getScene().getWindow().getY() + callsPanel.getScene().getWindow().getHeight();
+        StackPane.setAlignment(layout, Pos.TOP_CENTER);
+        callsPanel.setMinHeight(0);
+        callsPanel.setPrefHeight(windowBottomOnScreen - topOfPanelOnScreen);
+        callsPanel.setMaxHeight(windowBottomOnScreen - topOfPanelOnScreen);
+        callsPanel.setFitToHeight(false);
+        callsPanel.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
     }
 
     /**
@@ -1450,8 +1475,17 @@ public class View {
         scale.setPivotY(0);
         scale.setY(val);
         // remove old transforms
-        this.callsPanel.getTransforms().clear();
-        this.callsPanel.getTransforms().add(scale);
+        this.sampleGroup.getTransforms().clear();
+        this.sampleGroup.getTransforms().add(scale);
+        triggerScrollPane();
+    }
+
+    private void triggerScrollPane() {
+        // Apply CSS/layout for accurate prefHeight
+        double newHeight = this.sampleGroup.getBoundsInParent().getHeight();
+        sampleGroup.setMinHeight(newHeight);
+        sampleGroup.setPrefHeight(newHeight);
+        sampleGroup.setMaxHeight(newHeight);
     }
 
     public void redrawSampleInfoAfterScale(ArrayList<Sample> samples, double baseFontSize, double trackHeightScale, int originalTrackHeight) {
