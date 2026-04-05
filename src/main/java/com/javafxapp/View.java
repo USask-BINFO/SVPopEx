@@ -1,31 +1,31 @@
 package com.javafxapp;
 
 import javafx.animation.TranslateTransition;
+import javafx.beans.binding.Bindings;
 import javafx.beans.value.ChangeListener;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.geometry.VPos;
 import javafx.scene.Cursor;
+import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
-import javafx.scene.paint.Color;
-import javafx.scene.paint.CycleMethod;
-import javafx.scene.paint.LinearGradient;
-import javafx.scene.paint.Stop;
-import javafx.scene.shape.Circle;
-import javafx.scene.shape.Line;
-import javafx.scene.shape.Rectangle;
+import javafx.scene.paint.*;
+import javafx.scene.shape.*;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.scene.transform.Scale;
+import javafx.scene.transform.Transform;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import javafx.stage.Screen;
-import javafx.scene.shape.SVGPath;
 
 
 import java.sql.SQLOutput;
@@ -78,36 +78,60 @@ public class View {
     StackPane rectangleWithLabels = new StackPane(referenceWrapper, labelsBox);
     StackPane rectWithMarker = new StackPane(rectangleWithLabels, markerWrapper);
     // ---------- tickContainer ----------
+    SVGPath handIcon = new SVGPath();
     private final HBox tickContainer = new HBox();
     private final Pane spaceWrapper = new Pane();
     private final Pane ticksWrapper = new Pane();
     private EventHandler<MouseEvent> releaseSelectionHandler;
     private final int sampleSpaceWidth = 90;
-    // ----------- dropdownChromContainer --------
-    private final HBox dropdownChromContainer = new HBox(10);
+    // ----------- logoContainer ------------------
+    private final HBox logoContainer = new HBox();
+    Rectangle logoRectangle = new Rectangle(158, 61);
+    Image logoImage = new Image("file:./src/main/resources/com/javafxapp/logo.png",
+            0, 0,
+            true,
+            true);
+    ImagePattern imagePattern = new ImagePattern(
+            logoImage
+    );
+    // ----------- control container --------
+    private GridPane controlWrapper = new GridPane();
+    ColumnConstraints controlCol0 = new ColumnConstraints();
+    ColumnConstraints controlCol1 = new ColumnConstraints();
+    ColumnConstraints controlCol2 = new ColumnConstraints();
+    // nav container
+    private final HBox navContainer = new HBox(10);
     TextField regionField = new TextField();
     ComboBox<String> chromComboBox = new ComboBox<>();
     Button processRegionButton = new Button("Go");
-    // ----------- controlContainer ---------
-    private final HBox controlContainer = new HBox();
-    Region controlContainerSpacer = new Region();
-    Button zoomInButton = new Button("+");
-    Button zoomOutButton = new Button("-");
+    // controls
+    private final HBox generalControlContainer = new HBox();
+    Region generalControlSpacer = new Region();
+    Button zoomInButton = new Button("Zoom +");
+    Button zoomOutButton = new Button("Zoom -");
+    Button processButton = new Button("Color by Haplotype");
+    Button showSameButton = new Button("Show Same Calls");
+    Button showDiffButton = new Button("Show Diff Calls");
+    Button shrinkTrackHeightButton = new Button("- Height");
+    Button growTrackHeightButton = new Button("+ Height");
+    // ------------ selectionControlContainer ------------------
+    private final HBox selectionControlContainer = new HBox();
+    Region selectionControlSpacer = new Region();
     Button clearButton = new Button("Clear");
-    Button processButton = new Button("Display Haplotypes");
-    Button processBlocksButton = new Button("Display Variants in Unpinned");
-    Button shrinkTrackHeightButton = new Button("- Track");
-    Button growTrackHeightButton = new Button("+ Track");
     Button sidePaneButton = new Button("Selection Options");
     // ---------- callsPanel ----------
+    double scrollViewportHeight = 0;
     Tooltip callInfoTooltip = new Tooltip();
     private final HBox callsContentContainer = new HBox();
-    private final VBox samplesInfoContainer = new VBox();
+    private final VBox samplesInfoContainer = new VBox(0);
     private final VBox samplesContainer = new VBox(0);
     private final HBox selectionContainer = new HBox();
     private final Pane selectionWrapper = new Pane();
     private final StackPane samplePanel = new StackPane(samplesContainer, selectionContainer);
-    private final ScrollPane callsPanel = new ScrollPane(samplePanel);
+    VBox sampleGroup = new VBox(samplePanel);
+    private final ScrollPane samplesInfoPanel = new ScrollPane(samplesInfoContainer);
+    private final ScrollPane callsPanel = new ScrollPane(sampleGroup);
+    private final HashMap<String, ArrayList<Node>> nodeGroups = new HashMap<>();
 
 
     public View(Stage primaryStage) {
@@ -168,7 +192,8 @@ public class View {
         Separator separator2 = new Separator();
         selectionOptionsSideContainer.getChildren().add(separator2);
         // plots
-        selectionOptionsSideContainer.getChildren().add(processBlocksButton);
+        selectionOptionsSideContainer.getChildren().add(showSameButton);
+        selectionOptionsSideContainer.getChildren().add(showDiffButton);
         selectionOptionsSideContainer.getChildren().add(processButton);
 
 
@@ -234,8 +259,27 @@ public class View {
         // ---------- MENU --------------
         fileMenu.getItems().add(importVCFItem);
         menuBar.getMenus().add(fileMenu);
-        // ---------- DROPDOWN CHROM CONTAINER ----
-        dropdownChromContainer.setAlignment(Pos.CENTER);
+        // ---------- LOGO CONTAINER --------------
+        logoRectangle.setFill(Color.TRANSPARENT);
+        logoContainer.getChildren().add(logoRectangle);
+        logoRectangle.setFill(imagePattern);
+
+        // ---------- CONTROL CONTAINER ----
+        // controlled width columns
+        controlCol0.setPercentWidth(33);
+        controlCol0.setHgrow(Priority.ALWAYS);
+        controlCol1.setPercentWidth(34);
+        controlCol1.setHgrow(Priority.ALWAYS);
+        controlCol2.setPercentWidth(33);
+        controlCol2.setHgrow(Priority.ALWAYS);
+        controlWrapper.getColumnConstraints().addAll(controlCol0, controlCol1, controlCol2);
+        // add hboxes
+        controlWrapper.add(logoContainer, 0, 0);
+        controlWrapper.add(navContainer, 1, 0);
+        controlWrapper.add(generalControlContainer, 2, 0);
+
+        // navigation
+        navContainer.setAlignment(Pos.CENTER);
         regionField.setPromptText("Show region: chrom1:0-100");
         regionField.setStyle("""
         -fx-focus-color: transparent;
@@ -254,7 +298,7 @@ public class View {
         -fx-border-width: 1px;
         -fx-cursor: hand;
         """);
-        dropdownChromContainer.getChildren().addAll(chromComboBox, regionField, processRegionButton);
+        navContainer.getChildren().addAll(chromComboBox, regionField, processRegionButton);
         chromComboBox.setStyle("""
         -fx-focus-color: transparent;
         -fx-faint-focus-color: transparent;
@@ -270,27 +314,27 @@ public class View {
         regionField.setMaxWidth(180);
         chromComboBox.setMinWidth(180);
         chromComboBox.setMaxWidth(180);
-        // ---------- CONTROL PANEL -----
+        // controls
         // push buttons right
-        HBox.setHgrow(controlContainerSpacer, Priority.ALWAYS);
+        HBox.setHgrow(generalControlSpacer, Priority.ALWAYS);
         // initially set buttons to disabled until file is loaded
         zoomInButton.setDisable(true);
         zoomOutButton.setDisable(true);
         processButton.setDisable(true);
-        processBlocksButton.setDisable(true);
+        showSameButton.setDisable(true);
+        showDiffButton.setDisable(true);
         clearButton.setDisable(true);
         shrinkTrackHeightButton.setDisable(true);
         growTrackHeightButton.setDisable(true);
         sidePaneButton.setDisable(true);
         closeSidePaneButton.setDisable(true);
         showMateButton.setDisable(true);
-        zoomInButton.setMinSize(35, 25);
-        zoomInButton.setMaxSize(35, 25);
-        zoomOutButton.setMinSize(35, 25);
-        zoomOutButton.setMaxSize(35, 25);
+        zoomInButton.setMinSize(70, 25);
+        zoomInButton.setMaxSize(70, 25);
+        zoomOutButton.setMinSize(70, 25);
+        zoomOutButton.setMaxSize(70, 25);
         clearButton.setMinSize(50,25);
         processButton.setMinSize(50,25);
-        processBlocksButton.setMinSize(75,25);
         shrinkTrackHeightButton.setMinSize(75,25);
         shrinkTrackHeightButton.setMaxSize(75,25);
         growTrackHeightButton.setMinSize(80,25);
@@ -304,7 +348,8 @@ public class View {
         zoomOutButton.setFocusTraversable(false);
         clearButton.setFocusTraversable(false);
         processButton.setFocusTraversable(false);
-        processBlocksButton.setFocusTraversable(false);
+        showSameButton.setFocusTraversable(false);
+        showDiffButton.setFocusTraversable(false);
         shrinkTrackHeightButton.setFocusTraversable(false);
         growTrackHeightButton.setFocusTraversable(false);
         sidePaneButton.setFocusTraversable(false);
@@ -315,35 +360,60 @@ public class View {
         zoomOutButton.setStyle(circularStyle);
         clearButton.setStyle(circularStyle);
         processButton.setStyle(circularStyle);
-        processBlocksButton.setStyle(circularStyle);
+        showSameButton.setStyle(circularStyle);
+        showDiffButton.setStyle(circularStyle);
         shrinkTrackHeightButton.setStyle(circularStyle);
         growTrackHeightButton.setStyle(circularStyle);
         sidePaneButton.setStyle(circularStyle);
         closeSidePaneButton.setStyle(circularStyle);
         closeSidePaneButton.setStyle("-fx-font-size: 12px;");
         // add button
-        controlContainer.getChildren().add(controlContainerSpacer);
-        controlContainer.getChildren().add(zoomInButton);
-        controlContainer.getChildren().add(zoomOutButton);
-        controlContainer.getChildren().add(clearButton);
-        controlContainer.getChildren().add(shrinkTrackHeightButton);
-        controlContainer.getChildren().add(growTrackHeightButton);
-        controlContainer.getChildren().add(sidePaneButton);
+        generalControlContainer.setAlignment(Pos.CENTER_RIGHT);
+        generalControlContainer.getChildren().add(generalControlSpacer);
+        generalControlContainer.getChildren().add(zoomInButton);
+        generalControlContainer.getChildren().add(zoomOutButton);
+        generalControlContainer.getChildren().add(shrinkTrackHeightButton);
+        generalControlContainer.getChildren().add(growTrackHeightButton);
+
+        // -----------SELECTIONCONTROLCONTAINER --------------------
+        selectionControlContainer.setMinHeight(30);
+        selectionControlContainer.setMaxHeight(30);
+        selectionControlContainer.setPrefHeight(30);
+        selectionControlContainer.setAlignment(Pos.BOTTOM_RIGHT);
+        HBox.setHgrow(selectionControlSpacer, Priority.ALWAYS);
+        selectionControlContainer.getChildren().add(selectionControlSpacer);
+        selectionControlContainer.getChildren().add(clearButton);
+        selectionControlContainer.getChildren().add(sidePaneButton);
+
+
         // ---------- REF PANEL ---------
         referenceContainer.setStyle("-fx-background-color: white;");
         // reference rectangle
         this.referenceWrapper.setPrefHeight(50);
+        this.referenceWrapper.setMinHeight(50);
+        this.referenceWrapper.setMaxHeight(50);
         this.referenceContainer.getChildren().add(rectWithMarker);
         // marker
         markerWrapper.getChildren().add(marker);
         marker.setOnMouseEntered(e -> marker.setCursor(Cursor.HAND));
         marker.setOnMouseExited(e -> marker.setCursor(Cursor.DEFAULT));
-        layout.getChildren().addAll(menuBar, dropdownChromContainer, controlContainer, referenceContainer, tickContainer, callsContentContainer);
+        layout.getChildren().addAll(menuBar, controlWrapper, selectionControlContainer, referenceContainer, tickContainer, callsContentContainer);
         // ---------- TICK PANEL ---------
         spaceWrapper.setMinWidth(this.sampleSpaceWidth);
         spaceWrapper.setPrefWidth(this.sampleSpaceWidth);
         spaceWrapper.setMaxWidth(this.sampleSpaceWidth);
+        // hand icon
+        handIcon.setContent(
+                "M12 1.5 Q11.2344 1.5 10.625 1.9844 Q10.0312 2.4531 9.8438 3.1875 Q9.4062 3 9 3 Q8.0938 3 7.4219 3.6719 Q6.75 4.3281 6.75 5.25 L6.75 13.3125 L6.0938 12.6562 Q5.4375 12 4.5 12 Q3.5625 12 2.9062 12.6562 Q2.25 13.3125 2.25 14.25 Q2.25 15.1875 2.9062 15.8438 L8 20.9219 Q8.7188 21.6406 9.5625 22.0625 Q10.5 22.5 11.5312 22.5 L15 22.5 Q16.4375 22.5 17.6406 21.7969 Q18.8438 21.0938 19.5469 19.8906 Q20.25 18.6719 20.25 17.25 L20.25 8.25 Q20.25 7.3281 19.5781 6.6719 Q18.9219 6 18 6 Q17.6562 6 17.25 6.1406 L17.25 5.25 Q17.25 4.3281 16.5781 3.6719 Q15.9219 3 15 3 Q14.6094 3 14.1562 3.1875 Q13.9688 2.4531 13.375 1.9844 Q12.7812 1.5 12 1.5 ZM12 3 Q12.3281 3 12.5312 3.2188 Q12.75 3.4219 12.75 3.75 L12.75 11.25 L14.25 11.25 L14.25 5.25 Q14.25 4.9219 14.4531 4.7188 Q14.6719 4.5 15 4.5 Q15.3281 4.5 15.5312 4.7188 Q15.75 4.9219 15.75 5.25 L15.75 11.25 L17.25 11.25 L17.25 8.25 Q17.25 7.9219 17.4531 7.7188 Q17.6719 7.5 18 7.5 Q18.3281 7.5 18.5312 7.7188 Q18.75 7.9219 18.75 8.25 L18.75 17.25 Q18.75 18.2812 18.25 19.1406 Q17.75 19.9844 16.8906 20.5 Q16.0312 21 15 21 L11.5312 21 Q10.2188 21 9.0781 19.8438 L3.9688 14.7812 Q3.7344 14.5469 3.7344 14.25 Q3.7344 13.9375 3.9688 13.7031 Q4.2031 13.4688 4.5 13.4688 Q4.8125 13.4688 5.0469 13.7031 L8.25 16.9375 L8.25 5.25 Q8.25 4.9219 8.4531 4.7188 Q8.6719 4.5 9 4.5 Q9.3281 4.5 9.5312 4.7188 Q9.75 4.9219 9.75 5.25 L9.75 11.25 L11.25 11.25 L11.25 3.75 Q11.25 3.4219 11.4531 3.2188 Q11.6719 3 12 3 Z"
+        );
+        handIcon.setFill(Color.TRANSPARENT);
+        handIcon.setScaleX(1);
+        handIcon.setScaleY(1);
+        handIcon.setId("handIcon");
+
         tickContainer.getChildren().add(spaceWrapper);
+        this.tickContainer.setPrefHeight(40);
+        this.tickContainer.setMinHeight(40);
         this.ticksWrapper.setPrefHeight(40);
         tickContainer.getChildren().add(ticksWrapper);
         ticksWrapper.setOnMouseEntered(e -> ticksWrapper.setCursor(Cursor.HAND));
@@ -358,8 +428,12 @@ public class View {
             this.ticksReleased(e);
         });
         // ---------- CALLS PANEL -------
-        this.callsContentContainer.getChildren().add(samplesInfoContainer);
+        this.callsContentContainer.getChildren().add(samplesInfoPanel);
         this.callsContentContainer.getChildren().add(callsPanel);
+        samplesInfoPanel.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        samplesInfoPanel.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        samplesInfoPanel.vvalueProperty().bindBidirectional(callsPanel.vvalueProperty());
+        samplesInfoPanel.setStyle("-fx-background-color: transparent;");
         this.callsPanel.setStyle("-fx-focus-color: transparent; -fx-faint-focus-color: transparent;");
         this.callsPanel.setMinWidth(Screen.getPrimary().getBounds().getWidth() - sampleSpaceWidth);
         this.callsPanel.setPrefWidth(Screen.getPrimary().getBounds().getWidth() - sampleSpaceWidth);
@@ -367,7 +441,6 @@ public class View {
         selectionWrapper.setPickOnBounds(false);
         this.selectionContainer.setPickOnBounds(false);
         this.selectionContainer.getChildren().add(selectionWrapper);
-        this.callsPanel.setFitToHeight(true);
     }
 
     // *************************************************************** MAIN CONTROL FUNCTIONS ************************************************************************
@@ -378,7 +451,8 @@ public class View {
         this.zoomInButton.setDisable(false);
         this.zoomOutButton.setDisable(false);
         this.processButton.setDisable(false);
-        this.processBlocksButton.setDisable(false);
+        this.showSameButton.setDisable(false);
+        this.showDiffButton.setDisable(false);
         this.clearButton.setDisable(false);
         this.shrinkTrackHeightButton.setDisable(false);
         this.growTrackHeightButton.setDisable(false);
@@ -390,6 +464,17 @@ public class View {
         this.showMateButton.setDisable(false);
         double bottomOfTickContainerY = tickContainer.getLayoutY() + tickContainer.getLayoutBounds().getHeight();
         sidePaneContainer.setTranslateY(bottomOfTickContainerY);
+
+        // 2. Get the total height of the window
+        double topOfPanelOnScreen = callsPanel.localToScreen(0, 0).getY();
+        double windowBottomOnScreen = callsPanel.getScene().getWindow().getY() + callsPanel.getScene().getWindow().getHeight();
+        StackPane.setAlignment(layout, Pos.TOP_CENTER);
+        callsPanel.setMinHeight(0);
+        callsPanel.setPrefHeight(windowBottomOnScreen - topOfPanelOnScreen);
+        callsPanel.setMaxHeight(windowBottomOnScreen - topOfPanelOnScreen);
+        callsPanel.setFitToHeight(false);
+        callsPanel.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
+        this.scrollViewportHeight = windowBottomOnScreen - topOfPanelOnScreen;
     }
 
     /**
@@ -402,7 +487,8 @@ public class View {
         this.zoomInButton.setDisable(true);
         this.zoomOutButton.setDisable(true);
         this.processButton.setDisable(true);
-        this.processBlocksButton.setDisable(true);
+        this.showSameButton.setDisable(true);
+        this.showDiffButton.setDisable(true);
         this.clearButton.setDisable(true);
         this.shrinkTrackHeightButton.setDisable(true);
         this.growTrackHeightButton.setDisable(true);
@@ -463,7 +549,17 @@ public class View {
      *
      * Post Conditions: chromComboBox default set to < ALL >
      */
-    public void initReference(LinkedHashMap<String, Chromosome> refContigs, int totalRefLength) {
+    public void initReference(LinkedHashMap<String, Chromosome> refContigs, long totalRefLength) {
+        // add necessary icon as init reference
+        // display hand icon
+        handIcon.layoutXProperty().bind(spaceWrapper.widthProperty().subtract(handIcon.boundsInLocalProperty().get().getWidth()).subtract(spaceWrapper.widthProperty().multiply(0.25)));
+        handIcon.layoutYProperty().bind(
+                spaceWrapper.heightProperty()
+                        .subtract(spaceWrapper.heightProperty().multiply(0.1)) // 25% from bottom
+                        .subtract(handIcon.boundsInLocalProperty().get().getHeight()) // move icon top up
+        );
+        spaceWrapper.getChildren().add(handIcon);
+
         referenceWrapper.setBackground(new Background(new BackgroundFill(Color.WHITE, CornerRadii.EMPTY, Insets.EMPTY)));
 //        referenceWrapper.setBorder(new Border(new BorderStroke(
 //                Color.BLACK,
@@ -473,6 +569,7 @@ public class View {
 //        )));
         labelsBox.setStyle("-fx-alignment: center;");
         marker.setFill(Color.ORANGERED);
+
         marker.setOpacity(0.5);
         // fill chrom combo box
         double currentX = 0;
@@ -549,12 +646,12 @@ public class View {
         }
     }
 
-    public void initSamples(ArrayList<Sample> samples, HashMap<String, Color> sampleColors, int refLength, double zoomLevel, double baseFontSize, int originalTrackHeight) {
+    public void initSamples(ArrayList<Sample> samples, HashMap<String, Color> sampleColors, long refLength, double zoomLevel, double baseFontSize, int originalTrackHeight) {
         /*
         Post-conditions: Samples added to sampleOrder ArrayList
          */
         // add additional track for allele frequency
-        this.createNewAnnotationTrack(refLength, zoomLevel, "AF", baseFontSize, 100, "AF");
+        this.createNewAnnotationTrack(refLength, zoomLevel, "Allele Freq.", baseFontSize, 100, "AF");
         for (Sample sample : samples) {
             sampleOrder.add(sample);
             this.createNewCallTrack(sampleColors, refLength, zoomLevel, sample.getName(), baseFontSize, originalTrackHeight);
@@ -693,11 +790,15 @@ public class View {
                     currentCalls.getChildren().add(lineIns1);
                     currentCalls.getChildren().add(lineIns2);
                 }
-                else {
+                else if (Objects.equals(currentCall.getType(), "BND") || Objects.equals(currentCall.getType(), "TRA")){
                     callRect.setStroke(Color.BLACK);
                     callRect.setOpacity(0.7);
                     callRect.setFill(Color.BLACK);
                     callRect.getStrokeDashArray().setAll(12.0, 6.0);
+                }
+                else {
+                    System.err.println("Unrecognized/unsupported SV type that was not caught earlier: " + currentCall.getType() + ". Ignoring call.");
+                    continue;
                 }
                 currentCalls.getChildren().add(callRect);
                 callRect.setOnMouseEntered(e -> {
@@ -709,6 +810,20 @@ public class View {
                     this.setLiveCall(currentCall);
                     this.openSidePane();
                 });
+            }
+        }
+    }
+
+    public void hideCalls(ArrayList<Sample> samples, ArrayList<Call> calls) {
+        // loop through each sample
+        for (Sample sample : samples) {
+            // get sample track
+            Pane currentCalls = (Pane) this.samplesContainer.lookup("#" + sample.getName());
+            // loop through calls to hide
+            for (Call call : calls) {
+                for (Node nodeToRemove : nodeGroups.get(call.getId())) {
+                    currentCalls.getChildren().remove(nodeToRemove);
+                }
             }
         }
     }
@@ -728,14 +843,11 @@ public class View {
             currentCalls.setMinWidth(chromosome.getLength() * zoomLevel);
             currentCalls.setPrefWidth(chromosome.getLength() * zoomLevel);
             currentCalls.setMaxWidth(chromosome.getLength() * zoomLevel);
-            System.out.println("START AND END INTERVAL : " + startInterval + " , " + endInterval);
             // loop through each tile
             for (int i=startInterval; i<=endInterval; i++) {
-                System.out.println("I IS " + i);
                 // for each call
-                ArrayList<Call> calls = sample.getTiledCalls().get(chromosome.getName()).get(i);
-                if (calls == null) {
-                    System.err.println("NULL for key: " + chromosome.getName() + " " + " interval " + i);
+                if (sample.getTiledCalls().get(chromosome.getName()).get(i) == null) {
+                    continue;
                 }
                 for (Call currentCall : sample.getTiledCalls().get(chromosome.getName()).get(i)) {
                     // already seen this call and added it
@@ -745,8 +857,15 @@ public class View {
                     // haven't added this call in any other tiles for this sample yet
                     else {
                         seenIds.add(currentCall.getId());
-                        Rectangle callRect;
-                        callRect = new Rectangle(currentCall.getStart()*zoomLevel, 1, currentCall.getLength()*zoomLevel, originalTrackHeight-2);
+                        // make sure call is added to node groups
+                        if (!nodeGroups.containsKey(currentCall.getId())) {
+                            nodeGroups.put(currentCall.getId(), new ArrayList<>());
+                        }
+                        else {
+                            // do nothing
+                        }
+                        Rectangle callRect = new Rectangle(currentCall.getStart()*zoomLevel, 1, currentCall.getLength()*zoomLevel, originalTrackHeight-2);
+                        Polygon traPoly = new Polygon();
                         // styling
                         callRect.setOpacity(1);
                         callRect.setStrokeWidth(2);
@@ -756,21 +875,52 @@ public class View {
                             callRect.setStroke(Color.rgb(40, 70, 160));
                             callRect.setOpacity(0.5);
                             callRect.setFill(Color.rgb(65, 105, 225));
-                            double percentageHeight = originalTrackHeight * 0.15;
-                            double percentageLength = currentCall.getLength()*zoomLevel * 0.1;
-                            double endX = currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - percentageLength;
-                            Line lineDup1 = new Line(currentCall.getStart()*zoomLevel + percentageLength, percentageHeight, endX, percentageHeight);
-                            Line lineDup2 = new Line(currentCall.getStart()*zoomLevel + percentageLength, originalTrackHeight - percentageHeight, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - percentageLength, originalTrackHeight - percentageHeight);
-                            Line lineDup3 = new Line(currentCall.getStart()*zoomLevel + percentageLength, percentageHeight, currentCall.getStart()*zoomLevel + percentageLength, originalTrackHeight - percentageHeight);
-                            Line lineDup4 = new Line(currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - percentageLength, percentageHeight, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - percentageLength, originalTrackHeight - percentageHeight);
-                            lineDup1.setStroke(Color.rgb(40, 70, 160));
-                            lineDup2.setStroke(Color.rgb(40, 70, 160));
-                            lineDup3.setStroke(Color.rgb(40, 70, 160));
-                            lineDup4.setStroke(Color.rgb(40, 70, 160));
-                            currentCalls.getChildren().add(lineDup1);
-                            currentCalls.getChildren().add(lineDup2);
-                            currentCalls.getChildren().add(lineDup3);
-                            currentCalls.getChildren().add(lineDup4);
+                            nodeGroups.get(currentCall.getId()).add(callRect);
+                            // if the duplication rectangle is currently big enough to show the inside lines, show
+                            // inset is the distance from inner border to outer border
+                            int inset = 5;
+                            if (currentCall.getLength()*zoomLevel > (inset*2) && originalTrackHeight > (inset*2)) {
+                                // lines for inner border
+                                double endX = currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - inset;
+                                Line lineDup1 = new Line(currentCall.getStart()*zoomLevel + inset, inset, endX, inset);
+                                Line lineDup2 = new Line(currentCall.getStart()*zoomLevel + inset, originalTrackHeight - inset, endX, originalTrackHeight - inset);
+                                Line lineDup3 = new Line(currentCall.getStart()*zoomLevel + inset, inset, currentCall.getStart()*zoomLevel + inset, originalTrackHeight - inset);
+                                Line lineDup4 = new Line(endX, inset, endX, originalTrackHeight - inset);
+                                lineDup1.setStroke(Color.rgb(40, 70, 160));
+                                lineDup2.setStroke(Color.rgb(40, 70, 160));
+                                lineDup3.setStroke(Color.rgb(40, 70, 160));
+                                lineDup4.setStroke(Color.rgb(40, 70, 160));
+                                lineDup1.setOpacity(0.5);
+                                lineDup2.setOpacity(0.5);
+                                lineDup3.setOpacity(0.5);
+                                lineDup4.setOpacity(0.5);
+                                currentCalls.getChildren().add(lineDup1);
+                                currentCalls.getChildren().add(lineDup2);
+                                currentCalls.getChildren().add(lineDup3);
+                                currentCalls.getChildren().add(lineDup4);
+                                // lines for duplication-insert portion
+                                double middleDupX = ((currentCall.getStart()*zoomLevel + inset)+endX)/2;
+                                Line lineDup5 = new Line(currentCall.getStart()*zoomLevel + inset, originalTrackHeight - inset, middleDupX, inset);
+                                Line lineDup6 = new Line(middleDupX, inset, endX, originalTrackHeight - inset);
+                                lineDup5.setStroke(Color.rgb(40, 70, 160));
+                                lineDup6.setStroke(Color.rgb(40, 70, 160));
+                                lineDup5.setOpacity(0.5);
+                                lineDup6.setOpacity(0.5);
+                                currentCalls.getChildren().add(lineDup5);
+                                currentCalls.getChildren().add(lineDup6);
+                                // add to node groups
+                                nodeGroups.get(currentCall.getId()).add(lineDup1);
+                                nodeGroups.get(currentCall.getId()).add(lineDup2);
+                                nodeGroups.get(currentCall.getId()).add(lineDup3);
+                                nodeGroups.get(currentCall.getId()).add(lineDup4);
+                                nodeGroups.get(currentCall.getId()).add(lineDup5);
+                                nodeGroups.get(currentCall.getId()).add(lineDup6);
+
+                            }
+                            // otherwise, don't add additional lines
+                            else {
+                                // do nothing!
+                            }
                         }
                         else if (Objects.equals(currentCall.getType(), "INV")) {
                             callRect.setStroke(Color.rgb(200, 140, 0));
@@ -784,6 +934,10 @@ public class View {
                             lineInv2.setOpacity(0.6);
                             currentCalls.getChildren().add(lineInv1);
                             currentCalls.getChildren().add(lineInv2);
+                            // add to node groups
+                            nodeGroups.get(currentCall.getId()).add(callRect);
+                            nodeGroups.get(currentCall.getId()).add(lineInv1);
+                            nodeGroups.get(currentCall.getId()).add(lineInv2);
                         }
                         else if (Objects.equals(currentCall.getType(), "DEL")) {
                             callRect.setStroke(Color.rgb(120, 30, 2));
@@ -797,6 +951,10 @@ public class View {
                             lineDel2.setOpacity(0.4);
                             currentCalls.getChildren().add(lineDel1);
                             currentCalls.getChildren().add(lineDel2);
+                            // add to node groups
+                            nodeGroups.get(currentCall.getId()).add(callRect);
+                            nodeGroups.get(currentCall.getId()).add(lineDel1);
+                            nodeGroups.get(currentCall.getId()).add(lineDel2);
                         }
                         else if (Objects.equals(currentCall.getType(), "INS")) {
                             callRect.setStroke(Color.rgb(100, 140, 80));
@@ -810,19 +968,82 @@ public class View {
                             lineIns2.setOpacity(0.5);
                             currentCalls.getChildren().add(lineIns1);
                             currentCalls.getChildren().add(lineIns2);
+                            // add to node groups
+                            nodeGroups.get(currentCall.getId()).add(callRect);
+                            nodeGroups.get(currentCall.getId()).add(lineIns1);
+                            nodeGroups.get(currentCall.getId()).add(lineIns2);
                         }
-                        else {
+                        else if (Objects.equals(currentCall.getType(), "BND") || Objects.equals(currentCall.getType(), "TRA")) {
+                            // direction at first character, means join before
+                            if (currentCall.getAlternate().charAt(0) ==  ']' || currentCall.getAlternate().charAt(0) == '[') {
+                                // joining sequence is in reverse direction
+                                if (currentCall.getAlternate().charAt(0) ==  ']') {
+                                    traPoly.getPoints().addAll(
+                                            currentCall.getStart()*zoomLevel, 1.0,
+                                            currentCall.getStart()*zoomLevel, (double) originalTrackHeight /3,
+                                            currentCall.getStart()*zoomLevel-7, (double) (originalTrackHeight / 3) /2
+                                    );
+                                }
+                                // joining sequence is in forward direction
+                                else {
+                                    traPoly.getPoints().addAll(
+                                            currentCall.getStart()*zoomLevel-7, 1.0,
+                                            currentCall.getStart()*zoomLevel-7, (double) originalTrackHeight /3,
+                                            currentCall.getStart()*zoomLevel, (double) (originalTrackHeight / 3) /2
+                                    );
+                                }
+                            }
+                            // otherwise other sequence joined after this ref char
+                            else {
+                                // joining sequence is in the reverse direction
+                                if (currentCall.getAlternate().charAt(currentCall.getAlternate().length() - 1) ==  ']') {
+                                    traPoly.getPoints().addAll(
+                                            currentCall.getStart()*zoomLevel+7, 1.0,
+                                            currentCall.getStart()*zoomLevel+7, (double) originalTrackHeight /3,
+                                            currentCall.getStart()*zoomLevel, (double) (originalTrackHeight / 3) /2
+                                    );
+                                }
+                                // joining sequence is in the forward direction
+                                else {
+                                    traPoly.getPoints().addAll(
+                                            currentCall.getStart()*zoomLevel, 1.0,
+                                            currentCall.getStart()*zoomLevel, (double) originalTrackHeight /3,
+                                            currentCall.getStart()*zoomLevel+7, (double) (originalTrackHeight / 3) /2
+                                    );
+                                }
+                            }
                             callRect.setStroke(Color.BLACK);
                             callRect.setOpacity(0.7);
                             callRect.setFill(Color.BLACK);
                             callRect.getStrokeDashArray().setAll(12.0, 6.0);
+                            callRect.setStrokeWidth(3);
+                            // add to node groups
+                            nodeGroups.get(currentCall.getId()).add(callRect);
+                            nodeGroups.get(currentCall.getId()).add(traPoly);
                         }
+                        else {
+                            System.err.println("Unrecognized/unsupported SV type that was not caught earlier: " + currentCall.getType() + ". Ignoring call.");
+                            continue;
+                        }
+                        // for call rectangle
                         currentCalls.getChildren().add(callRect);
                         callRect.setOnMouseEntered(e -> {
                             callRect.setCursor(Cursor.HAND);
                         });
                         callRect.setOnMouseClicked(e -> {
                             callRect.setStroke(Color.BLACK);
+                            this.showCallInformation(currentCall, samples);
+                            this.setLiveCall(currentCall);
+                            this.openSidePane();
+                        });
+                        // for TRA polygon
+                        traPoly.setFill(Color.rgb(80, 80, 80));
+                        traPoly.setId("TRA" + currentCall.getId());
+                        currentCalls.getChildren().add(traPoly);
+                        traPoly.setOnMouseEntered(e -> {
+                            traPoly.setCursor(Cursor.HAND);
+                        });
+                        traPoly.setOnMouseClicked(e -> {
                             this.showCallInformation(currentCall, samples);
                             this.setLiveCall(currentCall);
                             this.openSidePane();
@@ -847,7 +1068,7 @@ public class View {
         Label chromLabel = (Label) callInfoSideContainer.lookup("#chrom");
         chromLabel.setText(call.getChromosome());
         Label posLabel = (Label) callInfoSideContainer.lookup("#pos");
-        posLabel.setText(String.valueOf(call.getStart()));
+        posLabel.setText(String.valueOf(String.format("%,d", call.getStart())));
         Label idLabel = (Label) callInfoSideContainer.lookup("#id");
         idLabel.setText(call.getId());
 
@@ -900,7 +1121,7 @@ public class View {
      * @param refLength int length of the entire reference
      * @return the zoom level
      */
-    public double initZoomWG(int refLength) {
+    public double initZoomWG(long refLength) {
         this.ticksWrapper.getChildren().clear();
         // calculate zoom level such that whole genome is in view
         return callsPanel.getViewportBounds().getWidth() / refLength;
@@ -908,8 +1129,18 @@ public class View {
 
     public void showCoords(Chromosome chromosome, int tickSpacing, double zoomLevel, LinkedHashMap<String, Chromosome> refContigs) {
         this.ticksWrapper.getChildren().clear();
+        // get status of hand icon
+        SVGPath handIcon = (SVGPath) this.spaceWrapper.lookup("#handIcon");
         // display ticks for chromosome names
         if (Objects.equals(chromosome.getName(), "<ALL>")) {
+            // update hand icon
+            if (handIcon.getFill().equals(Color.TRANSPARENT)) {
+                // do nothing
+            }
+            else {
+                handIcon.setFill(Color.TRANSPARENT);
+            }
+            // show names
             for (Map.Entry<String, Chromosome> refContig : refContigs.entrySet()) {
                 if (Objects.equals(refContig.getKey(), "<ALL>")) {
                     // do nothing
@@ -930,24 +1161,17 @@ public class View {
         }
         // display ticks for increment
         else {
+            // update hand icon
+            if (handIcon.getFill().equals(Color.TRANSPARENT)) {
+                handIcon.setFill(Color.BLACK);
+            }
+            else {
+                // do nothing, already black
+            }
             for (int x = 0; x <= chromosome.getLength(); x += tickSpacing) {
                 Text text = new Text(String.valueOf(x));
-                // base (b) range
-                if (x < 1000) {
-                    text = new Text(x + " b");
-                }
-                // kilobase (KB) range
-                else if (x >= 1000 && x < 1000000) {
-                    double truncatedX = (double) x / 1000;
-                    if (truncatedX % 1 == 0) {
-                        text = new Text(String.format("%.0f", truncatedX) + " kb");
-                    }
-                    else {
-                        text = new Text(String.format("%.1f", truncatedX) + " kb");
-                    }
-                }
-                // megabase (MB) range
-                else if (x >= 1000000) {
+                // if tick spacing is greater than 100,000 bp (100 kb), truncate
+                if (tickSpacing >= 100000) {
                     double truncatedX = (double) x / 1000000;
                     if (truncatedX % 1 == 0) {
                         text = new Text(String.format("%.0f", truncatedX) + " Mb");
@@ -956,9 +1180,11 @@ public class View {
                         text = new Text(String.format("%.1f", truncatedX) + " Mb");
                     }
                 }
+                // otherwise, do not truncate, but add commas
                 else {
-                    // do nothing
+                    text = new Text(String.format("%,d", x) + " bp");
                 }
+
                 double textWidth = text.getLayoutBounds().getWidth();
                 text.setX((x*zoomLevel) - textWidth / 2);
                 text.setY(25);
@@ -988,6 +1214,16 @@ public class View {
         }
     }
 
+    public double getHorizontalSBHeight() {
+        ScrollBar hBar = (ScrollBar) this.callsPanel.lookup(".scroll-bar:horizontal");
+        if (hBar == null || !hBar.isVisible()) {
+            return 0;
+        }
+        else {
+            return hBar.getHeight();
+        }
+    }
+
     /**
      * Checks if the vertical scrollbar (on Scrollpane callsPanel) is visible or not
      *
@@ -1000,7 +1236,7 @@ public class View {
 
     // *************************************************************** TRACK CREATION FUNCTIONS ************************************************************************
 
-    public void createNewAnnotationTrack(int refLength, double zoomLevel, String trackName, double baseFontSize, int height, String key) {
+    public void createNewAnnotationTrack(long refLength, double zoomLevel, String trackName, double baseFontSize, int height, String key) {
         // types
         // GENEREPEAT
         // AF
@@ -1061,6 +1297,7 @@ public class View {
 
         // label container to hold label and color rect if applicable
         VBox labelContainer = new VBox();
+        labelContainer.setAlignment(Pos.CENTER);
         labelWrapper.getChildren().add(sampleLabel);
         labelContainer.getChildren().add(labelWrapper);
 
@@ -1070,7 +1307,7 @@ public class View {
         this.samplesContainer.getChildren().add(callsWrapper);
     }
 
-    public void createNewCallTrack(HashMap<String, Color> sampleColors, int refLength, double zoomLevel, String sampleName, double baseFontSize, int height) {
+    public void createNewCallTrack(HashMap<String, Color> sampleColors, long refLength, double zoomLevel, String sampleName, double baseFontSize, int height) {
         // create callsWrapper to hold sample calls
         Pane callsWrapper = new Pane();
         callsWrapper.setPrefWidth(refLength * zoomLevel);
@@ -1252,8 +1489,8 @@ public class View {
         return this.markerWrapper.getWidth();
     }
 
-    public double getBaseCallPanelHeight() {
-        return this.callsPanel.getLayoutBounds().getHeight();
+    public double getCallsPanelHeight() {
+        return this.scrollViewportHeight;
     }
 
     public void updateTrackHeight(double val) {
@@ -1262,8 +1499,27 @@ public class View {
         scale.setPivotY(0);
         scale.setY(val);
         // remove old transforms
-        this.callsPanel.getTransforms().clear();
-        this.callsPanel.getTransforms().add(scale);
+        this.sampleGroup.getTransforms().clear();
+        this.sampleGroup.getTransforms().add(scale);
+        this.samplesInfoContainer.getTransforms().clear();
+        this.samplesInfoContainer.getTransforms().add(scale);
+        triggerScrollPane();
+    }
+
+    private void triggerScrollPane() {
+        // Apply CSS/layout for accurate prefHeight
+        double newHeight = this.sampleGroup.getBoundsInParent().getHeight();
+        sampleGroup.setMinHeight(newHeight);
+        sampleGroup.setPrefHeight(newHeight);
+        sampleGroup.setMaxHeight(newHeight);
+        ScrollBar hScrollBar = (ScrollBar) callsPanel.lookup(".scroll-bar:horizontal");
+        double scrollbarHeight = 0;
+        if (hScrollBar != null) {
+            scrollbarHeight = hScrollBar.getHeight();
+        }
+        samplesInfoContainer.setMinHeight(newHeight + scrollbarHeight);
+        samplesInfoContainer.setPrefHeight(newHeight + scrollbarHeight);
+        samplesInfoContainer.setMaxHeight(newHeight + scrollbarHeight);
     }
 
     public void redrawSampleInfoAfterScale(ArrayList<Sample> samples, double baseFontSize, double trackHeightScale, int originalTrackHeight) {
@@ -1272,14 +1528,33 @@ public class View {
          */
         for (Sample sample : samples) {
             HBox container = (HBox) samplesInfoContainer.lookup("#" + sample.getName());
-            container.setMinHeight(originalTrackHeight * trackHeightScale);
-            container.setMaxHeight(originalTrackHeight * trackHeightScale);
+//            container.setMinHeight(originalTrackHeight * trackHeightScale);
+//            container.setMaxHeight(originalTrackHeight * trackHeightScale);
             // get second vbox (labelcontainer)
             VBox labelContainer = (VBox) container.getChildren().get(1);
             // get the labelwrapper
             Pane labelWrapper = (Pane) labelContainer.getChildren().getFirst();
             Label sampleLabel = (Label) labelWrapper.getChildren().getFirst();
-            sampleLabel.setFont(Font.font(sampleLabel.getFont().getFamily(), baseFontSize));
+
+            Scale scale = null;
+            for (Transform t : samplesInfoContainer.getTransforms()) {
+                if (t instanceof Scale s) {
+                    scale = s;
+                    break;
+                }
+            }
+            if (scale != null) {
+                double scaleFactor = scale.getX();
+                // use scaleFactor to adjust font sizes
+                Font f = sampleLabel.getFont();
+                double currentFontSize = f.getSize();
+                sampleLabel.setFont(Font.font(sampleLabel.getFont().getFamily(), baseFontSize / scaleFactor));
+            }
+            System.out.println("TRACK HEIGHT SCALE IS " + trackHeightScale);
+            System.out.println("NEW HEIGHT IS " + (originalTrackHeight * trackHeightScale));
+            double adjustedFontSize = baseFontSize / trackHeightScale;
+            System.out.println("ADJUSTED FONT SIZE IS " + adjustedFontSize);
+
         }
     }
 
@@ -1501,8 +1776,11 @@ public class View {
     public void processSelectionsListener(EventHandler<ActionEvent> handler) {
         processButton.setOnAction(handler);
     }
-    public void processBlocksSelectionsListener(EventHandler<ActionEvent> handler) {
-        processBlocksButton.setOnAction(handler);
+    public void processShowSameCallsListener(EventHandler<ActionEvent> handler) {
+        showSameButton.setOnAction(handler);
+    }
+    public void processShowDiffCallsListener(EventHandler<ActionEvent> handler) {
+        showDiffButton.setOnAction(handler);
     }
     public void shrinkTrackHeightListener(EventHandler<ActionEvent> handler) {
         shrinkTrackHeightButton.setOnAction(handler);

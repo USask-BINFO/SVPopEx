@@ -1,7 +1,6 @@
 package com.javafxapp;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -38,8 +37,11 @@ public class Controller {
         view.processSelectionsListener(e -> {
             this.processSelections();
         });
-        view.processBlocksSelectionsListener(e -> {
-            this.processBlockSelections();
+        view.processShowSameCallsListener(e -> {
+            this.processShowSameCalls();
+        });
+        view.processShowDiffCallsListener(e -> {
+            this.processShowDiffCalls();
         });
         view.shrinkTrackHeightListener(e -> {
             this.updateTrackHeight(-0.1);
@@ -102,20 +104,28 @@ public class Controller {
 //            });
             this.model.reset();
             this.view.reset();
+            System.out.println("PROCESSING FILE...");
             model.processFile(fileContent);
+            System.out.println("INIT AND DRAW REFERENCE...");
             model.setCurrentChrom(model.getRefChromosomes().get("<ALL>"));
             view.initReference(model.getRefChromosomes(), model.getRefTotalLength());
             view.drawReference(model.getRefChromosomes(), "<ALL>");
+            System.out.println("SETTING ZOOM AND SHOWING MARKER AND COORDS...");
             model.setZoom(view.initZoomWG(model.getRefTotalLength()));
             view.showCoords(model.getCurrentChrom(), -1, model.getZoomLevel(), model.getRefChromosomes());
             view.updateMarkerWidth(model.getCurrentChrom(), model.getZoomLevel(), model.getCurrentChrom().getLength());
             view.updateMarkerPos(model.getCurrentChrom(), 0);
+            System.out.println("SHOW SIDE PANE...");
             view.initSidePane(model.getSamples(), model.getSampleColors(), model::getNumAnnotationsShown);
+            System.out.println("SHOW SAMPLES....");
             view.initSamples(model.getSamples(), model.getSampleColors(), model.getRefTotalLength(), model.getZoomLevel(), model.getBaseFontSize(), model.getOriginalTrackHeight());
+
+            System.out.println("ENABLE CONTROLS...");
+            view.enableControls();
             // triggers showChromosome()
             view.setChromComboBoxValue("<ALL>");
-            view.enableControls();
-//            view.viewportWidthChange(e -> {
+            this.updateTrackHeight(model.fitAllSamplesIncrement(view.getCallsPanelHeight(), view.getHorizontalSBHeight()));
+            //            view.viewportWidthChange(e -> {
 //                this.processViewportWidthChange();
 //            });
             view.scrollChange((obs,oldVal, newVal) -> {
@@ -138,10 +148,10 @@ public class Controller {
         }
         else {
             double factor;
-            if (Objects.equals(text, "+")) {
+            if (Objects.equals(text, "Zoom +")) {
                 factor = 1.5;
             }
-            else if (Objects.equals(text, "-")) {
+            else if (Objects.equals(text, "Zoom -")) {
                 factor = 0.5;
             }
             else {
@@ -167,8 +177,8 @@ public class Controller {
             // update newStart based on result
             System.out.println("---------------ANCHOR IS " + anchor);
             double newProportion = model.getGenomicProportion(view.getViewportWidth(), model.getCurrentChrom(), model.getZoomLevel());
-            int newStart = centerStart - (int) (newProportion/2);
-            int newEnd = centerStart + (int) (newProportion/2);
+            long newStart = centerStart - (int) (newProportion/2);
+            long newEnd = centerStart + (int) (newProportion/2);
             if (Objects.equals(anchor, "ABSOLUTE CENTER")) {
                 newStart = 1;
                 newEnd = model.getCurrentChrom().getLength();
@@ -187,12 +197,12 @@ public class Controller {
 
             // show calls
             System.out.println("UPDATED ZOOM SHOWING START: " + newStart + " and END : " + newEnd);
-            view.showTileCalls(model.getCurrentChrom(), view.getSampleOrderInView(), level, model.getOriginalTrackHeight(), model.getStartInterval((int) newStart), model.getEndInterval(newEnd));
-            view.showTileAlleleFreq(model.getCurrentChrom(), level, model.getOriginalTrackHeight(), model.getStartInterval((int) newStart), model.getEndInterval(newEnd));
+            view.showTileCalls(model.getCurrentChrom(), view.getSampleOrderInView(), level, model.getOriginalTrackHeight(), model.getStartInterval((int) newStart), model.getEndInterval((int) newEnd));
+            view.showTileAlleleFreq(model.getCurrentChrom(), level, model.getOriginalTrackHeight(), model.getStartInterval((int) newStart), model.getEndInterval((int) newEnd));
             double offset = ((double) newStart / model.getCurrentChrom().getLength()) * view.getMarkerWrapperWidth();
 
             // update scroll and marker based on newStart and offset (calculated from newStart)
-            view.setScroll(newStart, model.getCurrentChrom(), model.getZoomLevel());
+            view.setScroll((int) newStart, model.getCurrentChrom(), model.getZoomLevel());
             view.updateMarkerWidth(model.getCurrentChrom(), level, model.getGenomicProportion(view.getViewportWidth(), model.getCurrentChrom(), model.getZoomLevel()));
             view.updateMarkerPos(model.getCurrentChrom(), offset);
         }
@@ -207,8 +217,13 @@ public class Controller {
         view.showPlot(model.processHaplotypeSelections(view.getSampleOrderInView()));
     }
 
-    public void processBlockSelections() {
-        view.showPlot(model.processPinnedSelections(view.getSampleOrderInView(), view.getPinCheckboxes()));
+    public void processShowSameCalls() {
+        // want to show the same calls, so we are going to hide the different ones
+        view.hideCalls(view.getSampleOrderInView(), model.getDiffCallsFromPinned(view.getPinCheckboxes()));
+    }
+
+    public void processShowDiffCalls() {
+        view.hideCalls(view.getSampleOrderInView(), model.getSameCallsFromPinned(view.getPinCheckboxes()));
     }
 
     public void updateReleaseSelection(MouseEvent e) {
@@ -218,9 +233,6 @@ public class Controller {
     }
 
     public void updateTrackHeight(double increment) {
-        if (!model.isCallPanelHeightStored()) {
-            model.setBaseCallPanelHeight(view.getBaseCallPanelHeight());
-        }
         model.updateTrackHeightScale(increment);
         view.updateTrackHeight(model.getTrackHeightScale());
         view.redrawSampleInfoAfterScale(model.getSamples(), model.getBaseFontSize(), model.getTrackHeightScale(), model.getOriginalTrackHeight());
@@ -237,7 +249,12 @@ public class Controller {
         // show coords
         view.showCoords(model.getCurrentChrom(), model.getTickSpacing(), model.getZoomLevel(), model.getRefChromosomes());
         // show calls
-        view.showChromosomeCalls(chrom, view.getSampleOrderInView(), model.getZoomLevel(), model.getOriginalTrackHeight());
+        if (Objects.equals(selectedChrom, "<ALL>")) {
+            view.showChromosomeCalls(chrom, view.getSampleOrderInView(), model.getZoomLevel(), model.getOriginalTrackHeight());
+        }
+        else {
+            view.showTileCalls(chrom, view.getSampleOrderInView(), model.getZoomLevel(), model.getOriginalTrackHeight(), model.getStartInterval(1), model.getEndInterval((int) chrom.getLength()));
+        }
         view.showChromosomeAlleleFreq(chrom, model.getZoomLevel(), model.getOriginalTrackHeight());
         view.drawReference(model.getRefChromosomes(), model.getCurrentChrom().getName());
         view.updateMarkerWidth(chrom, model.getZoomLevel(), chrom.getLength());
@@ -250,7 +267,7 @@ public class Controller {
 //    }
 
     public String processShowMate() {
-        int length = (int) model.getGenomicProportion(view.getViewportWidth(), model.getCurrentChrom(), model.getZoomLevel());
+        long length = (int) model.getGenomicProportion(view.getViewportWidth(), model.getCurrentChrom(), model.getZoomLevel());
         String alternate = view.getLiveCall().getAlternate();
         Pattern pattern = Pattern.compile("[\\[\\]](.+)[\\[\\]]");
         Matcher altInfo = pattern.matcher(alternate);
@@ -259,9 +276,9 @@ public class Controller {
             Matcher region = regionPattern.matcher(altInfo.group(1));
             if (region.find()) {
                 String chrom = region.group(1);
-                int coords = Integer.parseInt(region.group(2));
-                int start = coords - length;
-                int end = coords + length;
+                long coords = Integer.parseInt(region.group(2));
+                long start = coords - length;
+                long end = coords + length;
 
                 // make sure start is in range
                 if (start < 1) {
@@ -290,10 +307,10 @@ public class Controller {
         double start = view.getStartFromHVal(view.getHValue(), model.getCurrentChrom());
         double proportion = model.getGenomicProportion(view.getViewportWidth(), model.getCurrentChrom(), model.getZoomLevel());
         double end = start + proportion;
-        System.out.println("NEW VAL IS " + newVal);
-        System.out.println("START IS " + start);
-        System.out.println("END IS " + end);
-        System.out.println("START AND END INTERVALS IN PROCESSSCROLLCHANGE : START : " + model.getStartInterval((int) start) + " END " + model.getEndInterval((int) end));
+//        System.out.println("NEW VAL IS " + newVal);
+//        System.out.println("START IS " + start);
+//        System.out.println("END IS " + end);
+//        System.out.println("START AND END INTERVALS IN PROCESSSCROLLCHANGE : START : " + model.getStartInterval((int) start) + " END " + model.getEndInterval((int) end));
         view.showTileCalls(model.getCurrentChrom(), view.getSampleOrderInView(), model.getZoomLevel(), model.getOriginalTrackHeight(), model.getStartInterval((int) start), model.getEndInterval((int) end));
         view.showTileAlleleFreq(model.getCurrentChrom(), model.getZoomLevel(), model.getOriginalTrackHeight(), model.getStartInterval((int) start), model.getEndInterval((int) end));
         view.syncScroll(newVal);

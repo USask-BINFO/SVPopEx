@@ -12,7 +12,7 @@ import javafx.scene.shape.Rectangle;
 public class Model {
     private Chromosome currentChrom = null;
     private LinkedHashMap<String,Chromosome> refChromosomes = new LinkedHashMap<>();
-    private int refTotalLength;
+    private long refTotalLength;
     private ArrayList<Sample> samples = new ArrayList<>();
     HashMap<String, Color> sampleColors = new HashMap<>();
     private ArrayList<Call> calls = new ArrayList<>();
@@ -23,10 +23,10 @@ public class Model {
     private double trackHeightScale = 1;
     private final double baseFontSize = 12;
     private final int originalTrackHeight = 100;
-    private Double baseCallPanelHeight;
     // AF is shown by default
     private int numAnnotationsShown = 1;
-    private int tileSize = 2000000;
+    private int tileSize = 5000000;
+    private final Set<String> supportedSVTypes = Set.of("TRA", "BND", "INS", "DEL", "INV", "DUP");
 
 
     public void reset() {
@@ -47,6 +47,18 @@ public class Model {
 
     public String loadFile(java.io.File file) throws java.io.IOException {
         return new String(java.nio.file.Files.readAllBytes(file.toPath()));
+    }
+
+    /**
+     * Finds the increment that is needed to display all samples vertically within the call panel scrollpane.
+     * @param panelHeight height of the callsPanel scrollpane
+     * @param SBHeight height of the callsPanel horizontal scrollbar
+     * @return the increment that needs to be applied to the scale factor
+     */
+    public double fitAllSamplesIncrement(double panelHeight, double SBHeight) {
+        double scale = ((panelHeight - SBHeight) / (samples.size()+1)) / this.originalTrackHeight;
+        System.out.println("SCALE IS " + scale);
+        return scale - 1;
     }
 
     public double getZoomLevel() {
@@ -88,15 +100,6 @@ public class Model {
         }
     }
 
-    public boolean isCallPanelHeightStored() {
-        if (this.baseCallPanelHeight == null) {
-            return false;
-        }
-        else {
-            return true;
-        }
-    }
-
     public void setZoom(double level) {
         this.zoomLevel = level;
     }
@@ -108,7 +111,7 @@ public class Model {
      * @param isSBVisible boolean value for whether the scrollpane vertical scrollbar is currently visible
      * @param SBwidth double value of the width of the scrollpane vertical scrollbar
      */
-    public void updateZoomLevelByRegion(int length, double viewportWidth, boolean isSBVisible, double SBwidth) {
+    public void updateZoomLevelByRegion(long length, double viewportWidth, boolean isSBVisible, double SBwidth) {
         // if scrollbar is visible, update zoomLevel taking into account the viewport width needs to include the scrollbar width
         if (isSBVisible) {
             this.zoomLevel = (viewportWidth + SBwidth) / length;
@@ -123,23 +126,15 @@ public class Model {
         return this.numAnnotationsShown;
     }
 
-    public void setBaseCallPanelHeight(double height) {
-        this.baseCallPanelHeight = height;
-    }
-
     public HashMap<String, Color> getSampleColors() {
         return this.sampleColors;
-    }
-
-    public double getBaseCallPanelHeight() {
-        return this.baseCallPanelHeight;
     }
 
     public LinkedHashMap<String,Chromosome> getRefChromosomes() {
         return this.refChromosomes;
     }
 
-    public int getRefTotalLength() {
+    public long getRefTotalLength() {
         return this.refTotalLength;
     }
 
@@ -155,6 +150,159 @@ public class Model {
         this.selections.add(selection);
         for (int i=0; i<selections.size(); i++) {
             System.out.println(selections.get(i).toString());
+        }
+    }
+
+    public ArrayList<Call> getDiffCallsFromPinned(ArrayList<CheckBox> checkboxes) {
+        ArrayList<Sample> checkedSamples = new ArrayList<>();
+        ArrayList<Call> result = new ArrayList<>();
+        for (int i=0; i<checkboxes.size(); i++) {
+            if (checkboxes.get(i).isSelected()) {
+                checkedSamples.add(this.samples.get(i));
+            }
+        }
+        // if no selections are made or no samples are checked, return empty result
+        if (this.selections.isEmpty() || checkedSamples.isEmpty()) {
+            return result;
+        }
+        // otherwise, process
+        else {
+            for (Selection selection : selections) {
+                double selectionStart = selection.getGenomicStart();
+                double selectionEnd = selection.getGenomicEnd();
+                int startInterval = getStartInterval((int) selectionStart);
+                int endInterval = getEndInterval((int) selectionEnd);
+                // loop through each tile
+                for (int i = startInterval; i <= endInterval; i++) {
+                    ArrayList<String> pinnedCallIds = new ArrayList<>();
+                    // loop through calls for pinned samples
+                    for (Sample checkedSample : checkedSamples) {
+                        // if no tile interval for that sample then move to the next
+                        if (checkedSample.getTiledCalls().get(getCurrentChrom().getName()).get(i) == null) {
+                            continue;
+                        }
+                        // otherwise, loop through the calls
+                        for (Call currentCall : checkedSample.getTiledCalls().get(getCurrentChrom().getName()).get(i)) {
+                            // if in region
+                            if (currentCall.getStart() > selectionStart && currentCall.getEnd() < selectionEnd) {
+                                // if this call has already been seen with another pinned sample, do nothing
+                                if (pinnedCallIds.contains(currentCall.getId())) {
+                                    // do nothing
+                                } else {
+                                    pinnedCallIds.add(currentCall.getId());
+                                }
+                            }
+                            // outside of region
+                            else {
+                                // do nothing
+                            }
+                        }
+                    }
+                    // loop through calls for non pinned samples
+                    for (Sample sample : this.samples) {
+                        // if in checked samples, don't process
+                        if (checkedSamples.contains(sample)) {
+                            // do nothing
+                        }
+                        // otherwise an unchecked sample, process calls
+                        else {
+                            // if no tile interval for that sample then move to the next
+                            if (sample.getTiledCalls().get(getCurrentChrom().getName()).get(i) == null) {
+                                continue;
+                            }
+                            // otherwise, loop through the calls
+                            for (Call currentCall : sample.getTiledCalls().get(getCurrentChrom().getName()).get(i)) {
+                                System.out.println("ID IS " + currentCall.getId() + " at location " + currentCall.getStart());
+                                // if in region
+                                if (currentCall.getStart() > selectionStart && currentCall.getEnd() < selectionEnd) {
+                                    // if this call has already been seen with another pinned sample, do nothing
+                                    if (pinnedCallIds.contains(currentCall.getId())) {
+                                        System.out.println("IT IS IN PINNED IDS");
+                                        // do nothing
+                                    }
+                                    // otherwise it is different so add it to results
+                                    else {
+                                        // add it only if results doesn't contain it
+                                        if (result.contains(currentCall)) {
+                                            System.out.println("RESULTS ALREADY CONTAIN THE ID");
+                                            // do nothing
+                                        }
+                                        else {
+                                            System.out.println("ADDED CALL TO RESULTS");
+                                            result.add(currentCall);
+                                        }
+                                    }
+                                }
+                                // outside of region
+                                else {
+                                    // do nothing
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return result;
+        }
+    }
+
+
+    public ArrayList<Call> getSameCallsFromPinned(ArrayList<CheckBox> checkboxes) {
+        ArrayList<Sample> checkedSamples = new ArrayList<>();
+        ArrayList<Call> result = new ArrayList<>();
+        for (int i = 0; i < checkboxes.size(); i++) {
+            if (checkboxes.get(i).isSelected()) {
+                checkedSamples.add(this.samples.get(i));
+            }
+        }
+        // if no selections are made or no samples are checked, return empty result
+        if (this.selections.isEmpty() || checkedSamples.isEmpty()) {
+            return result;
+        }
+        // otherwise, process
+        else {
+            for (Selection selection : selections) {
+                double selectionStart = selection.getGenomicStart();
+                double selectionEnd = selection.getGenomicEnd();
+                int startInterval = getStartInterval((int) selectionStart);
+                int endInterval = getEndInterval((int) selectionEnd);
+                // loop through each tile
+                for (int i = startInterval; i <= endInterval; i++) {
+                    ArrayList<String> pinnedCallIds = new ArrayList<>();
+                    // loop through calls for pinned samples
+                    for (Sample checkedSample : checkedSamples) {
+                        // if no tile interval for that sample then move to the next
+                        if (checkedSample.getTiledCalls().get(getCurrentChrom().getName()).get(i) == null) {
+                            continue;
+                        }
+                        // otherwise, loop through the calls
+                        for (Call currentCall : checkedSample.getTiledCalls().get(getCurrentChrom().getName()).get(i)) {
+                            // if in region
+                            if (currentCall.getStart() > selectionStart && currentCall.getEnd() < selectionEnd) {
+                                // if this call has already been seen with another pinned sample, do nothing
+                                if (pinnedCallIds.contains(currentCall.getId())) {
+                                    // do nothing
+                                }
+                                // otherwise add it to seen and add it to results if not added already
+                                else {
+                                    pinnedCallIds.add(currentCall.getId());
+                                    if (result.contains(currentCall)) {
+                                        // do nothing
+                                    }
+                                    else {
+                                        result.add(currentCall);
+                                    }
+                                }
+                            }
+                            // outside of region
+                            else {
+                                // do nothing
+                            }
+                        }
+                    }
+                }
+            }
+            return result;
         }
     }
 
@@ -395,7 +543,7 @@ public class Model {
         else {
             this.trackHeightScale += increment;
             // round to 1 decimal place
-            this.trackHeightScale = Math.round(this.trackHeightScale * 10) / 10.0;
+            //this.trackHeightScale = Math.round(this.trackHeightScale * 10) / 10.0;
         }
     }
 
@@ -465,11 +613,30 @@ public class Model {
                 Pattern lengthInfoPattern = Pattern.compile(lengthInfoRegex);
                 Matcher typeInfoMatcher = typeInfoPattern.matcher(fields[7]);
                 Matcher lengthInfoMatcher = lengthInfoPattern.matcher(fields[7]);
-                if (!typeInfoMatcher.find() || !lengthInfoMatcher.find()) {
-                    System.err.println("Error: Could not find type or length in expected VCF format for call. Ignoring call.");
+                if (!typeInfoMatcher.find()) {
+                    System.err.println("Error: Could not find type in expected VCF format for call. Ignoring call.");
+                }
+                else if (!lengthInfoMatcher.find()) {
+                    System.err.println("Error: Could not find length in expected VCF format for call. Ignoring call.");
                 }
                 else {
-                    int absoluteStart = refChromosomes.get(fields[0]).getAbsoluteStart() + Integer.parseInt(fields[1]);
+                    // if not a supported type, continue
+                    if (!supportedSVTypes.contains(typeInfoMatcher.group(1))) {
+                        System.err.println("Error: SV type: " + typeInfoMatcher.group(1) + " is not supported. Ignoring call.");
+                    }
+                    // otherwise, do nothing
+                    else {
+                        // do nothing
+                    }
+                    // make sure chrom was processed earlier
+                    long absoluteStart = 0;
+                    try {
+                        absoluteStart = refChromosomes.get(fields[0]).getAbsoluteStart() + Integer.parseInt(fields[1]);
+                    }
+                    catch (NullPointerException e) {
+                        //System.err.println("Could not identify Chromosome " + fields[0] + ". Ignoring call.");
+                        continue;
+                    }
                     Call currentCall = new Call(typeInfoMatcher.group(1), Integer.parseInt(lengthInfoMatcher.group(1)), fields[0], Integer.parseInt(fields[1]), absoluteStart, fields[4], fields[2], genotypes);
                     for (Sample sample : this.samples) {
                         String genotypeRegex = "(./.):";
@@ -523,7 +690,9 @@ public class Model {
         double genomicProportion = getGenomicProportion(viewportWidth, chrom, this.zoomLevel);
         if (genomicProportion < 100000000) {
             double ideal = genomicProportion / 7;
+            System.out.println("IDEAL IS " + ideal);
             this.coordIncrementIndex = getClosestIntegerValue(ideal, increments);
+            System.out.println("THIS COORD INCREMENT IS " + increments.get(coordIncrementIndex));
         }
         // last increment which corresponds to 100 MB
         else {
