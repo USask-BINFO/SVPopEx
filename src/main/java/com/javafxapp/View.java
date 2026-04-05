@@ -67,6 +67,7 @@ public class View {
     private final MenuBar menuBar = new MenuBar();
     private final Menu fileMenu = new Menu("File");
     private final MenuItem importVCFItem = new MenuItem("Import VCF");
+    private final MenuItem importGFFItem = new MenuItem("Import GFF3");
     // ------- referenceContainer ----------
     private final VBox referenceContainer = new VBox(5);
     private Rectangle marker = new Rectangle(0,0,0,50);
@@ -213,6 +214,8 @@ public class View {
         chromFill.setId("chrom");
         Label posFill = new Label("");
         posFill.setId("pos");
+        Label lengthFill = new Label("");
+        lengthFill.setId("length");
         Label idFill = new Label("");
         idFill.setId("id");
 
@@ -232,6 +235,8 @@ public class View {
         chromLabel.setStyle(regularStyle);
         Label posLabel = new Label("POS: ");
         posLabel.setStyle(regularStyle);
+        Label lengthLabel = new Label("LENGTH: ");
+        lengthLabel.setStyle(regularStyle);
         Label idLabel = new Label("ID: ");
         idLabel.setStyle(regularStyle);
         Label mateLabel = new Label("MATE: ");
@@ -242,6 +247,7 @@ public class View {
         callInfoSideContainer.getChildren().add(new HBox(typeLabel, typeFill));
         callInfoSideContainer.getChildren().add(new HBox(chromLabel, chromFill));
         callInfoSideContainer.getChildren().add(new HBox(posLabel, posFill));
+        callInfoSideContainer.getChildren().add(new HBox(lengthLabel, lengthFill));
         callInfoSideContainer.getChildren().add(new HBox(idLabel, idFill));
         mateContainer.getChildren().addAll(mateLabel, mateFill, showMateButton);
         callInfoSideContainer.getChildren().add(mateContainer);
@@ -258,6 +264,7 @@ public class View {
 
         // ---------- MENU --------------
         fileMenu.getItems().add(importVCFItem);
+        fileMenu.getItems().add(importGFFItem);
         menuBar.getMenus().add(fileMenu);
         // ---------- LOGO CONTAINER --------------
         logoRectangle.setFill(Color.TRANSPARENT);
@@ -387,7 +394,6 @@ public class View {
 
 
         // ---------- REF PANEL ---------
-        referenceContainer.setStyle("-fx-background-color: white;");
         // reference rectangle
         this.referenceWrapper.setPrefHeight(50);
         this.referenceWrapper.setMinHeight(50);
@@ -435,6 +441,7 @@ public class View {
         samplesInfoPanel.vvalueProperty().bindBidirectional(callsPanel.vvalueProperty());
         samplesInfoPanel.setStyle("-fx-background-color: transparent;");
         this.callsPanel.setStyle("-fx-focus-color: transparent; -fx-faint-focus-color: transparent;");
+        this.callsPanel.setStyle("-fx-background-color:transparent;");
         this.callsPanel.setMinWidth(Screen.getPrimary().getBounds().getWidth() - sampleSpaceWidth);
         this.callsPanel.setPrefWidth(Screen.getPrimary().getBounds().getWidth() - sampleSpaceWidth);
         this.callsPanel.setMaxWidth(Screen.getPrimary().getBounds().getWidth() - sampleSpaceWidth);
@@ -1069,6 +1076,8 @@ public class View {
         chromLabel.setText(call.getChromosome());
         Label posLabel = (Label) callInfoSideContainer.lookup("#pos");
         posLabel.setText(String.valueOf(String.format("%,d", call.getStart())));
+        Label lengthLabel = (Label) callInfoSideContainer.lookup("#length");
+        lengthLabel.setText(String.valueOf(call.getLength()));
         Label idLabel = (Label) callInfoSideContainer.lookup("#id");
         idLabel.setText(call.getId());
 
@@ -1163,7 +1172,7 @@ public class View {
         else {
             // update hand icon
             if (handIcon.getFill().equals(Color.TRANSPARENT)) {
-                handIcon.setFill(Color.BLACK);
+                handIcon.setFill(Color.rgb(65,65,65));
             }
             else {
                 // do nothing, already black
