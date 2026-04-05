@@ -124,6 +124,7 @@ public class Controller {
             view.enableControls();
             // triggers showChromosome()
             view.setChromComboBoxValue("<ALL>");
+            this.updateTrackHeight(model.fitAllSamplesIncrement(view.getCallsPanelHeight(), view.getHorizontalSBHeight()));
             //            view.viewportWidthChange(e -> {
 //                this.processViewportWidthChange();
 //            });
@@ -232,9 +233,6 @@ public class Controller {
     }
 
     public void updateTrackHeight(double increment) {
-        if (!model.isCallPanelHeightStored()) {
-            model.setBaseCallPanelHeight(view.getBaseCallPanelHeight());
-        }
         model.updateTrackHeightScale(increment);
         view.updateTrackHeight(model.getTrackHeightScale());
         view.redrawSampleInfoAfterScale(model.getSamples(), model.getBaseFontSize(), model.getTrackHeightScale(), model.getOriginalTrackHeight());

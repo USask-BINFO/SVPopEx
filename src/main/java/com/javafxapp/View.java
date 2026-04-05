@@ -22,6 +22,7 @@ import javafx.scene.shape.*;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.scene.transform.Scale;
+import javafx.scene.transform.Transform;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import javafx.stage.Screen;
@@ -119,9 +120,10 @@ public class View {
     Button clearButton = new Button("Clear");
     Button sidePaneButton = new Button("Selection Options");
     // ---------- callsPanel ----------
+    double scrollViewportHeight = 0;
     Tooltip callInfoTooltip = new Tooltip();
     private final HBox callsContentContainer = new HBox();
-    private final VBox samplesInfoContainer = new VBox();
+    private final VBox samplesInfoContainer = new VBox(0);
     private final VBox samplesContainer = new VBox(0);
     private final HBox selectionContainer = new HBox();
     private final Pane selectionWrapper = new Pane();
@@ -388,6 +390,8 @@ public class View {
         referenceContainer.setStyle("-fx-background-color: white;");
         // reference rectangle
         this.referenceWrapper.setPrefHeight(50);
+        this.referenceWrapper.setMinHeight(50);
+        this.referenceWrapper.setMaxHeight(50);
         this.referenceContainer.getChildren().add(rectWithMarker);
         // marker
         markerWrapper.getChildren().add(marker);
@@ -470,6 +474,7 @@ public class View {
         callsPanel.setMaxHeight(windowBottomOnScreen - topOfPanelOnScreen);
         callsPanel.setFitToHeight(false);
         callsPanel.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
+        this.scrollViewportHeight = windowBottomOnScreen - topOfPanelOnScreen;
     }
 
     /**
@@ -564,6 +569,7 @@ public class View {
 //        )));
         labelsBox.setStyle("-fx-alignment: center;");
         marker.setFill(Color.ORANGERED);
+
         marker.setOpacity(0.5);
         // fill chrom combo box
         double currentX = 0;
@@ -790,6 +796,10 @@ public class View {
                     callRect.setFill(Color.BLACK);
                     callRect.getStrokeDashArray().setAll(12.0, 6.0);
                 }
+                else {
+                    System.err.println("Unrecognized/unsupported SV type that was not caught earlier: " + currentCall.getType() + ". Ignoring call.");
+                    continue;
+                }
                 currentCalls.getChildren().add(callRect);
                 callRect.setOnMouseEntered(e -> {
                     callRect.setCursor(Cursor.HAND);
@@ -1011,6 +1021,10 @@ public class View {
                             nodeGroups.get(currentCall.getId()).add(callRect);
                             nodeGroups.get(currentCall.getId()).add(traPoly);
                         }
+                        else {
+                            System.err.println("Unrecognized/unsupported SV type that was not caught earlier: " + currentCall.getType() + ". Ignoring call.");
+                            continue;
+                        }
                         // for call rectangle
                         currentCalls.getChildren().add(callRect);
                         callRect.setOnMouseEntered(e -> {
@@ -1197,6 +1211,16 @@ public class View {
         }
         else {
             return vBar.getWidth();
+        }
+    }
+
+    public double getHorizontalSBHeight() {
+        ScrollBar hBar = (ScrollBar) this.callsPanel.lookup(".scroll-bar:horizontal");
+        if (hBar == null || !hBar.isVisible()) {
+            return 0;
+        }
+        else {
+            return hBar.getHeight();
         }
     }
 
@@ -1465,8 +1489,8 @@ public class View {
         return this.markerWrapper.getWidth();
     }
 
-    public double getBaseCallPanelHeight() {
-        return this.callsPanel.getLayoutBounds().getHeight();
+    public double getCallsPanelHeight() {
+        return this.scrollViewportHeight;
     }
 
     public void updateTrackHeight(double val) {
@@ -1477,6 +1501,8 @@ public class View {
         // remove old transforms
         this.sampleGroup.getTransforms().clear();
         this.sampleGroup.getTransforms().add(scale);
+        this.samplesInfoContainer.getTransforms().clear();
+        this.samplesInfoContainer.getTransforms().add(scale);
         triggerScrollPane();
     }
 
@@ -1486,6 +1512,14 @@ public class View {
         sampleGroup.setMinHeight(newHeight);
         sampleGroup.setPrefHeight(newHeight);
         sampleGroup.setMaxHeight(newHeight);
+        ScrollBar hScrollBar = (ScrollBar) callsPanel.lookup(".scroll-bar:horizontal");
+        double scrollbarHeight = 0;
+        if (hScrollBar != null) {
+            scrollbarHeight = hScrollBar.getHeight();
+        }
+        samplesInfoContainer.setMinHeight(newHeight + scrollbarHeight);
+        samplesInfoContainer.setPrefHeight(newHeight + scrollbarHeight);
+        samplesInfoContainer.setMaxHeight(newHeight + scrollbarHeight);
     }
 
     public void redrawSampleInfoAfterScale(ArrayList<Sample> samples, double baseFontSize, double trackHeightScale, int originalTrackHeight) {
@@ -1494,14 +1528,33 @@ public class View {
          */
         for (Sample sample : samples) {
             HBox container = (HBox) samplesInfoContainer.lookup("#" + sample.getName());
-            container.setMinHeight(originalTrackHeight * trackHeightScale);
-            container.setMaxHeight(originalTrackHeight * trackHeightScale);
+//            container.setMinHeight(originalTrackHeight * trackHeightScale);
+//            container.setMaxHeight(originalTrackHeight * trackHeightScale);
             // get second vbox (labelcontainer)
             VBox labelContainer = (VBox) container.getChildren().get(1);
             // get the labelwrapper
             Pane labelWrapper = (Pane) labelContainer.getChildren().getFirst();
             Label sampleLabel = (Label) labelWrapper.getChildren().getFirst();
-            sampleLabel.setFont(Font.font(sampleLabel.getFont().getFamily(), baseFontSize));
+
+            Scale scale = null;
+            for (Transform t : samplesInfoContainer.getTransforms()) {
+                if (t instanceof Scale s) {
+                    scale = s;
+                    break;
+                }
+            }
+            if (scale != null) {
+                double scaleFactor = scale.getX();
+                // use scaleFactor to adjust font sizes
+                Font f = sampleLabel.getFont();
+                double currentFontSize = f.getSize();
+                sampleLabel.setFont(Font.font(sampleLabel.getFont().getFamily(), baseFontSize / scaleFactor));
+            }
+            System.out.println("TRACK HEIGHT SCALE IS " + trackHeightScale);
+            System.out.println("NEW HEIGHT IS " + (originalTrackHeight * trackHeightScale));
+            double adjustedFontSize = baseFontSize / trackHeightScale;
+            System.out.println("ADJUSTED FONT SIZE IS " + adjustedFontSize);
+
         }
     }
 

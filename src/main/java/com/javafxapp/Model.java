@@ -23,10 +23,10 @@ public class Model {
     private double trackHeightScale = 1;
     private final double baseFontSize = 12;
     private final int originalTrackHeight = 100;
-    private Double baseCallPanelHeight;
     // AF is shown by default
     private int numAnnotationsShown = 1;
-    private int tileSize = 2000000;
+    private int tileSize = 5000000;
+    private final Set<String> supportedSVTypes = Set.of("TRA", "BND", "INS", "DEL", "INV", "DUP");
 
 
     public void reset() {
@@ -47,6 +47,18 @@ public class Model {
 
     public String loadFile(java.io.File file) throws java.io.IOException {
         return new String(java.nio.file.Files.readAllBytes(file.toPath()));
+    }
+
+    /**
+     * Finds the increment that is needed to display all samples vertically within the call panel scrollpane.
+     * @param panelHeight height of the callsPanel scrollpane
+     * @param SBHeight height of the callsPanel horizontal scrollbar
+     * @return the increment that needs to be applied to the scale factor
+     */
+    public double fitAllSamplesIncrement(double panelHeight, double SBHeight) {
+        double scale = ((panelHeight - SBHeight) / (samples.size()+1)) / this.originalTrackHeight;
+        System.out.println("SCALE IS " + scale);
+        return scale - 1;
     }
 
     public double getZoomLevel() {
@@ -88,15 +100,6 @@ public class Model {
         }
     }
 
-    public boolean isCallPanelHeightStored() {
-        if (this.baseCallPanelHeight == null) {
-            return false;
-        }
-        else {
-            return true;
-        }
-    }
-
     public void setZoom(double level) {
         this.zoomLevel = level;
     }
@@ -123,16 +126,8 @@ public class Model {
         return this.numAnnotationsShown;
     }
 
-    public void setBaseCallPanelHeight(double height) {
-        this.baseCallPanelHeight = height;
-    }
-
     public HashMap<String, Color> getSampleColors() {
         return this.sampleColors;
-    }
-
-    public double getBaseCallPanelHeight() {
-        return this.baseCallPanelHeight;
     }
 
     public LinkedHashMap<String,Chromosome> getRefChromosomes() {
@@ -548,7 +543,7 @@ public class Model {
         else {
             this.trackHeightScale += increment;
             // round to 1 decimal place
-            this.trackHeightScale = Math.round(this.trackHeightScale * 10) / 10.0;
+            //this.trackHeightScale = Math.round(this.trackHeightScale * 10) / 10.0;
         }
     }
 
@@ -625,6 +620,14 @@ public class Model {
                     System.err.println("Error: Could not find length in expected VCF format for call. Ignoring call.");
                 }
                 else {
+                    // if not a supported type, continue
+                    if (!supportedSVTypes.contains(typeInfoMatcher.group(1))) {
+                        System.err.println("Error: SV type: " + typeInfoMatcher.group(1) + " is not supported. Ignoring call.");
+                    }
+                    // otherwise, do nothing
+                    else {
+                        // do nothing
+                    }
                     // make sure chrom was processed earlier
                     long absoluteStart = 0;
                     try {
