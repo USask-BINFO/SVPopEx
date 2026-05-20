@@ -14,7 +14,7 @@ public class Model {
     private LinkedHashMap<String,Chromosome> refChromosomes = new LinkedHashMap<>();
     private long refTotalLength;
     private ArrayList<Sample> samples = new ArrayList<>();
-    HashMap<String, Color> sampleColors = new HashMap<>();
+    private HashMap<String, Color> sampleColors = new HashMap<>();
     private ArrayList<Call> calls = new ArrayList<>();
     private ArrayList<Selection> selections = new ArrayList<>();
     private double zoomLevel = 0.2;
@@ -25,7 +25,10 @@ public class Model {
     private final int originalTrackHeight = 100;
     // AF is shown by default
     private int numAnnotationsShown = 1;
-    private int tileSize = 5000000;
+    private int tileSize = 10000000;
+    private int currentTileStart = 0;
+    private int currentTileEnd = 0;
+    private int tileBuffer = 2;
     private final Set<String> supportedSVTypes = Set.of("TRA", "BND", "INS", "DEL", "INV", "DUP");
 
 
@@ -35,6 +38,53 @@ public class Model {
         this.calls.clear();
         this.selections.clear();
         setCurrentChrom(null);
+    }
+
+    /**
+     *
+     * @param newStartTile corresponds to the start of the tile for the region in view
+     * @return whether new tiles need to be shown
+     */
+    public boolean updateCurrentTileStart(int newStartTile) {
+        // currently range includes less than 0, and new region includes less than 0, do nothing
+        if (this.currentTileStart <= 0 && newStartTile-tileBuffer <= 0) {
+            // do nothing
+            return false;
+        }
+        // currently already the same, do nothing
+        else if (this.currentTileStart == (newStartTile-tileBuffer)) {
+            // do nothing
+            return false;
+        }
+        // otherwise different, update
+        else {
+            if (newStartTile-tileBuffer < 1) {
+                this.currentTileStart = 1;
+            }
+            else {
+                this.currentTileStart = newStartTile-tileBuffer;
+            }
+        }
+        return true;
+    }
+
+    public boolean updateCurrentTileEnd(int newEndTile) {
+        if (this.currentTileEnd == (newEndTile+tileBuffer)) {
+            // do nothing
+            return false;
+        }
+        else {
+            this.currentTileEnd = newEndTile+tileBuffer;
+            return true;
+        }
+    }
+
+    public int getCurrentTileStart() {
+        return this.currentTileStart;
+    }
+
+    public int getCurrentTileEnd() {
+        return this.currentTileEnd;
     }
 
     public Chromosome getCurrentChrom() {
@@ -306,82 +356,6 @@ public class Model {
         }
     }
 
-    public HashMap<Rectangle,Color> processPinnedSelections(ArrayList<Sample> sampleOrder, ArrayList<CheckBox> checkboxes) {
-        ArrayList<Sample> checkedSamples = new ArrayList<>();
-        HashMap<Rectangle, Color> result = new HashMap<>();
-        for (int i=0; i<checkboxes.size(); i++) {
-            if (checkboxes.get(i).isSelected()) {
-                checkedSamples.add(this.samples.get(i));
-            }
-        }
-        // if no selections are made or no samples are checked, return empty hashmap
-        if (this.selections.isEmpty() || checkedSamples.isEmpty()) {
-            return result;
-        }
-        // if selections are made, process
-        else {
-            ArrayList<String> seenCallIds = new ArrayList<>();
-            for (Selection selection : selections) {
-                double selectionStart = selection.getGenomicStart();
-                double selectionEnd = selection.getGenomicEnd();
-                // loop through samples
-                for (Sample checkedSample : checkedSamples) {
-                    // loop through sample calls in the selection chromosome
-                    for (Call call : checkedSample.getChromosomeCalls(selection.getChromosome())) {
-                        double calcStart = call.getStart() * zoomLevel;
-                        double calcLength = call.getLength() * zoomLevel;
-                        // if entire call is in selection area, then loop through genotypes
-                        if (call.getStart() > selectionStart && call.getEnd() < selectionEnd) {
-                            // if this call has not been processed
-                            if (!seenCallIds.contains(call.getId())) {
-                                // add call id to seen
-                                seenCallIds.add(call.getId());
-                                Boolean pastCurrent = false;
-                                // loop through samples and check the genotype if applicable
-                                for (int i=0; i<sampleOrder.size(); i++) {
-                                    // dealing with a sample past the current checked sample
-                                    if (pastCurrent) {
-                                        // if it has the variant allele, add to result
-                                        if (call.genotypes.get(sampleOrder.get(i).getName()).contains("1")) {
-                                            Rectangle newRect = new Rectangle(calcStart, i*100, calcLength, 100);
-                                            result.put(newRect, sampleColors.get(checkedSample.getName()));
-                                        }
-                                        else {
-                                            // do nothing
-                                        }
-                                    }
-                                    // if current sample is the current checked sample
-                                    else if (sampleOrder.get(i) == checkedSample) {
-                                        // change atCurrent to true
-                                        pastCurrent = true;
-                                        // create rectangle for itself
-                                        Rectangle newRect = new Rectangle(calcStart, i*100, calcLength, 100);
-                                        result.put(newRect, sampleColors.get(checkedSample.getName()));
-                                    }
-                                    // sample is before the current checked sample, do nothing because these are already processed
-                                    else {
-                                        // do nothing
-                                    }
-
-                                }
-
-                            }
-                            // call has already been processed, do nothing
-                            else {
-                                // do nothing
-                            }
-                        }
-                        // call outside of selection area
-                        else {
-                            // do nothing
-                        }
-                    }
-                }
-            }
-        }
-        return result;
-    }
-
     public HashMap<Rectangle,Color> processHaplotypeSelections(ArrayList<Sample> sampleOrder) {
         /*
         Preconditions: Assumes that sample order may have been manipulated by pinning
@@ -590,14 +564,14 @@ public class Model {
                 // assign reference length if match is found, otherwise exit
                 if (matcher.find()) {
                     // assign name
-                    this.refChromosomes.put(matcher.group(1), new Chromosome(matcher.group(1), Integer.parseInt(matcher.group(2)), this.refTotalLength+1));
+                    this.refChromosomes.put(matcher.group(1), new Chromosome(matcher.group(1), Integer.parseInt(matcher.group(2)), this.refTotalLength+1, this.tileSize));
                     this.refTotalLength += Integer.parseInt(matcher.group(2));
                 }
             }
             // header line with sample info
             else if (line.startsWith("#")) {
                 // add <ALL> to refChromosomes now that all header lines have been processed and total ref length is known
-                this.refChromosomes.put("<ALL>", new Chromosome("<ALL>", this.refTotalLength, 1));
+                this.refChromosomes.put("<ALL>", new Chromosome("<ALL>", this.refTotalLength, 1, this.tileSize));
                 String[] header = line.split("\t");
                 createSamples(Arrays.copyOfRange(header, 9, header.length), this.refChromosomes);
             }
@@ -637,7 +611,7 @@ public class Model {
                         //System.err.println("Could not identify Chromosome " + fields[0] + ". Ignoring call.");
                         continue;
                     }
-                    Call currentCall = new Call(typeInfoMatcher.group(1), Integer.parseInt(lengthInfoMatcher.group(1)), fields[0], Integer.parseInt(fields[1]), absoluteStart, fields[4], fields[2], genotypes);
+                    Call currentCall = new Call(typeInfoMatcher.group(1), Integer.parseInt(lengthInfoMatcher.group(1)), fields[0], fields[5], fields[6], Integer.parseInt(fields[1]), absoluteStart, fields[4], fields[2], genotypes);
                     for (Sample sample : this.samples) {
                         String genotypeRegex = "(./.):";
                         Pattern genotypePattern = Pattern.compile(genotypeRegex);
