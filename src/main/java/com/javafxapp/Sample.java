@@ -13,12 +13,21 @@ public class Sample {
     private HashMap<String, HashMap<Integer, ArrayList<Call>>> tiledCalls = new HashMap<>();
     public Sample(String sampleName, LinkedHashMap<String, Chromosome> refChromosomes) {
         this.name = sampleName;
-        // add each Chromosome name to callsByRegion hashmap and set value to empty ArrayList
-        for (String regionName : refChromosomes.keySet()) {
-            callsByChromosome.put(regionName, new ArrayList<>());
+        // add each Chromosome name to callsByChromosome hashmap and set value to empty ArrayList
+        for (String chromosomeName : refChromosomes.keySet()) {
+            callsByChromosome.put(chromosomeName, new ArrayList<>());
+            this.initTileCallsForChrom(refChromosomes.get(chromosomeName));
         }
     }
 
+    public void initTileCallsForChrom(Chromosome chrom) {
+        // create empty hashmap for chromosome
+        tiledCalls.put(chrom.getName(), new HashMap<>());
+        // fill with all possible intervals
+        for (int i=1; i<=chrom.getTileEndInterval();i++) {
+            tiledCalls.get(chrom.getName()).put(i, new ArrayList<>());
+        }
+    }
 
     public String getName() {
         return this.name;
@@ -42,12 +51,6 @@ public class Sample {
         int startInterval = (start - 1) / tileSize + 1;
         int endInterval = (end - 1) / tileSize + 1;
         for (int i=startInterval; i<endInterval+1; i++) {
-            if (tiledCalls.get(chromosomeName).containsKey(i)) {
-                // do nothing
-            }
-            else {
-                tiledCalls.get(chromosomeName).put(i, new ArrayList<>());
-            }
             tiledCalls.get(chromosomeName).get(i).add(call);
         }
     }

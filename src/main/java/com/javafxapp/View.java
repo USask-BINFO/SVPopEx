@@ -44,29 +44,31 @@ import java.util.function.Supplier;
 // EventHandler -> ...Handler
 
 public class View {
-    ArrayList<Sample> sampleOrder = new ArrayList<Sample>();
+    private ArrayList<Sample> sampleOrder = new ArrayList<Sample>();
     // ----------- root and side pane ---------------
-    VBox sidePaneContainer = new VBox(0);
-    VBox selectionOptionsSideContainer = new VBox(20);
-    VBox callInfoSideContainer = new VBox(7);
-    Call liveCall = null;
-    StackPane sidePaneSwapPanel = new StackPane(callInfoSideContainer, selectionOptionsSideContainer);
-    ArrayList<CheckBox> pinCheckboxes = new ArrayList<>();
-    HBox mateContainer = new HBox();
-    Button showMateButton = new Button("Show");
-    VBox comparators = new VBox();
-    Button closeSidePaneButton = new Button("\u00D7");
-    HBox closeButtonContainer = new HBox(closeSidePaneButton);
-    Label regionSelectLabel = new Label("Provide a Region to Select");
+    private VBox sidePaneContainer = new VBox(0);
+    private VBox selectionOptionsSideContainer = new VBox(20);
+    private VBox callInfoSideContainer = new VBox(7);
+    private Call liveCall = null;
+    private StackPane sidePaneSwapPanel = new StackPane(callInfoSideContainer, selectionOptionsSideContainer);
+    private ArrayList<CheckBox> pinCheckboxes = new ArrayList<>();
+    private VBox compareLabelContainer = new VBox();
+    private VBox processRegionLabelContainer = new VBox();
+    private HBox mateContainer = new HBox();
+    private Button showMateButton = new Button("Show");
+    private VBox comparators = new VBox();
+    private Button closeSidePaneButton = new Button("\u00D7");
+    private HBox closeButtonContainer = new HBox(closeSidePaneButton);
     private final VBox layout = new VBox(3);
-    StackPane root = new StackPane(layout, sidePaneContainer);
+    private StackPane root = new StackPane(layout, sidePaneContainer);
     private final Stage primaryStage;
-    TranslateTransition slideIn = new TranslateTransition(Duration.millis(300), sidePaneContainer);
-    TranslateTransition slideOut = new TranslateTransition(Duration.millis(300), sidePaneContainer);
+    private TranslateTransition slideIn = new TranslateTransition(Duration.millis(300), sidePaneContainer);
+    private TranslateTransition slideOut = new TranslateTransition(Duration.millis(300), sidePaneContainer);
     // ---------- menuBar -------------
     private final MenuBar menuBar = new MenuBar();
     private final Menu fileMenu = new Menu("File");
     private final MenuItem importVCFItem = new MenuItem("Import VCF");
+    private final MenuItem importGFFItem = new MenuItem("Import GFF3");
     // ------- referenceContainer ----------
     private final VBox referenceContainer = new VBox(5);
     private Rectangle marker = new Rectangle(0,0,0,50);
@@ -74,11 +76,11 @@ public class View {
     private final Pane markerWrapper = new Pane();
     private Label l1 = new Label("");
     private Label l2 = new Label("");
-    VBox labelsBox = new VBox(10, l1, l2);
-    StackPane rectangleWithLabels = new StackPane(referenceWrapper, labelsBox);
-    StackPane rectWithMarker = new StackPane(rectangleWithLabels, markerWrapper);
+    private VBox labelsBox = new VBox(10, l1, l2);
+    private StackPane rectangleWithLabels = new StackPane(referenceWrapper, labelsBox);
+    private StackPane rectWithMarker = new StackPane(rectangleWithLabels, markerWrapper);
     // ---------- tickContainer ----------
-    SVGPath handIcon = new SVGPath();
+    private SVGPath handIcon = new SVGPath();
     private final HBox tickContainer = new HBox();
     private final Pane spaceWrapper = new Pane();
     private final Pane ticksWrapper = new Pane();
@@ -86,52 +88,52 @@ public class View {
     private final int sampleSpaceWidth = 90;
     // ----------- logoContainer ------------------
     private final HBox logoContainer = new HBox();
-    Rectangle logoRectangle = new Rectangle(158, 61);
-    Image logoImage = new Image("file:./src/main/resources/com/javafxapp/logo.png",
+    private Rectangle logoRectangle = new Rectangle(158, 61);
+    private Image logoImage = new Image("file:./src/main/resources/com/javafxapp/logo.png",
             0, 0,
             true,
             true);
-    ImagePattern imagePattern = new ImagePattern(
+    private ImagePattern imagePattern = new ImagePattern(
             logoImage
     );
     // ----------- control container --------
     private GridPane controlWrapper = new GridPane();
-    ColumnConstraints controlCol0 = new ColumnConstraints();
-    ColumnConstraints controlCol1 = new ColumnConstraints();
-    ColumnConstraints controlCol2 = new ColumnConstraints();
+    private ColumnConstraints controlCol0 = new ColumnConstraints();
+    private ColumnConstraints controlCol1 = new ColumnConstraints();
+    private ColumnConstraints controlCol2 = new ColumnConstraints();
     // nav container
     private final HBox navContainer = new HBox(10);
-    TextField regionField = new TextField();
-    ComboBox<String> chromComboBox = new ComboBox<>();
-    Button processRegionButton = new Button("Go");
+    private TextField regionField = new TextField();
+    public ComboBox<String> chromComboBox = new ComboBox<>();
+    private Button processRegionButton = new Button("Go");
     // controls
     private final HBox generalControlContainer = new HBox();
-    Region generalControlSpacer = new Region();
-    Button zoomInButton = new Button("Zoom +");
-    Button zoomOutButton = new Button("Zoom -");
-    Button processButton = new Button("Color by Haplotype");
-    Button showSameButton = new Button("Show Same Calls");
-    Button showDiffButton = new Button("Show Diff Calls");
-    Button shrinkTrackHeightButton = new Button("- Height");
-    Button growTrackHeightButton = new Button("+ Height");
+    private Region generalControlSpacer = new Region();
+    private Button zoomInButton = new Button("Zoom +");
+    private Button zoomOutButton = new Button("Zoom -");
+    private Button processButton = new Button("Color by Haplotype");
+    private Button showSameButton = new Button("Show Same Calls");
+    private Button showDiffButton = new Button("Show Diff Calls");
+    private Button shrinkTrackHeightButton = new Button("- Height");
+    private Button growTrackHeightButton = new Button("+ Height");
     // ------------ selectionControlContainer ------------------
     private final HBox selectionControlContainer = new HBox();
-    Region selectionControlSpacer = new Region();
-    Button clearButton = new Button("Clear");
-    Button sidePaneButton = new Button("Selection Options");
+    private Region selectionControlSpacer = new Region();
+    private Button clearButton = new Button("Clear");
+    private Button sidePaneButton = new Button("Comparative Options");
     // ---------- callsPanel ----------
-    double scrollViewportHeight = 0;
-    Tooltip callInfoTooltip = new Tooltip();
+    private double scrollViewportHeight = 0;
     private final HBox callsContentContainer = new HBox();
     private final VBox samplesInfoContainer = new VBox(0);
     private final VBox samplesContainer = new VBox(0);
     private final HBox selectionContainer = new HBox();
     private final Pane selectionWrapper = new Pane();
     private final StackPane samplePanel = new StackPane(samplesContainer, selectionContainer);
-    VBox sampleGroup = new VBox(samplePanel);
+    private VBox sampleGroup = new VBox(samplePanel);
     private final ScrollPane samplesInfoPanel = new ScrollPane(samplesInfoContainer);
     private final ScrollPane callsPanel = new ScrollPane(sampleGroup);
     private final HashMap<String, ArrayList<Node>> nodeGroups = new HashMap<>();
+    private boolean dragging = false;
 
 
     public View(Stage primaryStage) {
@@ -167,33 +169,60 @@ public class View {
 
         closeButtonContainer.setAlignment(Pos.TOP_RIGHT);
         // title
-        Label title = new Label("Selection Options");
+        Label title = new Label("Comparative Options");
         String style = """
-               -fx-font-size: 20px;
+               -fx-font-size: 18px;
                -fx-text-fill: #555555;
                -fx-font-weight: bold;
                """;
+        String noteStyle = """
+                -fx-text-fill: #6f6f6f;
+                -fx-font-size: 10px;
+                -fx-font-style: italic;
+                """;
         title.setStyle(style);
-        regionSelectLabel.setStyle(regularStyle);
         Region spacer1 = new Region();
-        spacer1.setMinHeight(20);
+        spacer1.setMinHeight(15);
         Region spacer2 = new Region();
         spacer2.setMinHeight(20);
         selectionOptionsSideContainer.setAlignment(Pos.TOP_CENTER);
 
         selectionOptionsSideContainer.getChildren().add(spacer1);
         selectionOptionsSideContainer.getChildren().add(title);
-        // region
-        selectionOptionsSideContainer.getChildren().add(regionSelectLabel);
         Separator separator1 = new Separator();
         selectionOptionsSideContainer.getChildren().add(separator1);
+
         // pin checkboxes
         selectionOptionsSideContainer.getChildren().add(comparators);
-        Separator separator2 = new Separator();
-        selectionOptionsSideContainer.getChildren().add(separator2);
         // plots
+        compareLabelContainer.setPadding(new Insets(0, 0, 0, 20));
+        Label compareLabel = new Label("Compare:");
+        compareLabel.setStyle("""
+                -fx-text-fill: #555555;
+                -fx-font-weight: bold;
+                -fx-font-size: 14px;
+                """);
+        Label selectRegionLabel1 = new Label("*region must be selected");
+        selectRegionLabel1.setStyle(noteStyle);
+        Label selectRegionLabel2 = new Label("*region must be selected");
+        selectRegionLabel2.setStyle(noteStyle);
+        compareLabelContainer.getChildren().add(compareLabel);
+        compareLabelContainer.getChildren().add(selectRegionLabel1);
+        processRegionLabelContainer.setPadding(new Insets(0, 0, 0, 20));
+        Label regionLabel = new Label("Process Region:");
+        regionLabel.setStyle("""
+                -fx-text-fill: #555555;
+                -fx-font-weight: bold;
+                -fx-font-size: 14px;
+                """);
+        processRegionLabelContainer.getChildren().add(regionLabel);
+        processRegionLabelContainer.getChildren().add(selectRegionLabel2);
+        selectionOptionsSideContainer.getChildren().add(compareLabelContainer);
         selectionOptionsSideContainer.getChildren().add(showSameButton);
         selectionOptionsSideContainer.getChildren().add(showDiffButton);
+        Separator separator2 = new Separator();
+        selectionOptionsSideContainer.getChildren().add(separator2);
+        selectionOptionsSideContainer.getChildren().add(processRegionLabelContainer);
         selectionOptionsSideContainer.getChildren().add(processButton);
 
 
@@ -207,14 +236,20 @@ public class View {
         callInfoSideContainer.getChildren().add(new Separator());
 
         // create labels with ids to be filled with info when call is selected
+        Label idFill = new Label("");
+        idFill.setId("id");
         Label typeFill = new Label("");
         typeFill.setId("type");
         Label chromFill = new Label("");
         chromFill.setId("chrom");
         Label posFill = new Label("");
         posFill.setId("pos");
-        Label idFill = new Label("");
-        idFill.setId("id");
+        Label lengthFill = new Label("");
+        lengthFill.setId("length");
+        Label qualFill = new Label("");
+        qualFill.setId("qual");
+        Label filterFill = new Label("");
+        filterFill.setId("filter");
 
         this.mateContainer.setId("bndContainer");
         this.mateContainer.setAlignment(Pos.CENTER_LEFT);
@@ -226,23 +261,32 @@ public class View {
         // styling to set genotypes to the right
         genotypesFill.setPadding(new Insets(0, 0, 0, 15));
 
+        Label idLabel = new Label("ID: ");
+        idLabel.setStyle(regularStyle);
         Label typeLabel = new Label("TYPE: ");
         typeLabel.setStyle(regularStyle);
         Label chromLabel = new Label("CHROM: ");
         chromLabel.setStyle(regularStyle);
         Label posLabel = new Label("POS: ");
         posLabel.setStyle(regularStyle);
-        Label idLabel = new Label("ID: ");
-        idLabel.setStyle(regularStyle);
+        Label lengthLabel = new Label("LENGTH: ");
+        lengthLabel.setStyle(regularStyle);
+        Label qualLabel = new Label("QUAL: ");
+        qualLabel.setStyle(regularStyle);
+        Label filterLabel = new Label("FILTER: ");
+        filterLabel.setStyle(regularStyle);
         Label mateLabel = new Label("MATE: ");
         mateLabel.setStyle(regularStyle);
         Label genotypesLabel = new Label("GENOTYPES: ");
         genotypesLabel.setStyle(regularStyle);
 
+        callInfoSideContainer.getChildren().add(new HBox(idLabel, idFill));
         callInfoSideContainer.getChildren().add(new HBox(typeLabel, typeFill));
         callInfoSideContainer.getChildren().add(new HBox(chromLabel, chromFill));
         callInfoSideContainer.getChildren().add(new HBox(posLabel, posFill));
-        callInfoSideContainer.getChildren().add(new HBox(idLabel, idFill));
+        callInfoSideContainer.getChildren().add(new HBox(lengthLabel, lengthFill));
+        callInfoSideContainer.getChildren().add(new HBox(qualLabel, qualFill));
+        callInfoSideContainer.getChildren().add(new HBox(filterLabel, filterFill));
         mateContainer.getChildren().addAll(mateLabel, mateFill, showMateButton);
         callInfoSideContainer.getChildren().add(mateContainer);
         callInfoSideContainer.getChildren().add(genotypesLabel);
@@ -258,6 +302,7 @@ public class View {
 
         // ---------- MENU --------------
         fileMenu.getItems().add(importVCFItem);
+        fileMenu.getItems().add(importGFFItem);
         menuBar.getMenus().add(fileMenu);
         // ---------- LOGO CONTAINER --------------
         logoRectangle.setFill(Color.TRANSPARENT);
@@ -339,8 +384,8 @@ public class View {
         shrinkTrackHeightButton.setMaxSize(75,25);
         growTrackHeightButton.setMinSize(80,25);
         growTrackHeightButton.setMaxSize(80,25);
-        sidePaneButton.setMinSize(120,25);
-        sidePaneButton.setMaxSize(120,25);
+        sidePaneButton.setMinSize(140,25);
+        sidePaneButton.setMaxSize(140,25);
         closeSidePaneButton.setMinSize(25,25);
         closeSidePaneButton.setMaxSize(25,25);
         // button focus off
@@ -387,7 +432,6 @@ public class View {
 
 
         // ---------- REF PANEL ---------
-        referenceContainer.setStyle("-fx-background-color: white;");
         // reference rectangle
         this.referenceWrapper.setPrefHeight(50);
         this.referenceWrapper.setMinHeight(50);
@@ -435,9 +479,17 @@ public class View {
         samplesInfoPanel.vvalueProperty().bindBidirectional(callsPanel.vvalueProperty());
         samplesInfoPanel.setStyle("-fx-background-color: transparent;");
         this.callsPanel.setStyle("-fx-focus-color: transparent; -fx-faint-focus-color: transparent;");
+        this.callsPanel.setStyle("-fx-background-color:transparent;");
+        this.samplePanel.setStyle("-fx-background-color:white;");
         this.callsPanel.setMinWidth(Screen.getPrimary().getBounds().getWidth() - sampleSpaceWidth);
         this.callsPanel.setPrefWidth(Screen.getPrimary().getBounds().getWidth() - sampleSpaceWidth);
         this.callsPanel.setMaxWidth(Screen.getPrimary().getBounds().getWidth() - sampleSpaceWidth);
+        callsPanel.setOnMousePressed(e -> {
+            this.hBarPressed(e, callsPanel.getHvalue());
+        });
+        callsPanel.setOnMouseReleased(e -> {
+            this.hBarReleased(e, callsPanel.getHvalue());
+        });
         selectionWrapper.setPickOnBounds(false);
         this.selectionContainer.setPickOnBounds(false);
         this.selectionContainer.getChildren().add(selectionWrapper);
@@ -511,10 +563,11 @@ public class View {
     public void initSidePane(ArrayList<Sample> samples, HashMap<String, Color> sampleColors, Supplier<Integer> numAnnotations) {
         HashMap<String,Boolean> result = new HashMap<>();
         comparators.setPadding(new Insets(0, 0, 0, 20));
-        Label pinLabel = new Label("Pin Samples to Top:");
+        Label pinLabel = new Label("Pin to Top:");
         String style = """
                 -fx-text-fill: #555555;
                 -fx-font-weight: bold;
+                -fx-font-size: 14px;
                 """;
         pinLabel.setStyle(style);
         comparators.getChildren().add(pinLabel);
@@ -690,12 +743,17 @@ public class View {
         // loop through each tile
         for (int i=startInterval; i<endInterval+1; i++) {
             // for each call
-            for (Call currentCall : chromosome.getTiledCallStarts().get(i)) {
-                double currentFreq = currentCall.getAlleleFreq();
-                Circle circle = new Circle(currentCall.getStart()*zoomLevel, originalTrackHeight * currentFreq, 1);
-                circle.setFill(Color.BLACK);
-                circle.setStroke(Color.BLACK);
-                freqPane.getChildren().add(circle);
+            try {
+                for (Call currentCall : chromosome.getTiledCallStarts().get(i)) {
+                    double currentFreq = currentCall.getAlleleFreq();
+                    Circle circle = new Circle(currentCall.getStart() * zoomLevel, originalTrackHeight * currentFreq, 1);
+                    circle.setFill(Color.BLACK);
+                    circle.setStroke(Color.BLACK);
+                    freqPane.getChildren().add(circle);
+                }
+            }
+            catch (NullPointerException e) {
+                continue;
             }
         }
     }
@@ -822,7 +880,8 @@ public class View {
             // loop through calls to hide
             for (Call call : calls) {
                 for (Node nodeToRemove : nodeGroups.get(call.getId())) {
-                    currentCalls.getChildren().remove(nodeToRemove);
+                    //currentCalls.getChildren().remove(nodeToRemove);
+                    nodeToRemove.setOpacity(0.01);
                 }
             }
         }
@@ -832,6 +891,7 @@ public class View {
         /**
          * Pre-conditions/assumptions: Gets call pane for each sample by looking up the ID
          */
+        System.out.println(" ------------- TRIGGERING VIEW.SHOWTILECALLS() ------------ ");
         this.samplePanel.setMinWidth(chromosome.getLength() * zoomLevel);
         this.samplePanel.setMaxWidth(chromosome.getLength() * zoomLevel);
 
@@ -844,11 +904,12 @@ public class View {
             currentCalls.setPrefWidth(chromosome.getLength() * zoomLevel);
             currentCalls.setMaxWidth(chromosome.getLength() * zoomLevel);
             // loop through each tile
+            System.out.println("START INTERVAL IS " + startInterval);
+            System.out.println("END INTERVAL IS " + endInterval);
+            System.out.println("CHROMOSOME IS " + chromosome.getName());
+            System.out.println("CHROMOSOME END INTERVAL IS " + chromosome.getTileEndInterval());
             for (int i=startInterval; i<=endInterval; i++) {
                 // for each call
-                if (sample.getTiledCalls().get(chromosome.getName()).get(i) == null) {
-                    continue;
-                }
                 for (Call currentCall : sample.getTiledCalls().get(chromosome.getName()).get(i)) {
                     // already seen this call and added it
                     if (seenIds.contains(currentCall.getId())) {
@@ -1054,23 +1115,29 @@ public class View {
         }
     }
 
-    void setLiveCall(Call call) {
+    public void setLiveCall(Call call) {
         this.liveCall = call;
     }
 
-    Call getLiveCall() {
+    public Call getLiveCall() {
         return this.liveCall;
     }
 
     void showCallInformation(Call call, ArrayList<Sample> samples) {
+        Label idLabel = (Label) callInfoSideContainer.lookup("#id");
+        idLabel.setText(call.getId());
         Label typeLabel = (Label) callInfoSideContainer.lookup("#type");
         typeLabel.setText(call.getType());
         Label chromLabel = (Label) callInfoSideContainer.lookup("#chrom");
         chromLabel.setText(call.getChromosome());
         Label posLabel = (Label) callInfoSideContainer.lookup("#pos");
         posLabel.setText(String.valueOf(String.format("%,d", call.getStart())));
-        Label idLabel = (Label) callInfoSideContainer.lookup("#id");
-        idLabel.setText(call.getId());
+        Label lengthLabel = (Label) callInfoSideContainer.lookup("#length");
+        lengthLabel.setText(String.valueOf(call.getLength()));
+        Label qualLabel = (Label) callInfoSideContainer.lookup("#qual");
+        qualLabel.setText(call.getQual());
+        Label filterLabel = (Label) callInfoSideContainer.lookup("#filter");
+        filterLabel.setText(call.getFilter());
 
         // try to look up mate container in side pane
         HBox bndContainer = (HBox) callInfoSideContainer.lookup("#bndContainer");
@@ -1163,7 +1230,7 @@ public class View {
         else {
             // update hand icon
             if (handIcon.getFill().equals(Color.TRANSPARENT)) {
-                handIcon.setFill(Color.BLACK);
+                handIcon.setFill(Color.rgb(65,65,65));
             }
             else {
                 // do nothing, already black
@@ -1353,6 +1420,8 @@ public class View {
         infoContainer.getChildren().addAll(lockContainer, labelContainer);
         this.samplesInfoContainer.getChildren().add(infoContainer);
         // add sampContainer to samplesContainer
+        callsWrapper.setStyle("-fx-border-color: #DFE0DF; -fx-border-width: 0.5;");
+
         this.samplesContainer.getChildren().add(callsWrapper);
         // set IDs
         infoContainer.setId(sampleName);
@@ -1360,12 +1429,14 @@ public class View {
     }
 
 
-
-
-    // sync scrollpane scroll with marker and coordinate ticks
+    /**
+     * syncScroll is a method that updates the translation of the coordinate system and the layout of the marker within the
+     * markerWrapper.
+     * @param newVal value between 0 and 1 corresponding to the start position of the new genomic region in view
+     */
     public void syncScroll(Number newVal) {
-        // oldVal = old scroll position (between 0 and 1)
-        // newVal = new scroll position (between 0 and 1)
+        System.out.println("--------------- SYNC SCROLL TRIGGERED ----------------");
+        System.out.println("new val is " + newVal);
         // getContent() gets node scrollpane is scrolling, getboundsinlocal gets actual width and height of node, so maxX is the maximum distance that can be scrolled
         double maxX = callsPanel.getContent().getBoundsInLocal().getWidth()
                 - callsPanel.getViewportBounds().getWidth();
@@ -1376,16 +1447,38 @@ public class View {
         marker.setLayoutX(scrollX);
     }
 
+    /**
+     *
+     * @param chromosome
+     * @param zoomLevel
+     * @param length
+     * @param offset in pixels
+     */
+    public void updateMarker(Chromosome chromosome, double zoomLevel, double length, double offset) {
+        callsPanel.layout();
+        double visibleWidth = length * zoomLevel;
+        double contentWidth = chromosome.getLength() * zoomLevel;
+        double proportionVisible = visibleWidth/contentWidth;
+        // set width
+        marker.setWidth(markerWrapper.getWidth() * proportionVisible);
+        System.out.println("OFFSET IS " + offset);
+        marker.setLayoutX(offset);
+    }
+
     public double setScroll(int start, Chromosome chrom, double zoomLevel) {
         //System.out.println("SET SCROLL PERCENT IS " + percent);
         this.callsPanel.layout();
         double contentWidth = callsPanel.getContent().getBoundsInLocal().getWidth();
+        System.out.println("CONTENT WIDTH FROM SETSCROLL IS " + contentWidth);
         double viewportWidth = callsPanel.getViewportBounds().getWidth();
         double maxScroll = contentWidth - viewportWidth;
 
         double scale = contentWidth / chrom.getLength();
         double targetPixelX = start * scale;
         double hvalue = targetPixelX / maxScroll;
+        System.out.println("SET SCROLL RETURN VAL IS " + hvalue);
+        // triggers controller.processScrollChange()
+        callsPanel.layout();
         this.callsPanel.setHvalue(hvalue);
         return hvalue;
     }
@@ -1398,8 +1491,10 @@ public class View {
 
     }
 
-    public double getStartFromHVal(double hval, Chromosome currentChrom) {
-        double contentWidth = callsPanel.getContent().getBoundsInLocal().getWidth();
+    public double getStartFromHVal(double hval, Chromosome currentChrom, double zoomLevel) {
+        // pixel lengths
+        // this is based off the zoom level not the processed length in case hval and zoom are updated but not calls
+        double contentWidth = currentChrom.getLength() * zoomLevel;
         double viewportWidth = callsPanel.getViewportBounds().getWidth();
         double maxScroll = contentWidth - viewportWidth;
         double start = hval * maxScroll * currentChrom.getLength() / contentWidth;
@@ -1459,30 +1554,15 @@ public class View {
         }
     }
 
-    /**
-     *
-     * @param chromosome
-     * @param zoomLevel
-     * @param length
-     */
-    public void updateMarkerWidth(Chromosome chromosome, double zoomLevel, double length) {
-        callsPanel.layout();
-        double visibleWidth = length * zoomLevel;
-        double contentWidth = chromosome.getLength() * zoomLevel;
-        double proportionVisible = visibleWidth/contentWidth;
-        // set width
-        marker.setWidth(markerWrapper.getWidth() * proportionVisible);
-        //marker.setWidth(chromosome.getPixelWidth() * proportionVisible);
+    public void hBarPressed(MouseEvent e, double hValue) {
+        dragging = true;
     }
 
-    /**
-     *
-     * @param chromosome
-     * @param offset in pixels
-     */
-    public void updateMarkerPos(Chromosome chromosome, double offset) {
-        //marker.setLayoutX(chromosome.getPixelAbsoluteOffset() + offset);
-        marker.setLayoutX(offset);
+    public void hBarReleased(MouseEvent e, double hValue) {
+        dragging = false;
+        System.out.println("CLOSE HVALUE " + hValue);
+        System.out.println("RELEASING HBAR!!!!!!");
+        syncScroll(hValue);
     }
 
     public double getMarkerWrapperWidth() {
@@ -1550,10 +1630,7 @@ public class View {
                 double currentFontSize = f.getSize();
                 sampleLabel.setFont(Font.font(sampleLabel.getFont().getFamily(), baseFontSize / scaleFactor));
             }
-            System.out.println("TRACK HEIGHT SCALE IS " + trackHeightScale);
-            System.out.println("NEW HEIGHT IS " + (originalTrackHeight * trackHeightScale));
             double adjustedFontSize = baseFontSize / trackHeightScale;
-            System.out.println("ADJUSTED FONT SIZE IS " + adjustedFontSize);
 
         }
     }
@@ -1815,11 +1892,15 @@ public class View {
 //        });
 //    }
 
-    public void scrollChange(ChangeListener<Number> listener) {
+    public void browserDragged(ChangeListener<Number> listener) {
         this.callsPanel.hvalueProperty().addListener(listener);
     }
 
     public void markerDragged(EventHandler<MouseEvent> handler) {
         marker.setOnMouseDragged(handler);
+    }
+
+    public boolean isDragging() {
+        return this.dragging;
     }
 }

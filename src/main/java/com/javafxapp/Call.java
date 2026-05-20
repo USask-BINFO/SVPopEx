@@ -9,6 +9,8 @@ public class Call {
     private String type;
     private int length;
     private String chromosome;
+    private String qual;
+    private String filter;
     private int start;
     private long absoluteStart;
     private int end;
@@ -16,7 +18,7 @@ public class Call {
     private String id;
     private Double alleleFreq;
     HashMap<String,String> genotypes = new HashMap<>();
-    public Call(String type, int length, String chromosome, int start, long absoluteStart, String alternate, String id, HashMap<String,String> genotypes) {
+    public Call(String type, int length, String chromosome, String qual, String filter, int start, long absoluteStart, String alternate, String id, HashMap<String,String> genotypes) {
         this.type = type;
         if (Objects.equals(type, "DEL")) {
             this.length = Math.abs(length);
@@ -25,6 +27,8 @@ public class Call {
             this.length = length;
         }
         this.chromosome = chromosome;
+        this.qual = qual;
+        this.filter = filter;
         this.start = start;
         this.absoluteStart = absoluteStart;
         this.alternate = alternate;
@@ -51,6 +55,14 @@ public class Call {
 
     public String getChromosome() {
         return this.chromosome;
+    }
+
+    public String getQual() {
+        return this.qual;
+    }
+
+    public String getFilter() {
+        return this.filter;
     }
 
     public long getAbsoluteStart() {

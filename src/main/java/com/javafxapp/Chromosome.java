@@ -10,6 +10,7 @@ public class Chromosome {
     private double pixelWidth;
     private double pixelAbsoluteOffset;
     private HashMap<Integer, ArrayList<Call>> tiledCallStarts;
+    private int tileEndInterval;
     private ArrayList<Call> allCalls;
 
     /**
@@ -18,12 +19,18 @@ public class Chromosome {
      * @param length
      * @param absoluteStart reflects the start position from the start of the REFERENCE
      */
-    public Chromosome(String name, long length, long absoluteStart) {
+    public Chromosome(String name, long length, long absoluteStart, int tileSize) {
         this.name = name;
         this.length = length;
         this.absoluteStart = absoluteStart;
+        this.tileEndInterval = Math.toIntExact((length - 1) / tileSize + 1);
+        System.out.println("END FOR CHROMOSOME IS " + name + " " + tileEndInterval);
         this.tiledCallStarts = new HashMap<>();
         this.allCalls = new ArrayList<>();
+    }
+
+    public int getTileEndInterval() {
+        return this.tileEndInterval;
     }
 
     public long getAbsoluteStart() {
