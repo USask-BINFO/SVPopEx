@@ -69,6 +69,16 @@ public class View {
     private final Menu fileMenu = new Menu("File");
     private final MenuItem importVCFItem = new MenuItem("Import VCF");
     private final MenuItem importGFFItem = new MenuItem("Import GFF3");
+    private final Menu viewMenu = new Menu("View");
+    private final Menu colorThemesMenu = new Menu("Color Themes");
+    private final Menu AFColorThemesMenu = new Menu("Allele Frequency Track");
+    private final Menu SVGlyphThemesMenu = new Menu("SV Glyphs");
+    private final ToggleGroup AFThemesGroup = new ToggleGroup();
+    private final RadioMenuItem redGreenAFTrackItem = new RadioMenuItem("Red-Green");
+    private final RadioMenuItem grayscaleAFTrackItem = new RadioMenuItem("Grayscale");
+    private final ToggleGroup SVGlyphThemesGroup = new ToggleGroup();
+    private final RadioMenuItem defaultSVGlyphColorItem = new RadioMenuItem("Default");
+    private final RadioMenuItem colorblindSVGlyphItem = new RadioMenuItem("Colorblind Friendly");
     // ------- referenceContainer ----------
     private final VBox referenceContainer = new VBox(5);
     private Rectangle marker = new Rectangle(0,0,0,50);
@@ -304,6 +314,22 @@ public class View {
         fileMenu.getItems().add(importVCFItem);
         fileMenu.getItems().add(importGFFItem);
         menuBar.getMenus().add(fileMenu);
+        menuBar.getMenus().add(viewMenu);
+        viewMenu.getItems().add(colorThemesMenu);
+        // add items to color themes and initially disable
+        colorThemesMenu.setDisable(true);
+        colorThemesMenu.getItems().add(AFColorThemesMenu);
+        colorThemesMenu.getItems().add(SVGlyphThemesMenu);
+        // SV glyph toggling
+        SVGlyphThemesMenu.getItems().add(defaultSVGlyphColorItem);
+        SVGlyphThemesMenu.getItems().add(colorblindSVGlyphItem);
+        defaultSVGlyphColorItem.setToggleGroup(SVGlyphThemesGroup);
+        colorblindSVGlyphItem.setToggleGroup(SVGlyphThemesGroup);
+        // AF toggling
+        AFColorThemesMenu.getItems().add(redGreenAFTrackItem);
+        AFColorThemesMenu.getItems().add(grayscaleAFTrackItem);
+        redGreenAFTrackItem.setToggleGroup(AFThemesGroup);
+        grayscaleAFTrackItem.setToggleGroup(AFThemesGroup);
         // ---------- LOGO CONTAINER --------------
         logoRectangle.setFill(Color.TRANSPARENT);
         logoContainer.getChildren().add(logoRectangle);
@@ -500,6 +526,7 @@ public class View {
      * Enables all buttons in controlContainer and sidePane. Side Pane translation also done here after layout is complete
      **/
     public void enableControls() {
+        this.colorThemesMenu.setDisable(false);
         this.zoomInButton.setDisable(false);
         this.zoomOutButton.setDisable(false);
         this.processButton.setDisable(false);
@@ -1328,19 +1355,16 @@ public class View {
             // Set color
             topLine.setStroke(Color.BLACK);
             bottomLine.setStroke(Color.BLACK);
-            LinearGradient lg = new LinearGradient(
-                    0, 0, 0, 1,      // startX, startY, endX, endY
-                    true,            // proportional
-                    CycleMethod.NO_CYCLE,
-                    new Stop(0.0, Color.rgb(199, 92, 92, 0.8)),    // red from 0%...
-                    new Stop(0.05, Color.rgb(199, 92, 92, 0.8)),   // ...to 5%
-                    new Stop(0.25, Color.rgb(92, 156, 92, 0.6)),  // green at center
-                    new Stop(0.75, Color.rgb(92, 156, 92, 0.6)),  // green at center
-                    new Stop(0.95, Color.rgb(199, 92, 92, 0.8)),   // red starts again at 95%
-                    new Stop(1.0, Color.rgb(199, 92, 92, 0.8))     // red to bottom
-            );
-            BackgroundFill bgFill = new BackgroundFill(lg, CornerRadii.EMPTY, Insets.EMPTY);
-            callsWrapper.setBackground(new Background(bgFill));
+            // set actions for radio controls
+            this.redGreenAFTrackItem.setOnAction(e -> {
+                this.applyColorTheme("red-green AF", callsWrapper);
+            });
+            this.grayscaleAFTrackItem.setOnAction(e -> {
+                this.applyColorTheme("grayscale AF", callsWrapper);
+            });
+            // trigger default color theme
+            this.applyColorTheme("red-green AF", callsWrapper);
+            this.redGreenAFTrackItem.setSelected(true);
         }
         else {
             // do nothing
@@ -1902,5 +1926,43 @@ public class View {
 
     public boolean isDragging() {
         return this.dragging;
+    }
+
+
+    public void applyColorTheme(String theme, Pane callsWrapper) {
+        LinearGradient redGreenGradient = new LinearGradient(
+                0, 0, 0, 1,      // startX, startY, endX, endY
+                true,            // proportional
+                CycleMethod.NO_CYCLE,
+                new Stop(0.0, Color.rgb(199, 92, 92, 0.8)),    // red from 0%...
+                new Stop(0.05, Color.rgb(199, 92, 92, 0.8)),   // ...to 5%
+                new Stop(0.25, Color.rgb(92, 156, 92, 0.6)),  // green at center
+                new Stop(0.75, Color.rgb(92, 156, 92, 0.6)),  // green at center
+                new Stop(0.95, Color.rgb(199, 92, 92, 0.8)),   // red starts again at 95%
+                new Stop(1.0, Color.rgb(199, 92, 92, 0.8))     // red to bottom
+        );
+        BackgroundFill redGreenFill = new BackgroundFill(redGreenGradient, CornerRadii.EMPTY, Insets.EMPTY);
+
+        LinearGradient grayscaleGradient = new LinearGradient(
+                0, 0, 0, 1,      // startX, startY, endX, endY
+                true,            // proportional
+                CycleMethod.NO_CYCLE,
+                new Stop(0.0, Color.rgb(110, 114, 110, 0.8)),    // gray
+                new Stop(0.05, Color.rgb(110, 114, 110, 0.8)),   // gray
+                new Stop(0.25, Color.rgb(229, 228, 226, 0.6)),  // platinum
+                new Stop(0.75, Color.rgb(229, 228, 226, 0.6)),  // platinum
+                new Stop(0.95, Color.rgb(110, 114, 110, 0.8)),   // gray
+                new Stop(1.0, Color.rgb(110, 114, 110, 0.8))     // gray
+        );
+        BackgroundFill grayscaleFill = new BackgroundFill(grayscaleGradient, CornerRadii.EMPTY, Insets.EMPTY);
+
+
+        if (Objects.equals(theme, "red-green AF")) {
+            callsWrapper.setBackground(new Background(redGreenFill));
+        }
+        if (Objects.equals(theme, "grayscale AF")) {
+            callsWrapper.setBackground(new Background(grayscaleFill));
+        }
+
     }
 }
