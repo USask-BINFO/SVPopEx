@@ -79,6 +79,8 @@ public class View {
     private final ToggleGroup SVGlyphThemesGroup = new ToggleGroup();
     private final RadioMenuItem defaultSVGlyphColorItem = new RadioMenuItem("Default");
     private final RadioMenuItem colorblindSVGlyphItem = new RadioMenuItem("Colorblind Friendly");
+    private final HashMap<String, HashMap<String, HashMap<String, Color>>> SVGlyphColorThemes = new HashMap<>();
+    private String currentSVGlyphTheme = "default";
     // ------- referenceContainer ----------
     private final VBox referenceContainer = new VBox(5);
     private Rectangle marker = new Rectangle(0,0,0,50);
@@ -158,6 +160,37 @@ public class View {
     -fx-focus-color: transparent;
     -fx-faint-focus-color: transparent;
 """;
+        // ----------- SET GLYPH COLOR THEMES -----------
+        // default
+        this.SVGlyphColorThemes.put("default", new HashMap<>());
+        this.SVGlyphColorThemes.get("default").put("INV", new HashMap<>());
+        this.SVGlyphColorThemes.get("default").put("DUP", new HashMap<>());
+        this.SVGlyphColorThemes.get("default").put("INS", new HashMap<>());
+        this.SVGlyphColorThemes.get("default").put("DEL", new HashMap<>());
+        this.SVGlyphColorThemes.get("default").get("INV").put("fill", Color.rgb(255, 195, 0 ));
+        this.SVGlyphColorThemes.get("default").get("INV").put("stroke", Color.rgb(200, 140, 0));
+        this.SVGlyphColorThemes.get("default").get("DUP").put("fill", Color.rgb(65, 105, 225));
+        this.SVGlyphColorThemes.get("default").get("DUP").put("stroke", Color.rgb(40, 70, 160));
+        this.SVGlyphColorThemes.get("default").get("INS").put("fill", Color.rgb(147, 197, 114));
+        this.SVGlyphColorThemes.get("default").get("INS").put("stroke", Color.rgb(100, 140, 80));
+        this.SVGlyphColorThemes.get("default").get("DEL").put("fill", Color.rgb(164, 42, 4));
+        this.SVGlyphColorThemes.get("default").get("DEL").put("stroke", Color.rgb(120, 30, 2));
+        // colorblind friendly
+        this.SVGlyphColorThemes.put("colorblind", new HashMap<>());
+        this.SVGlyphColorThemes.get("colorblind").put("INV", new HashMap<>());
+        this.SVGlyphColorThemes.get("colorblind").put("DUP", new HashMap<>());
+        this.SVGlyphColorThemes.get("colorblind").put("INS", new HashMap<>());
+        this.SVGlyphColorThemes.get("colorblind").put("DEL", new HashMap<>());
+        this.SVGlyphColorThemes.get("colorblind").get("INV").put("fill", Color.rgb(249, 214, 44));
+        this.SVGlyphColorThemes.get("colorblind").get("INV").put("stroke", Color.rgb(199, 171, 35));
+        this.SVGlyphColorThemes.get("colorblind").get("DUP").put("fill", Color.rgb(113, 111, 111));
+        this.SVGlyphColorThemes.get("colorblind").get("DUP").put("stroke", Color.rgb(90, 89, 89));
+        this.SVGlyphColorThemes.get("colorblind").get("INS").put("fill", Color.rgb(30, 136, 229));
+        this.SVGlyphColorThemes.get("colorblind").get("INS").put("stroke", Color.rgb(24, 109, 183));
+        this.SVGlyphColorThemes.get("colorblind").get("DEL").put("fill", Color.rgb(150, 38, 22));
+        this.SVGlyphColorThemes.get("colorblind").get("DEL").put("stroke", Color.rgb(120, 30, 18));
+
+
         // ---------- ROOT AND SIDE PANE ---------
         String regularStyle = """
                 -fx-text-fill: #555555;
@@ -325,6 +358,13 @@ public class View {
         SVGlyphThemesMenu.getItems().add(colorblindSVGlyphItem);
         defaultSVGlyphColorItem.setToggleGroup(SVGlyphThemesGroup);
         colorblindSVGlyphItem.setToggleGroup(SVGlyphThemesGroup);
+        defaultSVGlyphColorItem.setOnAction(e -> {
+            this.updateCurrentSVGlyphTheme("default");
+        });
+        colorblindSVGlyphItem.setOnAction(e -> {
+            this.updateCurrentSVGlyphTheme("colorblind");
+        });
+        defaultSVGlyphColorItem.setSelected(true);
         // AF toggling
         AFColorThemesMenu.getItems().add(redGreenAFTrackItem);
         AFColorThemesMenu.getItems().add(grayscaleAFTrackItem);
@@ -817,9 +857,9 @@ public class View {
                 callRect.setArcWidth(5);   // horizontal roundness
                 callRect.setArcHeight(5);
                 if (Objects.equals(currentCall.getType(), "DUP")) {
-                    callRect.setStroke(Color.rgb(40, 70, 160));
+                    callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
                     callRect.setOpacity(0.5);
-                    callRect.setFill(Color.rgb(65, 105, 225));
+                    callRect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("fill"));
                     double percentageHeight = originalTrackHeight * 0.15;
                     double percentageLength = currentCall.getLength()*zoomLevel * 0.1;
                     double endX = currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - percentageLength;
@@ -827,49 +867,49 @@ public class View {
                     Line lineDup2 = new Line(currentCall.getStart()*zoomLevel + percentageLength, originalTrackHeight - percentageHeight, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - percentageLength, originalTrackHeight - percentageHeight);
                     Line lineDup3 = new Line(currentCall.getStart()*zoomLevel + percentageLength, percentageHeight, currentCall.getStart()*zoomLevel + percentageLength, originalTrackHeight - percentageHeight);
                     Line lineDup4 = new Line(currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - percentageLength, percentageHeight, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - percentageLength, originalTrackHeight - percentageHeight);
-                    lineDup1.setStroke(Color.rgb(40, 70, 160));
-                    lineDup2.setStroke(Color.rgb(40, 70, 160));
-                    lineDup3.setStroke(Color.rgb(40, 70, 160));
-                    lineDup4.setStroke(Color.rgb(40, 70, 160));
+                    lineDup1.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
+                    lineDup2.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
+                    lineDup3.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
+                    lineDup4.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
                     currentCalls.getChildren().add(lineDup1);
                     currentCalls.getChildren().add(lineDup2);
                     currentCalls.getChildren().add(lineDup3);
                     currentCalls.getChildren().add(lineDup4);
                 }
                 else if (Objects.equals(currentCall.getType(), "INV")) {
-                    callRect.setStroke(Color.rgb(200, 140, 0));
+                    callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INV").get("stroke"));
                     callRect.setOpacity(0.5);
-                    callRect.setFill(Color.rgb(255, 195, 0 ));
+                    callRect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INV").get("fill"));
                     Line lineInv1 = new Line(currentCall.getStart()*zoomLevel, 1, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, originalTrackHeight-2);
                     Line lineInv2 = new Line(currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, 1, currentCall.getStart()*zoomLevel, originalTrackHeight-2);
-                    lineInv1.setStroke(Color.rgb(200, 140, 0));
-                    lineInv2.setStroke(Color.rgb(200, 140, 0));
+                    lineInv1.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INV").get("stroke"));
+                    lineInv2.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INV").get("stroke"));
                     lineInv1.setOpacity(0.6);
                     lineInv2.setOpacity(0.6);
                     currentCalls.getChildren().add(lineInv1);
                     currentCalls.getChildren().add(lineInv2);
                 }
                 else if (Objects.equals(currentCall.getType(), "DEL")) {
-                    callRect.setStroke(Color.rgb(120, 30, 2));
+                    callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DEL").get("stroke"));
                     callRect.setOpacity(0.5);
-                    callRect.setFill(Color.rgb(164, 42, 4));
+                    callRect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DEL").get("fill"));
                     Line lineDel1 = new Line(currentCall.getStart()*zoomLevel, 1, currentCall.getStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), originalTrackHeight-2);
                     Line lineDel2 = new Line(currentCall.getStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), originalTrackHeight-2, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, 1);
-                    lineDel1.setStroke(Color.rgb(120, 30, 2));
-                    lineDel2.setStroke(Color.rgb(120, 30, 2));
+                    lineDel1.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DEL").get("stroke"));
+                    lineDel2.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DEL").get("stroke"));
                     lineDel1.setOpacity(0.4);
                     lineDel2.setOpacity(0.4);
                     currentCalls.getChildren().add(lineDel1);
                     currentCalls.getChildren().add(lineDel2);
                 }
                 else if (Objects.equals(currentCall.getType(), "INS")) {
-                    callRect.setStroke(Color.rgb(100, 140, 80));
+                    callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INS").get("stroke"));
                     callRect.setOpacity(0.5);
-                    callRect.setFill(Color.rgb(147, 197, 114));
+                    callRect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INS").get("fill"));
                     Line lineIns1 = new Line(currentCall.getStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), 1, currentCall.getStart()*zoomLevel, originalTrackHeight-2);
                     Line lineIns2 = new Line(currentCall.getStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), 1, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, originalTrackHeight-2);
-                    lineIns1.setStroke(Color.rgb(100, 140, 80));
-                    lineIns2.setStroke(Color.rgb(100, 140, 80));
+                    lineIns1.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INS").get("stroke"));
+                    lineIns2.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INS").get("stroke"));
                     lineIns1.setOpacity(0.5);
                     lineIns2.setOpacity(0.5);
                     currentCalls.getChildren().add(lineIns1);
@@ -918,6 +958,7 @@ public class View {
         /**
          * Pre-conditions/assumptions: Gets call pane for each sample by looking up the ID
          */
+
         System.out.println(" ------------- TRIGGERING VIEW.SHOWTILECALLS() ------------ ");
         this.samplePanel.setMinWidth(chromosome.getLength() * zoomLevel);
         this.samplePanel.setMaxWidth(chromosome.getLength() * zoomLevel);
@@ -960,9 +1001,9 @@ public class View {
                         callRect.setArcWidth(5);   // horizontal roundness
                         callRect.setArcHeight(5);
                         if (Objects.equals(currentCall.getType(), "DUP")) {
-                            callRect.setStroke(Color.rgb(40, 70, 160));
+                            callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
                             callRect.setOpacity(0.5);
-                            callRect.setFill(Color.rgb(65, 105, 225));
+                            callRect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("fill"));
                             nodeGroups.get(currentCall.getId()).add(callRect);
                             // if the duplication rectangle is currently big enough to show the inside lines, show
                             // inset is the distance from inner border to outer border
@@ -974,10 +1015,10 @@ public class View {
                                 Line lineDup2 = new Line(currentCall.getStart()*zoomLevel + inset, originalTrackHeight - inset, endX, originalTrackHeight - inset);
                                 Line lineDup3 = new Line(currentCall.getStart()*zoomLevel + inset, inset, currentCall.getStart()*zoomLevel + inset, originalTrackHeight - inset);
                                 Line lineDup4 = new Line(endX, inset, endX, originalTrackHeight - inset);
-                                lineDup1.setStroke(Color.rgb(40, 70, 160));
-                                lineDup2.setStroke(Color.rgb(40, 70, 160));
-                                lineDup3.setStroke(Color.rgb(40, 70, 160));
-                                lineDup4.setStroke(Color.rgb(40, 70, 160));
+                                lineDup1.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
+                                lineDup2.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
+                                lineDup3.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
+                                lineDup4.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
                                 lineDup1.setOpacity(0.5);
                                 lineDup2.setOpacity(0.5);
                                 lineDup3.setOpacity(0.5);
@@ -990,8 +1031,8 @@ public class View {
                                 double middleDupX = ((currentCall.getStart()*zoomLevel + inset)+endX)/2;
                                 Line lineDup5 = new Line(currentCall.getStart()*zoomLevel + inset, originalTrackHeight - inset, middleDupX, inset);
                                 Line lineDup6 = new Line(middleDupX, inset, endX, originalTrackHeight - inset);
-                                lineDup5.setStroke(Color.rgb(40, 70, 160));
-                                lineDup6.setStroke(Color.rgb(40, 70, 160));
+                                lineDup5.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
+                                lineDup6.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
                                 lineDup5.setOpacity(0.5);
                                 lineDup6.setOpacity(0.5);
                                 currentCalls.getChildren().add(lineDup5);
@@ -1011,13 +1052,13 @@ public class View {
                             }
                         }
                         else if (Objects.equals(currentCall.getType(), "INV")) {
-                            callRect.setStroke(Color.rgb(200, 140, 0));
+                            callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INV").get("stroke"));
                             callRect.setOpacity(0.5);
-                            callRect.setFill(Color.rgb(255, 195, 0 ));
+                            callRect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INV").get("fill"));
                             Line lineInv1 = new Line(currentCall.getStart()*zoomLevel, 1, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, originalTrackHeight-2);
                             Line lineInv2 = new Line(currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, 1, currentCall.getStart()*zoomLevel, originalTrackHeight-2);
-                            lineInv1.setStroke(Color.rgb(200, 140, 0));
-                            lineInv2.setStroke(Color.rgb(200, 140, 0));
+                            lineInv1.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INV").get("stroke"));
+                            lineInv2.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INV").get("stroke"));
                             lineInv1.setOpacity(0.6);
                             lineInv2.setOpacity(0.6);
                             currentCalls.getChildren().add(lineInv1);
@@ -1028,13 +1069,13 @@ public class View {
                             nodeGroups.get(currentCall.getId()).add(lineInv2);
                         }
                         else if (Objects.equals(currentCall.getType(), "DEL")) {
-                            callRect.setStroke(Color.rgb(120, 30, 2));
+                            callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DEL").get("stroke"));
                             callRect.setOpacity(0.5);
-                            callRect.setFill(Color.rgb(164, 42, 4));
+                            callRect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DEL").get("fill"));
                             Line lineDel1 = new Line(currentCall.getStart()*zoomLevel, 1, currentCall.getStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), originalTrackHeight-2);
                             Line lineDel2 = new Line(currentCall.getStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), originalTrackHeight-2, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, 1);
-                            lineDel1.setStroke(Color.rgb(120, 30, 2));
-                            lineDel2.setStroke(Color.rgb(120, 30, 2));
+                            lineDel1.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DEL").get("stroke"));
+                            lineDel2.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DEL").get("stroke"));
                             lineDel1.setOpacity(0.4);
                             lineDel2.setOpacity(0.4);
                             currentCalls.getChildren().add(lineDel1);
@@ -1045,13 +1086,13 @@ public class View {
                             nodeGroups.get(currentCall.getId()).add(lineDel2);
                         }
                         else if (Objects.equals(currentCall.getType(), "INS")) {
-                            callRect.setStroke(Color.rgb(100, 140, 80));
+                            callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INS").get("stroke"));
                             callRect.setOpacity(0.5);
-                            callRect.setFill(Color.rgb(147, 197, 114));
+                            callRect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INS").get("fill"));
                             Line lineIns1 = new Line(currentCall.getStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), 1, currentCall.getStart()*zoomLevel, originalTrackHeight-2);
                             Line lineIns2 = new Line(currentCall.getStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), 1, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, originalTrackHeight-2);
-                            lineIns1.setStroke(Color.rgb(100, 140, 80));
-                            lineIns2.setStroke(Color.rgb(100, 140, 80));
+                            lineIns1.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INS").get("stroke"));
+                            lineIns2.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INS").get("stroke"));
                             lineIns1.setOpacity(0.5);
                             lineIns2.setOpacity(0.5);
                             currentCalls.getChildren().add(lineIns1);
@@ -1357,13 +1398,13 @@ public class View {
             bottomLine.setStroke(Color.BLACK);
             // set actions for radio controls
             this.redGreenAFTrackItem.setOnAction(e -> {
-                this.applyColorTheme("red-green AF", callsWrapper);
+                this.applyAFColorTheme("red-green AF", callsWrapper);
             });
             this.grayscaleAFTrackItem.setOnAction(e -> {
-                this.applyColorTheme("grayscale AF", callsWrapper);
+                this.applyAFColorTheme("grayscale AF", callsWrapper);
             });
             // trigger default color theme
-            this.applyColorTheme("red-green AF", callsWrapper);
+            this.applyAFColorTheme("red-green AF", callsWrapper);
             this.redGreenAFTrackItem.setSelected(true);
         }
         else {
@@ -1929,7 +1970,8 @@ public class View {
     }
 
 
-    public void applyColorTheme(String theme, Pane callsWrapper) {
+    public void applyAFColorTheme(String theme, Pane callsWrapper) {
+        // RED GREEN GRADIENT
         LinearGradient redGreenGradient = new LinearGradient(
                 0, 0, 0, 1,      // startX, startY, endX, endY
                 true,            // proportional
@@ -1943,6 +1985,7 @@ public class View {
         );
         BackgroundFill redGreenFill = new BackgroundFill(redGreenGradient, CornerRadii.EMPTY, Insets.EMPTY);
 
+        // GRAYSCALE GRADIENT
         LinearGradient grayscaleGradient = new LinearGradient(
                 0, 0, 0, 1,      // startX, startY, endX, endY
                 true,            // proportional
@@ -1956,13 +1999,24 @@ public class View {
         );
         BackgroundFill grayscaleFill = new BackgroundFill(grayscaleGradient, CornerRadii.EMPTY, Insets.EMPTY);
 
-
+        // apply to AF callsWrapper based on specified theme
         if (Objects.equals(theme, "red-green AF")) {
             callsWrapper.setBackground(new Background(redGreenFill));
         }
         if (Objects.equals(theme, "grayscale AF")) {
             callsWrapper.setBackground(new Background(grayscaleFill));
         }
+    }
 
+    public void updateCurrentSVGlyphTheme(String theme) {
+        if (Objects.equals(theme, "default")) {
+            this.currentSVGlyphTheme = "default";
+        }
+        else if (Objects.equals(theme, "colorblind")) {
+            this.currentSVGlyphTheme = "colorblind";
+        }
+        else {
+            // do nothing, not recognized, update for bug later
+        }
     }
 }
