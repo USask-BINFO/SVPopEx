@@ -136,14 +136,23 @@ public class View {
     // ---------- callsPanel ----------
     private double scrollViewportHeight = 0;
     private final HBox callsContentContainer = new HBox();
+    // information (left hand side)
+    private final VBox annotationsInfoContainer = new VBox(0);
     private final VBox samplesInfoContainer = new VBox(0);
+    private final VBox tracksInfoContainer = new VBox(0, annotationsInfoContainer, samplesInfoContainer);
+    private final ScrollPane tracksInfoPanel = new ScrollPane(tracksInfoContainer);
+
+    // calls (right hand side)
+    private final VBox annotationsContainer = new VBox(0);
     private final VBox samplesContainer = new VBox(0);
+    private final VBox tracksContainer = new VBox(0, annotationsContainer, samplesContainer);
+
     private final HBox selectionContainer = new HBox();
     private final Pane selectionWrapper = new Pane();
-    private final StackPane samplePanel = new StackPane(samplesContainer, selectionContainer);
-    private VBox sampleGroup = new VBox(samplePanel);
-    private final ScrollPane samplesInfoPanel = new ScrollPane(samplesInfoContainer);
-    private final ScrollPane callsPanel = new ScrollPane(sampleGroup);
+    private final StackPane tracksPanel = new StackPane(tracksContainer, selectionContainer);
+    private VBox tracksGroup = new VBox(tracksPanel);
+
+    private final ScrollPane callsPanel = new ScrollPane(tracksGroup);
     private final HashMap<String, ArrayList<Node>> nodeGroups = new HashMap<>();
     private boolean dragging = false;
 
@@ -538,15 +547,15 @@ public class View {
             this.ticksReleased(e);
         });
         // ---------- CALLS PANEL -------
-        this.callsContentContainer.getChildren().add(samplesInfoPanel);
+        this.callsContentContainer.getChildren().add(tracksInfoPanel);
         this.callsContentContainer.getChildren().add(callsPanel);
-        samplesInfoPanel.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-        samplesInfoPanel.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-        samplesInfoPanel.vvalueProperty().bindBidirectional(callsPanel.vvalueProperty());
-        samplesInfoPanel.setStyle("-fx-background-color: transparent;");
+        tracksInfoPanel.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        tracksInfoPanel.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        tracksInfoPanel.vvalueProperty().bindBidirectional(callsPanel.vvalueProperty());
+        tracksInfoPanel.setStyle("-fx-background-color: transparent;");
         this.callsPanel.setStyle("-fx-focus-color: transparent; -fx-faint-focus-color: transparent;");
         this.callsPanel.setStyle("-fx-background-color:transparent;");
-        this.samplePanel.setStyle("-fx-background-color:white;");
+        this.tracksPanel.setStyle("-fx-background-color:white;");
         this.callsPanel.setMinWidth(Screen.getPrimary().getBounds().getWidth() - sampleSpaceWidth);
         this.callsPanel.setPrefWidth(Screen.getPrimary().getBounds().getWidth() - sampleSpaceWidth);
         this.callsPanel.setMaxWidth(Screen.getPrimary().getBounds().getWidth() - sampleSpaceWidth);
@@ -780,7 +789,7 @@ public class View {
     }
 
     public void showChromosomeAlleleFreq(Chromosome chromosome, double zoomLevel, int originalTrackHeight) {
-        Pane freqPane = (Pane) this.samplesContainer.lookup("#" + "AlleleFreq");
+        Pane freqPane = (Pane) this.annotationsContainer.lookup("#" + "AlleleFreq");
         freqPane.getChildren().clear();
         freqPane.setMinWidth(chromosome.getLength() * zoomLevel);
         freqPane.setPrefWidth(chromosome.getLength() * zoomLevel);
@@ -802,7 +811,7 @@ public class View {
     }
 
     public void showTileAlleleFreq(Chromosome chromosome, double zoomLevel, int originalTrackHeight, int startInterval, int endInterval) {
-        Pane freqPane = (Pane) this.samplesContainer.lookup("#" + "AlleleFreq");
+        Pane freqPane = (Pane) this.annotationsContainer.lookup("#" + "AlleleFreq");
         freqPane.getChildren().clear();
         freqPane.setMinWidth(chromosome.getLength() * zoomLevel);
         freqPane.setPrefWidth(chromosome.getLength() * zoomLevel);
@@ -830,8 +839,8 @@ public class View {
          * Pre-conditions/assumptions: Gets call pane for each sample by looking up the ID
          */
 
-        this.samplePanel.setMinWidth(chromosome.getLength() * zoomLevel);
-        this.samplePanel.setMaxWidth(chromosome.getLength() * zoomLevel);
+        this.tracksPanel.setMinWidth(chromosome.getLength() * zoomLevel);
+        this.tracksPanel.setMaxWidth(chromosome.getLength() * zoomLevel);
 
         // loops through each sample and gets the sample pane to update, access order does not matter
         for (Sample sample : samples) {
@@ -960,8 +969,8 @@ public class View {
          */
 
         System.out.println(" ------------- TRIGGERING VIEW.SHOWTILECALLS() ------------ ");
-        this.samplePanel.setMinWidth(chromosome.getLength() * zoomLevel);
-        this.samplePanel.setMaxWidth(chromosome.getLength() * zoomLevel);
+        this.tracksPanel.setMinWidth(chromosome.getLength() * zoomLevel);
+        this.tracksPanel.setMaxWidth(chromosome.getLength() * zoomLevel);
 
         // loops through each sample and gets the sample pane to update, access order does not matter
         for (Sample sample : samples) {
@@ -1434,9 +1443,9 @@ public class View {
         labelContainer.getChildren().add(labelWrapper);
 
         infoContainer.getChildren().addAll(lockContainer, labelContainer);
-        this.samplesInfoContainer.getChildren().add(infoContainer);
+        this.annotationsInfoContainer.getChildren().add(infoContainer);
         // add sampContainer to samplesContainer
-        this.samplesContainer.getChildren().add(callsWrapper);
+        this.annotationsContainer.getChildren().add(callsWrapper);
     }
 
     public void createNewCallTrack(HashMap<String, Color> sampleColors, long refLength, double zoomLevel, String sampleName, double baseFontSize, int height) {
@@ -1638,14 +1647,14 @@ public class View {
         return this.scrollViewportHeight;
     }
 
-    public void updateTrackHeight(double val) {
+    public void updateTrackHeight(ArrayList<Sample> samples, double val) {
         Scale scale = new Scale();
         // pivot at top edge, so it grows and shrinks from top
         scale.setPivotY(0);
         scale.setY(val);
         // remove old transforms
-        this.sampleGroup.getTransforms().clear();
-        this.sampleGroup.getTransforms().add(scale);
+        this.samplesContainer.getTransforms().clear();
+        this.samplesContainer.getTransforms().add(scale);
         this.samplesInfoContainer.getTransforms().clear();
         this.samplesInfoContainer.getTransforms().add(scale);
         triggerScrollPane();
@@ -1653,10 +1662,13 @@ public class View {
 
     private void triggerScrollPane() {
         // Apply CSS/layout for accurate prefHeight
-        double newHeight = this.sampleGroup.getBoundsInParent().getHeight();
-        sampleGroup.setMinHeight(newHeight);
-        sampleGroup.setPrefHeight(newHeight);
-        sampleGroup.setMaxHeight(newHeight);
+        double newHeight = this.samplesContainer.getBoundsInParent().getHeight() + this.annotationsContainer.getLayoutBounds().getHeight();
+        tracksGroup.setMinHeight(newHeight);
+        tracksGroup.setPrefHeight(newHeight);
+        tracksGroup.setMaxHeight(newHeight);
+        tracksContainer.setMinHeight(newHeight);
+        tracksContainer.setPrefHeight(newHeight);
+        tracksContainer.setMaxHeight(newHeight);
         ScrollBar hScrollBar = (ScrollBar) callsPanel.lookup(".scroll-bar:horizontal");
         double scrollbarHeight = 0;
         if (hScrollBar != null) {
@@ -1680,23 +1692,7 @@ public class View {
             // get the labelwrapper
             Pane labelWrapper = (Pane) labelContainer.getChildren().getFirst();
             Label sampleLabel = (Label) labelWrapper.getChildren().getFirst();
-
-            Scale scale = null;
-            for (Transform t : samplesInfoContainer.getTransforms()) {
-                if (t instanceof Scale s) {
-                    scale = s;
-                    break;
-                }
-            }
-            if (scale != null) {
-                double scaleFactor = scale.getX();
-                // use scaleFactor to adjust font sizes
-                Font f = sampleLabel.getFont();
-                double currentFontSize = f.getSize();
-                sampleLabel.setFont(Font.font(sampleLabel.getFont().getFamily(), baseFontSize / scaleFactor));
-            }
-            double adjustedFontSize = baseFontSize / trackHeightScale;
-
+            sampleLabel.setScaleY(1.0/trackHeightScale);
         }
     }
 

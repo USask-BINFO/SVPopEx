@@ -239,7 +239,7 @@ public class Controller {
 
     public void updateTrackHeight(double increment) {
         model.updateTrackHeightScale(increment);
-        view.updateTrackHeight(model.getTrackHeightScale());
+        view.updateTrackHeight(model.getSamples(), model.getTrackHeightScale());
         view.redrawSampleInfoAfterScale(model.getSamples(), model.getBaseFontSize(), model.getTrackHeightScale(), model.getOriginalTrackHeight());
     }
 
