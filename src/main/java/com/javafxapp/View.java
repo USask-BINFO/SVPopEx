@@ -636,7 +636,7 @@ public class View {
 
     // *************************************************************** MAIN INITIALIZATION FUNCTIONS ************************************************************************
 
-    public void initSidePane(ArrayList<Sample> samples, HashMap<String, Color> sampleColors, Supplier<Integer> numAnnotations) {
+    public void initSidePane(ArrayList<Sample> samples, HashMap<String, Color> sampleColors) {
         HashMap<String,Boolean> result = new HashMap<>();
         comparators.setPadding(new Insets(0, 0, 0, 20));
         Label pinLabel = new Label("Pin to Top:");
@@ -658,11 +658,11 @@ public class View {
             int OGIndex = index;
             checkBox.setOnAction(event -> {
                 if (checkBox.isSelected()) {
-                    moveSample(sample, OGIndex, "TOP", numAnnotations.get());
+                    moveSample(sample, OGIndex, "TOP");
                     toggleSampleLock(sample);
                 }
                 else {
-                    moveSample(sample, OGIndex, "BOTTOM", numAnnotations.get());
+                    moveSample(sample, OGIndex, "BOTTOM");
                     toggleSampleLock(sample);
 
                 }
@@ -775,12 +775,12 @@ public class View {
         }
     }
 
-    public void initSamples(ArrayList<Sample> samples, HashMap<String, Color> sampleColors, long refLength, double zoomLevel, double baseFontSize, int originalTrackHeight) {
+    public void initSamples(ArrayList<Sample> samples, HashMap<String, Color> sampleColors, long refLength, double zoomLevel, double baseFontSize, int originalTrackHeight, int AFTrackHeight) {
         /*
         Post-conditions: Samples added to sampleOrder ArrayList
          */
         // add additional track for allele frequency
-        this.createNewAnnotationTrack(refLength, zoomLevel, "Allele Freq.", baseFontSize, 100, "AF");
+        this.createNewAnnotationTrack(refLength, zoomLevel, "Allele Freq.", baseFontSize, AFTrackHeight, "AF");
         for (Sample sample : samples) {
             sampleOrder.add(sample);
             this.createNewCallTrack(sampleColors, refLength, zoomLevel, sample.getName(), baseFontSize, originalTrackHeight);
@@ -788,7 +788,7 @@ public class View {
         this.callsPanel.setPannable(true);   // Optional: enables mouse drag scrolling
     }
 
-    public void showChromosomeAlleleFreq(Chromosome chromosome, double zoomLevel, int originalTrackHeight) {
+    public void showChromosomeAlleleFreq(Chromosome chromosome, double zoomLevel, int AFTrackHeight) {
         Pane freqPane = (Pane) this.annotationsContainer.lookup("#" + "AlleleFreq");
         freqPane.getChildren().clear();
         freqPane.setMinWidth(chromosome.getLength() * zoomLevel);
@@ -799,10 +799,10 @@ public class View {
             double currentFreq = chromosome.getAllCalls().get(i).getAlleleFreq();
             Circle circle;
             if (Objects.equals(chromosome.getName(), "<ALL>")) {
-                circle = new Circle(currentCall.getAbsoluteStart()*zoomLevel, originalTrackHeight * currentFreq, 1);
+                circle = new Circle(currentCall.getAbsoluteStart()*zoomLevel, AFTrackHeight * currentFreq, 1);
             }
             else {
-                circle = new Circle(currentCall.getStart()*zoomLevel, originalTrackHeight * currentFreq, 1);
+                circle = new Circle(currentCall.getStart()*zoomLevel, AFTrackHeight * currentFreq, 1);
             }
             circle.setFill(Color.BLACK);
             circle.setStroke(Color.BLACK);
@@ -810,7 +810,7 @@ public class View {
         }
     }
 
-    public void showTileAlleleFreq(Chromosome chromosome, double zoomLevel, int originalTrackHeight, int startInterval, int endInterval) {
+    public void showTileAlleleFreq(Chromosome chromosome, double zoomLevel, int AFTrackHeight, int startInterval, int endInterval) {
         Pane freqPane = (Pane) this.annotationsContainer.lookup("#" + "AlleleFreq");
         freqPane.getChildren().clear();
         freqPane.setMinWidth(chromosome.getLength() * zoomLevel);
@@ -822,7 +822,7 @@ public class View {
             try {
                 for (Call currentCall : chromosome.getTiledCallStarts().get(i)) {
                     double currentFreq = currentCall.getAlleleFreq();
-                    Circle circle = new Circle(currentCall.getStart() * zoomLevel, originalTrackHeight * currentFreq, 1);
+                    Circle circle = new Circle(currentCall.getStart() * zoomLevel, AFTrackHeight * currentFreq, 1);
                     circle.setFill(Color.BLACK);
                     circle.setStroke(Color.BLACK);
                     freqPane.getChildren().add(circle);
@@ -1455,13 +1455,6 @@ public class View {
         // force height of track (or else it will collapse if there is no content)
         callsWrapper.setMinHeight(height);
         callsWrapper.setMaxHeight(height);
-        // create labelWrapper Pane to hold sample name
-        StackPane labelWrapper = new StackPane();
-        labelWrapper.setMinWidth(this.sampleSpaceWidth * 0.7);
-        labelWrapper.setMaxWidth(this.sampleSpaceWidth * 0.7);
-        // create sample label
-        Label sampleLabel = new Label(sampleName);
-        sampleLabel.setFont(Font.font("System", baseFontSize));
 
         // create infoContainer to hold all sample info and graphics
         HBox infoContainer = new HBox();
@@ -1485,17 +1478,25 @@ public class View {
         lockContainer.setMinWidth(this.sampleSpaceWidth * 0.3);
 
         // label container to hold label and color rect if applicable
-        VBox labelContainer = new VBox();
-        labelContainer.setAlignment(Pos.CENTER);
+        HBox labelContainer = new HBox();
+        labelContainer.setMinWidth(this.sampleSpaceWidth*0.7);
+        labelContainer.setMaxWidth(this.sampleSpaceWidth*0.7);
+        labelContainer.setAlignment(Pos.CENTER_LEFT);
+        // create sample color with padding around it
+        Rectangle colorRect = new Rectangle(5.5, 5.5, sampleColors.get(sampleName));
+        HBox.setMargin(colorRect, new Insets(0, 4, 0, 4));
+        // create labelWrapper Pane to hold sample name
+        StackPane labelWrapper = new StackPane();
+        Label sampleLabel = new Label(sampleName);
+        sampleLabel.setFont(Font.font("System", baseFontSize));
         labelWrapper.getChildren().add(sampleLabel);
-        Rectangle colorRect = new Rectangle(40, 2.5, sampleColors.get(sampleName));
-        labelContainer.getChildren().addAll(labelWrapper, colorRect);
+        // add elements to label container
+        labelContainer.getChildren().addAll(colorRect, labelWrapper);
 
         infoContainer.getChildren().addAll(lockContainer, labelContainer);
         this.samplesInfoContainer.getChildren().add(infoContainer);
         // add sampContainer to samplesContainer
         callsWrapper.setStyle("-fx-border-color: #DFE0DF; -fx-border-width: 0.5;");
-
         this.samplesContainer.getChildren().add(callsWrapper);
         // set IDs
         infoContainer.setId(sampleName);
@@ -1687,12 +1688,18 @@ public class View {
             HBox container = (HBox) samplesInfoContainer.lookup("#" + sample.getName());
 //            container.setMinHeight(originalTrackHeight * trackHeightScale);
 //            container.setMaxHeight(originalTrackHeight * trackHeightScale);
-            // get second vbox (labelcontainer)
-            VBox labelContainer = (VBox) container.getChildren().get(1);
-            // get the labelwrapper
-            Pane labelWrapper = (Pane) labelContainer.getChildren().getFirst();
+            // get second HBox (labelContainer), lockContainer is first
+            VBox lockContainer = (VBox) container.getChildren().getFirst();
+            SVGPath lockIcon = (SVGPath) lockContainer.getChildren().getFirst();
+            HBox labelContainer = (HBox) container.getChildren().get(1);
+            // get the labelwrapper and color
+            Rectangle rect = (Rectangle) labelContainer.getChildren().getFirst();
+            Pane labelWrapper = (Pane) labelContainer.getChildren().get(1);
             Label sampleLabel = (Label) labelWrapper.getChildren().getFirst();
             sampleLabel.setScaleY(1.0/trackHeightScale);
+            rect.setScaleY(1.0/trackHeightScale);
+            lockIcon.setScaleY(0.75/trackHeightScale);
+            //sampleLabel.setFont(new Font(sampleLabel.getFont().getFamily(), baseFontSize*trackHeightScale));
         }
     }
 
@@ -1769,7 +1776,7 @@ public class View {
     }
 
 
-    public void moveSample(Sample sample, int OGIndex, String setting, int numAnnotations) {
+    public void moveSample(Sample sample, int OGIndex, String setting) {
         int numChecked = 0;
         // past refers to below here
         int pastChecked = 0;
@@ -1815,8 +1822,8 @@ public class View {
         this.samplesInfoContainer.getChildren().remove(container);
         this.sampleOrder.remove(sample);
         // insert at new location
-        this.samplesContainer.getChildren().add(newIndex+numAnnotations, calls);
-        this.samplesInfoContainer.getChildren().add(newIndex+numAnnotations, container);
+        this.samplesContainer.getChildren().add(newIndex, calls);
+        this.samplesInfoContainer.getChildren().add(newIndex, container);
         this.sampleOrder.add(newIndex, sample);
     }
 

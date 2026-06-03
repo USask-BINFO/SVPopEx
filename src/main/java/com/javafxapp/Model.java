@@ -23,12 +23,11 @@ public class Model {
     private double trackHeightScale = 1;
     private final double baseFontSize = 12;
     private final int originalTrackHeight = 100;
-    // AF is shown by default
-    private int numAnnotationsShown = 1;
     private int tileSize = 10000000;
     private int currentTileStart = 0;
     private int currentTileEnd = 0;
     private int tileBuffer = 2;
+    private int AFTrackHeight = 88;
     private final Set<String> supportedSVTypes = Set.of("TRA", "BND", "INS", "DEL", "INV", "DUP");
 
 
@@ -170,10 +169,6 @@ public class Model {
         else {
             this.zoomLevel = viewportWidth / length;
         }
-    }
-
-    public int getNumAnnotationsShown() {
-        return this.numAnnotationsShown;
     }
 
     public HashMap<String, Color> getSampleColors() {
@@ -479,9 +474,9 @@ public class Model {
                 }
                 double calcStart = selection.getStart() * zoomLevel / selection.getZoomLevel();
                 double calcLength = selection.getLength() * zoomLevel / selection.getZoomLevel();
-                int curIndex = numAnnotationsShown;
+                int curIndex = 0;
                 for (Sample sample : sampleOrder) {
-                    Rectangle newRect = new Rectangle(calcStart, curIndex*100, calcLength, 100);
+                    Rectangle newRect = new Rectangle(calcStart, (curIndex*(originalTrackHeight*trackHeightScale))+(this.AFTrackHeight), calcLength, (originalTrackHeight*trackHeightScale));
                     Color color = this.sampleColors.get(equiv.get(sample.getName()).getFirst());
                     result.put(newRect, color);
                     curIndex++;
@@ -511,7 +506,7 @@ public class Model {
     }
 
     public void updateTrackHeightScale(double increment) {
-        if ((this.trackHeightScale + increment) < 0.2) {
+        if ((this.trackHeightScale + increment) < 0.1) {
             // do nothing, too small
         }
         else {
@@ -700,5 +695,9 @@ public class Model {
 
     public int getTickSpacing() {
         return increments.get(coordIncrementIndex);
+    }
+
+    public int getAFTrackHeight() {
+        return this.AFTrackHeight;
     }
 }
