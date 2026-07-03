@@ -23,9 +23,9 @@ public class Model {
     private double trackHeightScale = 1;
     private final double baseFontSize = 12;
     private final int originalTrackHeight = 100;
-    private int tileSize = 10000000;
-    private int currentTileStart = 0;
-    private int currentTileEnd = 0;
+    private int tileSize = 20000000;
+    private Integer currentTileBufferStart = null;
+    private Integer currentTileBufferEnd = null;
     private int tileBuffer = 2;
     private int AFTrackHeight = 88;
     private final Set<String> supportedSVTypes = Set.of("TRA", "BND", "INS", "DEL", "INV", "DUP");
@@ -39,51 +39,80 @@ public class Model {
         setCurrentChrom(null);
     }
 
+    public int getBufferStartTile() {
+        return this.currentTileBufferStart;
+    }
+
+    public int getBufferEndTile() {
+        return this.currentTileBufferEnd;
+    }
+
     /**
      *
-     * @param newStartTile corresponds to the start of the tile for the region in view
+     * @param newStartTile corresponds to the start of the tile for the region in view INCLUDES BUFFER
      * @return whether new tiles need to be shown
      */
     public boolean updateCurrentTileStart(int newStartTile) {
-        // currently range includes less than 0, and new region includes less than 0, do nothing
-        if (this.currentTileStart <= 0 && newStartTile-tileBuffer <= 0) {
+        System.out.println("NEW START TILE " + newStartTile);
+        System.out.println("CURRENT BUFFER START " + currentTileBufferStart);
+        if (currentTileBufferStart == null) {
+            currentTileBufferStart = newStartTile;
+        }
+        // both at min, do nothing
+        if (this.currentTileBufferStart == 1 && newStartTile == 1) {
             // do nothing
+            System.out.println("EXECUTED CASE 1");
             return false;
         }
         // currently already the same, do nothing
-        else if (this.currentTileStart == (newStartTile-tileBuffer)) {
+        else if (this.currentTileBufferStart == (newStartTile)-tileBuffer) {
             // do nothing
+            System.out.println("EXECUTE CASE 2");
             return false;
         }
         // otherwise different, update
         else {
-            if (newStartTile-tileBuffer < 1) {
-                this.currentTileStart = 1;
+            if (newStartTile < 1 || newStartTile-tileBuffer < 1) {
+                System.out.println("CASE 3 - UPDATING BUFFER TO 1st TILE");
+                this.currentTileBufferStart = 1;
             }
             else {
-                this.currentTileStart = newStartTile-tileBuffer;
+                System.out.println("CASE 4 - UPDATING BUFFER TO " + (newStartTile-tileBuffer));
+                this.currentTileBufferStart = newStartTile-tileBuffer;
             }
         }
         return true;
     }
 
     public boolean updateCurrentTileEnd(int newEndTile) {
-        if (this.currentTileEnd == (newEndTile+tileBuffer)) {
+        System.out.println("NEW END TILE " + newEndTile);
+        System.out.println("CURRENT END TILE " + currentTileBufferEnd);
+        int maxEndTile = getStartInterval((int) currentChrom.getLength());
+        if (this.currentTileBufferEnd == null) {
+            this.currentTileBufferEnd = newEndTile;
+        }
+        // already equal
+        if (this.currentTileBufferEnd == (newEndTile+tileBuffer)) {
             // do nothing
+            System.out.println("CASE 1 END");
+            return false;
+        }
+        // greater than end and needs to be updated to max
+        else if (newEndTile+tileBuffer > maxEndTile && currentTileBufferEnd != maxEndTile) {
+            System.out.println("CASE 2 END");
+            this.currentTileBufferEnd = maxEndTile;
+            return true;
+        }
+        // if buffer should be greater than end, but buffer is already at max, do nothing
+        else if (newEndTile+tileBuffer > maxEndTile && currentTileBufferEnd == maxEndTile) {
+            System.out.println("CASE 3 END");
             return false;
         }
         else {
-            this.currentTileEnd = newEndTile+tileBuffer;
+            System.out.println("CASE 4 END");
+            this.currentTileBufferEnd = newEndTile+tileBuffer;
             return true;
         }
-    }
-
-    public int getCurrentTileStart() {
-        return this.currentTileStart;
-    }
-
-    public int getCurrentTileEnd() {
-        return this.currentTileEnd;
     }
 
     public Chromosome getCurrentChrom() {
@@ -506,6 +535,8 @@ public class Model {
     }
 
     public void updateTrackHeightScale(double increment) {
+        System.out.println("TRACK HEIGHT SCALE IS " + trackHeightScale);
+        System.out.println("TRACK HEIGHT IS " + (trackHeightScale*originalTrackHeight));
         if ((this.trackHeightScale + increment) < 0.1) {
             // do nothing, too small
         }
@@ -593,47 +624,45 @@ public class Model {
                     if (!supportedSVTypes.contains(typeInfoMatcher.group(1))) {
                         System.err.println("Error: SV type: " + typeInfoMatcher.group(1) + " is not supported. Ignoring call.");
                     }
-                    // otherwise, do nothing
+                    // otherwise, process
                     else {
-                        // do nothing
-                    }
-                    // make sure chrom was processed earlier
-                    long absoluteStart = 0;
-                    try {
-                        absoluteStart = refChromosomes.get(fields[0]).getAbsoluteStart() + Integer.parseInt(fields[1]);
-                    }
-                    catch (NullPointerException e) {
-                        //System.err.println("Could not identify Chromosome " + fields[0] + ". Ignoring call.");
-                        continue;
-                    }
-                    Call currentCall = new Call(typeInfoMatcher.group(1), Integer.parseInt(lengthInfoMatcher.group(1)), fields[0], fields[5], fields[6], Integer.parseInt(fields[1]), absoluteStart, fields[4], fields[2], genotypes);
-                    for (Sample sample : this.samples) {
-                        String genotypeRegex = "(./.):";
-                        Pattern genotypePattern = Pattern.compile(genotypeRegex);
-                        Matcher genotypeMatcher = genotypePattern.matcher(fields[startCol]);
-                        // assign reference length if match is found, otherwise exit
-                        if (genotypeMatcher.find()) {
-                            genotypes.put(sample.getName(), genotypeMatcher.group(1));
-                            // if has the variant, add
-                            if (Objects.equals(genotypeMatcher.group(1), "0/1") || Objects.equals(genotypeMatcher.group(1), "1/1")) {
-                                // add call for chromosome (in VCF)
-                                sample.addCall(fields[0], currentCall);
-                                sample.addToTiledCalls(fields[0], currentCall, this.tileSize);
-                                // add call to <ALL>
-                                sample.addCall("<ALL>", currentCall);
-                            }
-                        } else {
-                            System.err.println("Error: Could not find genotype for a sample on line:" + line + " . Ignoring call.");
+                        // make sure chrom was processed earlier
+                        long absoluteStart = 0;
+                        try {
+                            absoluteStart = refChromosomes.get(fields[0]).getAbsoluteStart() + Integer.parseInt(fields[1]);
+                        } catch (NullPointerException e) {
+                            //System.err.println("Could not identify Chromosome " + fields[0] + ". Ignoring call.");
+                            continue;
                         }
-                        startCol++;
+                        Call currentCall = new Call(typeInfoMatcher.group(1), Integer.parseInt(lengthInfoMatcher.group(1)), fields[0], fields[5], fields[6], Integer.parseInt(fields[1]), absoluteStart, fields[4], fields[2], genotypes);
+                        for (Sample sample : this.samples) {
+                            String genotypeRegex = "(./.):";
+                            Pattern genotypePattern = Pattern.compile(genotypeRegex);
+                            Matcher genotypeMatcher = genotypePattern.matcher(fields[startCol]);
+                            // assign reference length if match is found, otherwise exit
+                            if (genotypeMatcher.find()) {
+                                genotypes.put(sample.getName(), genotypeMatcher.group(1));
+                                // if has the variant, add
+                                if (Objects.equals(genotypeMatcher.group(1), "0/1") || Objects.equals(genotypeMatcher.group(1), "1/1")) {
+                                    // add call for chromosome (in VCF)
+                                    sample.addCall(fields[0], currentCall);
+                                    sample.addToTiledCalls(fields[0], currentCall, this.tileSize);
+                                    // add call to <ALL>
+                                    sample.addCall("<ALL>", currentCall);
+                                }
+                            } else {
+                                System.err.println("Error: Could not find genotype for a sample on line:" + line + " . Ignoring call.");
+                            }
+                            startCol++;
+                        }
+                        // after all calls added, calculate allele frequency
+                        currentCall.setAlleleFreq();
+                        // add to structures
+                        calls.add(currentCall);
+                        refChromosomes.get(fields[0]).addTiledCall(currentCall, this.tileSize);
+                        refChromosomes.get("<ALL>").addCall(currentCall);
+                        refChromosomes.get(fields[0]).addCall(currentCall);
                     }
-                    // after all calls added, calculate allele frequency
-                    currentCall.setAlleleFreq();
-                    // add to structures
-                    calls.add(currentCall);
-                    refChromosomes.get(fields[0]).addTiledCall(currentCall, this.tileSize);
-                    refChromosomes.get("<ALL>").addCall(currentCall);
-                    refChromosomes.get(fields[0]).addCall(currentCall);
                 }
             }
         }
@@ -648,7 +677,7 @@ public class Model {
     }
 
     public int getStartInterval(int start) {
-        return (start - 1) / this.tileSize + 1;
+        return ((start - 1) / this.tileSize + 1);
     }
 
     public int getEndInterval(int end) {

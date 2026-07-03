@@ -31,6 +31,8 @@ import javafx.stage.Screen;
 import java.sql.SQLOutput;
 import java.util.*;
 import java.util.function.Supplier;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 // naming conventions
 // Stage -> ...Stage
@@ -880,10 +882,12 @@ public class View {
                     lineDup2.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
                     lineDup3.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
                     lineDup4.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
-                    currentCalls.getChildren().add(lineDup1);
-                    currentCalls.getChildren().add(lineDup2);
-                    currentCalls.getChildren().add(lineDup3);
-                    currentCalls.getChildren().add(lineDup4);
+                    if (!Objects.equals(chromosome.getName(), "<ALL>")) {
+                        currentCalls.getChildren().add(lineDup1);
+                        currentCalls.getChildren().add(lineDup2);
+                        currentCalls.getChildren().add(lineDup3);
+                        currentCalls.getChildren().add(lineDup4);
+                    }
                 }
                 else if (Objects.equals(currentCall.getType(), "INV")) {
                     callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INV").get("stroke"));
@@ -963,7 +967,7 @@ public class View {
         }
     }
 
-    public void showTileCalls(Chromosome chromosome, ArrayList<Sample> samples, double zoomLevel, int originalTrackHeight, int startInterval, int endInterval) {
+    public void showTileCalls(Chromosome chromosome, ArrayList<Sample> samples, double zoomLevel, int originalTrackHeight, Integer startInterval, int endInterval) {
         /**
          * Pre-conditions/assumptions: Gets call pane for each sample by looking up the ID
          */
@@ -1229,7 +1233,14 @@ public class View {
                 // do nothing
             }
             Label mateLabel = (Label) callInfoSideContainer.lookup("#mate");
-            mateLabel.setText(call.getAlternate());
+            Pattern pattern = Pattern.compile("([\\[\\]])(.+)\\1");
+            Matcher matcher = pattern.matcher(call.getAlternate());
+            if (matcher.find()) {
+                mateLabel.setText(matcher.group(2));
+            }
+            else {
+                System.err.println("Error: could not identify mate region in ALT field for BND or TRA. ID is " + call.getId() + " and alternate is " + call.getAlternate());
+            }
         }
         // call is not breakend type, make sure mate container node is removed
         else {
@@ -1385,14 +1396,19 @@ public class View {
         // GENEREPEAT
         // AF
         // PILEUP
-        Pane callsWrapper = new Pane();
-        callsWrapper.setPrefWidth(refLength * zoomLevel);
+        StackPane callsWrapper = new StackPane();
+        callsWrapper.setPadding(new Insets(1, 0, 1, 0));
+
+        Pane freqPane = new Pane();
+        callsWrapper.getChildren().add(freqPane);
+
+        freqPane.setPrefWidth(refLength * zoomLevel);
         // force height of track (or else it will collapse if there is no content)
-        callsWrapper.setMinHeight(height);
-        callsWrapper.setMaxHeight(height);
+        freqPane.setMinHeight(height);
+        freqPane.setMaxHeight(height);
         if (Objects.equals(key, "AF")) {
             // set id
-            callsWrapper.setId("AlleleFreq");
+            freqPane.setId("AlleleFreq");
 
 
             Line topLine = new Line();
@@ -1474,17 +1490,17 @@ public class View {
         lockIcon.setId("lock");
         lockContainer.getChildren().add(lockIcon);
         lockContainer.setAlignment(Pos.CENTER_RIGHT);
-        lockContainer.setMinWidth(this.sampleSpaceWidth * 0.3);
-        lockContainer.setMinWidth(this.sampleSpaceWidth * 0.3);
+        lockContainer.setMinWidth(this.sampleSpaceWidth * 0.2);
+        lockContainer.setMinWidth(this.sampleSpaceWidth * 0.2);
 
         // label container to hold label and color rect if applicable
         HBox labelContainer = new HBox();
-        labelContainer.setMinWidth(this.sampleSpaceWidth*0.7);
-        labelContainer.setMaxWidth(this.sampleSpaceWidth*0.7);
+        labelContainer.setMinWidth(this.sampleSpaceWidth*0.8);
+        labelContainer.setMaxWidth(this.sampleSpaceWidth*0.8);
         labelContainer.setAlignment(Pos.CENTER_LEFT);
         // create sample color with padding around it
-        Rectangle colorRect = new Rectangle(5.5, 5.5, sampleColors.get(sampleName));
-        HBox.setMargin(colorRect, new Insets(0, 4, 0, 4));
+        Rectangle colorRect = new Rectangle(7, 7, sampleColors.get(sampleName));
+        HBox.setMargin(colorRect, new Insets(0, 2, 0, 2));
         // create labelWrapper Pane to hold sample name
         StackPane labelWrapper = new StackPane();
         Label sampleLabel = new Label(sampleName);
@@ -1973,7 +1989,7 @@ public class View {
     }
 
 
-    public void applyAFColorTheme(String theme, Pane callsWrapper) {
+    public void applyAFColorTheme(String theme, StackPane callsWrapper) {
         // RED GREEN GRADIENT
         LinearGradient redGreenGradient = new LinearGradient(
                 0, 0, 0, 1,      // startX, startY, endX, endY
@@ -1993,12 +2009,12 @@ public class View {
                 0, 0, 0, 1,      // startX, startY, endX, endY
                 true,            // proportional
                 CycleMethod.NO_CYCLE,
-                new Stop(0.0, Color.rgb(110, 114, 110, 0.8)),    // gray
-                new Stop(0.05, Color.rgb(110, 114, 110, 0.8)),   // gray
-                new Stop(0.25, Color.rgb(229, 228, 226, 0.6)),  // platinum
-                new Stop(0.75, Color.rgb(229, 228, 226, 0.6)),  // platinum
-                new Stop(0.95, Color.rgb(110, 114, 110, 0.8)),   // gray
-                new Stop(1.0, Color.rgb(110, 114, 110, 0.8))     // gray
+                new Stop(0.0, Color.rgb(140, 144, 140, 0.8)),    // gray
+                new Stop(0.05, Color.rgb(140, 144, 140, 0.8)),   // gray
+                new Stop(0.25, Color.rgb(245, 245, 245, 0.6)),  // platinum
+                new Stop(0.75, Color.rgb(245, 245, 245, 0.6)),  // platinum
+                new Stop(0.95, Color.rgb(140, 144, 140, 0.8)),   // gray
+                new Stop(1.0, Color.rgb(140, 144, 140, 0.8))     // gray
         );
         BackgroundFill grayscaleFill = new BackgroundFill(grayscaleGradient, CornerRadii.EMPTY, Insets.EMPTY);
 

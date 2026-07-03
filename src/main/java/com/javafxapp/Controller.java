@@ -203,7 +203,9 @@ public class Controller {
 
             // show calls
             System.out.println("UPDATED ZOOM SHOWING START: " + newStart + " and END : " + newEnd);
-            view.showTileCalls(model.getCurrentChrom(), view.getSampleOrderInView(), level, model.getOriginalTrackHeight(), model.getStartInterval((int) newStart), model.getEndInterval((int) newEnd));
+            boolean updateStart = model.updateCurrentTileStart(model.getStartInterval((int) newStart));
+            boolean updateEnd = model.updateCurrentTileEnd(model.getEndInterval((int) newEnd));
+            view.showTileCalls(model.getCurrentChrom(), view.getSampleOrderInView(), level, model.getOriginalTrackHeight(), model.getBufferStartTile(), model.getBufferEndTile());
             view.showTileAlleleFreq(model.getCurrentChrom(), level, model.getAFTrackHeight(), model.getStartInterval((int) newStart), model.getEndInterval((int) newEnd));
             double offset = ((double) newStart / model.getCurrentChrom().getLength()) * view.getMarkerWrapperWidth();
             // update scroll and marker based on newStart and offset (calculated from newStart)
@@ -317,9 +319,10 @@ public class Controller {
         double proportion = model.getGenomicProportion(view.getViewportWidth(), model.getCurrentChrom(), model.getZoomLevel());
         double start = view.getStartFromHVal(newVal, model.getCurrentChrom(), model.getZoomLevel());
         double end = start + proportion;
-        System.out.println(model.updateCurrentTileStart(model.getStartInterval((int) start)));
-        if (model.updateCurrentTileStart(model.getStartInterval((int) start)) || model.updateCurrentTileEnd(model.getEndInterval((int) end))) {
-            view.showTileCalls(model.getCurrentChrom(), view.getSampleOrderInView(), model.getZoomLevel(), model.getOriginalTrackHeight(), model.getStartInterval((int) start), model.getEndInterval((int) end));
+        boolean updateStart = model.updateCurrentTileStart(model.getStartInterval((int) start));
+        boolean updateEnd = model.updateCurrentTileEnd(model.getEndInterval((int) end));
+        if (updateStart || updateEnd) {
+            view.showTileCalls(model.getCurrentChrom(), view.getSampleOrderInView(), model.getZoomLevel(), model.getOriginalTrackHeight(), model.getBufferStartTile(), model.getBufferEndTile());
             view.showTileAlleleFreq(model.getCurrentChrom(), model.getZoomLevel(), model.getAFTrackHeight(), model.getStartInterval((int) start), model.getEndInterval((int) end));
         }
     }
