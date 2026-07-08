@@ -9,7 +9,7 @@ public class Main extends Application {
         View view = new View(primaryStage);
         new Controller(model, view);
         primaryStage.setScene(view.getScene());
-        primaryStage.setTitle("JavaFX SV Visualization");
+        primaryStage.setTitle("SVPopEx");
         primaryStage.show();
         primaryStage.setMaximized(true);
     }

@@ -31,6 +31,8 @@ import javafx.stage.Screen;
 import java.sql.SQLOutput;
 import java.util.*;
 import java.util.function.Supplier;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 // naming conventions
 // Stage -> ...Stage
@@ -69,6 +71,18 @@ public class View {
     private final Menu fileMenu = new Menu("File");
     private final MenuItem importVCFItem = new MenuItem("Import VCF");
     private final MenuItem importGFFItem = new MenuItem("Import GFF3");
+    private final Menu viewMenu = new Menu("View");
+    private final Menu colorThemesMenu = new Menu("Color Themes");
+    private final Menu AFColorThemesMenu = new Menu("Allele Frequency Track");
+    private final Menu SVGlyphThemesMenu = new Menu("SV Glyphs");
+    private final ToggleGroup AFThemesGroup = new ToggleGroup();
+    private final RadioMenuItem redGreenAFTrackItem = new RadioMenuItem("Red-Green");
+    private final RadioMenuItem grayscaleAFTrackItem = new RadioMenuItem("Grayscale");
+    private final ToggleGroup SVGlyphThemesGroup = new ToggleGroup();
+    private final RadioMenuItem defaultSVGlyphColorItem = new RadioMenuItem("Default");
+    private final RadioMenuItem colorblindSVGlyphItem = new RadioMenuItem("Colorblind Friendly");
+    private final HashMap<String, HashMap<String, HashMap<String, Color>>> SVGlyphColorThemes = new HashMap<>();
+    private String currentSVGlyphTheme = "default";
     // ------- referenceContainer ----------
     private final VBox referenceContainer = new VBox(5);
     private Rectangle marker = new Rectangle(0,0,0,50);
@@ -124,14 +138,23 @@ public class View {
     // ---------- callsPanel ----------
     private double scrollViewportHeight = 0;
     private final HBox callsContentContainer = new HBox();
+    // information (left hand side)
+    private final VBox annotationsInfoContainer = new VBox(0);
     private final VBox samplesInfoContainer = new VBox(0);
+    private final VBox tracksInfoContainer = new VBox(0, annotationsInfoContainer, samplesInfoContainer);
+    private final ScrollPane tracksInfoPanel = new ScrollPane(tracksInfoContainer);
+
+    // calls (right hand side)
+    private final VBox annotationsContainer = new VBox(0);
     private final VBox samplesContainer = new VBox(0);
+    private final VBox tracksContainer = new VBox(0, annotationsContainer, samplesContainer);
+
     private final HBox selectionContainer = new HBox();
     private final Pane selectionWrapper = new Pane();
-    private final StackPane samplePanel = new StackPane(samplesContainer, selectionContainer);
-    private VBox sampleGroup = new VBox(samplePanel);
-    private final ScrollPane samplesInfoPanel = new ScrollPane(samplesInfoContainer);
-    private final ScrollPane callsPanel = new ScrollPane(sampleGroup);
+    private final StackPane tracksPanel = new StackPane(tracksContainer, selectionContainer);
+    private VBox tracksGroup = new VBox(tracksPanel);
+
+    private final ScrollPane callsPanel = new ScrollPane(tracksGroup);
     private final HashMap<String, ArrayList<Node>> nodeGroups = new HashMap<>();
     private boolean dragging = false;
 
@@ -148,6 +171,37 @@ public class View {
     -fx-focus-color: transparent;
     -fx-faint-focus-color: transparent;
 """;
+        // ----------- SET GLYPH COLOR THEMES -----------
+        // default
+        this.SVGlyphColorThemes.put("default", new HashMap<>());
+        this.SVGlyphColorThemes.get("default").put("INV", new HashMap<>());
+        this.SVGlyphColorThemes.get("default").put("DUP", new HashMap<>());
+        this.SVGlyphColorThemes.get("default").put("INS", new HashMap<>());
+        this.SVGlyphColorThemes.get("default").put("DEL", new HashMap<>());
+        this.SVGlyphColorThemes.get("default").get("INV").put("fill", Color.rgb(255, 195, 0 ));
+        this.SVGlyphColorThemes.get("default").get("INV").put("stroke", Color.rgb(200, 140, 0));
+        this.SVGlyphColorThemes.get("default").get("DUP").put("fill", Color.rgb(65, 105, 225));
+        this.SVGlyphColorThemes.get("default").get("DUP").put("stroke", Color.rgb(40, 70, 160));
+        this.SVGlyphColorThemes.get("default").get("INS").put("fill", Color.rgb(147, 197, 114));
+        this.SVGlyphColorThemes.get("default").get("INS").put("stroke", Color.rgb(100, 140, 80));
+        this.SVGlyphColorThemes.get("default").get("DEL").put("fill", Color.rgb(164, 42, 4));
+        this.SVGlyphColorThemes.get("default").get("DEL").put("stroke", Color.rgb(120, 30, 2));
+        // colorblind friendly
+        this.SVGlyphColorThemes.put("colorblind", new HashMap<>());
+        this.SVGlyphColorThemes.get("colorblind").put("INV", new HashMap<>());
+        this.SVGlyphColorThemes.get("colorblind").put("DUP", new HashMap<>());
+        this.SVGlyphColorThemes.get("colorblind").put("INS", new HashMap<>());
+        this.SVGlyphColorThemes.get("colorblind").put("DEL", new HashMap<>());
+        this.SVGlyphColorThemes.get("colorblind").get("INV").put("fill", Color.rgb(249, 214, 44));
+        this.SVGlyphColorThemes.get("colorblind").get("INV").put("stroke", Color.rgb(199, 171, 35));
+        this.SVGlyphColorThemes.get("colorblind").get("DUP").put("fill", Color.rgb(113, 111, 111));
+        this.SVGlyphColorThemes.get("colorblind").get("DUP").put("stroke", Color.rgb(90, 89, 89));
+        this.SVGlyphColorThemes.get("colorblind").get("INS").put("fill", Color.rgb(30, 136, 229));
+        this.SVGlyphColorThemes.get("colorblind").get("INS").put("stroke", Color.rgb(24, 109, 183));
+        this.SVGlyphColorThemes.get("colorblind").get("DEL").put("fill", Color.rgb(150, 38, 22));
+        this.SVGlyphColorThemes.get("colorblind").get("DEL").put("stroke", Color.rgb(120, 30, 18));
+
+
         // ---------- ROOT AND SIDE PANE ---------
         String regularStyle = """
                 -fx-text-fill: #555555;
@@ -304,6 +358,29 @@ public class View {
         fileMenu.getItems().add(importVCFItem);
         fileMenu.getItems().add(importGFFItem);
         menuBar.getMenus().add(fileMenu);
+        menuBar.getMenus().add(viewMenu);
+        viewMenu.getItems().add(colorThemesMenu);
+        // add items to color themes and initially disable
+        colorThemesMenu.setDisable(true);
+        colorThemesMenu.getItems().add(AFColorThemesMenu);
+        colorThemesMenu.getItems().add(SVGlyphThemesMenu);
+        // SV glyph toggling
+        SVGlyphThemesMenu.getItems().add(defaultSVGlyphColorItem);
+        SVGlyphThemesMenu.getItems().add(colorblindSVGlyphItem);
+        defaultSVGlyphColorItem.setToggleGroup(SVGlyphThemesGroup);
+        colorblindSVGlyphItem.setToggleGroup(SVGlyphThemesGroup);
+        defaultSVGlyphColorItem.setOnAction(e -> {
+            this.updateCurrentSVGlyphTheme("default");
+        });
+        colorblindSVGlyphItem.setOnAction(e -> {
+            this.updateCurrentSVGlyphTheme("colorblind");
+        });
+        defaultSVGlyphColorItem.setSelected(true);
+        // AF toggling
+        AFColorThemesMenu.getItems().add(redGreenAFTrackItem);
+        AFColorThemesMenu.getItems().add(grayscaleAFTrackItem);
+        redGreenAFTrackItem.setToggleGroup(AFThemesGroup);
+        grayscaleAFTrackItem.setToggleGroup(AFThemesGroup);
         // ---------- LOGO CONTAINER --------------
         logoRectangle.setFill(Color.TRANSPARENT);
         logoContainer.getChildren().add(logoRectangle);
@@ -472,15 +549,15 @@ public class View {
             this.ticksReleased(e);
         });
         // ---------- CALLS PANEL -------
-        this.callsContentContainer.getChildren().add(samplesInfoPanel);
+        this.callsContentContainer.getChildren().add(tracksInfoPanel);
         this.callsContentContainer.getChildren().add(callsPanel);
-        samplesInfoPanel.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-        samplesInfoPanel.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-        samplesInfoPanel.vvalueProperty().bindBidirectional(callsPanel.vvalueProperty());
-        samplesInfoPanel.setStyle("-fx-background-color: transparent;");
+        tracksInfoPanel.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        tracksInfoPanel.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        tracksInfoPanel.vvalueProperty().bindBidirectional(callsPanel.vvalueProperty());
+        tracksInfoPanel.setStyle("-fx-background-color: transparent;");
         this.callsPanel.setStyle("-fx-focus-color: transparent; -fx-faint-focus-color: transparent;");
         this.callsPanel.setStyle("-fx-background-color:transparent;");
-        this.samplePanel.setStyle("-fx-background-color:white;");
+        this.tracksPanel.setStyle("-fx-background-color:white;");
         this.callsPanel.setMinWidth(Screen.getPrimary().getBounds().getWidth() - sampleSpaceWidth);
         this.callsPanel.setPrefWidth(Screen.getPrimary().getBounds().getWidth() - sampleSpaceWidth);
         this.callsPanel.setMaxWidth(Screen.getPrimary().getBounds().getWidth() - sampleSpaceWidth);
@@ -500,6 +577,7 @@ public class View {
      * Enables all buttons in controlContainer and sidePane. Side Pane translation also done here after layout is complete
      **/
     public void enableControls() {
+        this.colorThemesMenu.setDisable(false);
         this.zoomInButton.setDisable(false);
         this.zoomOutButton.setDisable(false);
         this.processButton.setDisable(false);
@@ -560,7 +638,7 @@ public class View {
 
     // *************************************************************** MAIN INITIALIZATION FUNCTIONS ************************************************************************
 
-    public void initSidePane(ArrayList<Sample> samples, HashMap<String, Color> sampleColors, Supplier<Integer> numAnnotations) {
+    public void initSidePane(ArrayList<Sample> samples, HashMap<String, Color> sampleColors) {
         HashMap<String,Boolean> result = new HashMap<>();
         comparators.setPadding(new Insets(0, 0, 0, 20));
         Label pinLabel = new Label("Pin to Top:");
@@ -582,11 +660,11 @@ public class View {
             int OGIndex = index;
             checkBox.setOnAction(event -> {
                 if (checkBox.isSelected()) {
-                    moveSample(sample, OGIndex, "TOP", numAnnotations.get());
+                    moveSample(sample, OGIndex, "TOP");
                     toggleSampleLock(sample);
                 }
                 else {
-                    moveSample(sample, OGIndex, "BOTTOM", numAnnotations.get());
+                    moveSample(sample, OGIndex, "BOTTOM");
                     toggleSampleLock(sample);
 
                 }
@@ -699,12 +777,12 @@ public class View {
         }
     }
 
-    public void initSamples(ArrayList<Sample> samples, HashMap<String, Color> sampleColors, long refLength, double zoomLevel, double baseFontSize, int originalTrackHeight) {
+    public void initSamples(ArrayList<Sample> samples, HashMap<String, Color> sampleColors, long refLength, double zoomLevel, double baseFontSize, int originalTrackHeight, int AFTrackHeight) {
         /*
         Post-conditions: Samples added to sampleOrder ArrayList
          */
         // add additional track for allele frequency
-        this.createNewAnnotationTrack(refLength, zoomLevel, "Allele Freq.", baseFontSize, 100, "AF");
+        this.createNewAnnotationTrack(refLength, zoomLevel, "Allele Freq.", baseFontSize, AFTrackHeight, "AF");
         for (Sample sample : samples) {
             sampleOrder.add(sample);
             this.createNewCallTrack(sampleColors, refLength, zoomLevel, sample.getName(), baseFontSize, originalTrackHeight);
@@ -712,8 +790,8 @@ public class View {
         this.callsPanel.setPannable(true);   // Optional: enables mouse drag scrolling
     }
 
-    public void showChromosomeAlleleFreq(Chromosome chromosome, double zoomLevel, int originalTrackHeight) {
-        Pane freqPane = (Pane) this.samplesContainer.lookup("#" + "AlleleFreq");
+    public void showChromosomeAlleleFreq(Chromosome chromosome, double zoomLevel, int AFTrackHeight) {
+        Pane freqPane = (Pane) this.annotationsContainer.lookup("#" + "AlleleFreq");
         freqPane.getChildren().clear();
         freqPane.setMinWidth(chromosome.getLength() * zoomLevel);
         freqPane.setPrefWidth(chromosome.getLength() * zoomLevel);
@@ -723,10 +801,10 @@ public class View {
             double currentFreq = chromosome.getAllCalls().get(i).getAlleleFreq();
             Circle circle;
             if (Objects.equals(chromosome.getName(), "<ALL>")) {
-                circle = new Circle(currentCall.getAbsoluteStart()*zoomLevel, originalTrackHeight * currentFreq, 1);
+                circle = new Circle(currentCall.getAbsoluteStart()*zoomLevel, AFTrackHeight * currentFreq, 1);
             }
             else {
-                circle = new Circle(currentCall.getStart()*zoomLevel, originalTrackHeight * currentFreq, 1);
+                circle = new Circle(currentCall.getStart()*zoomLevel, AFTrackHeight * currentFreq, 1);
             }
             circle.setFill(Color.BLACK);
             circle.setStroke(Color.BLACK);
@@ -734,8 +812,8 @@ public class View {
         }
     }
 
-    public void showTileAlleleFreq(Chromosome chromosome, double zoomLevel, int originalTrackHeight, int startInterval, int endInterval) {
-        Pane freqPane = (Pane) this.samplesContainer.lookup("#" + "AlleleFreq");
+    public void showTileAlleleFreq(Chromosome chromosome, double zoomLevel, int AFTrackHeight, int startInterval, int endInterval) {
+        Pane freqPane = (Pane) this.annotationsContainer.lookup("#" + "AlleleFreq");
         freqPane.getChildren().clear();
         freqPane.setMinWidth(chromosome.getLength() * zoomLevel);
         freqPane.setPrefWidth(chromosome.getLength() * zoomLevel);
@@ -746,7 +824,7 @@ public class View {
             try {
                 for (Call currentCall : chromosome.getTiledCallStarts().get(i)) {
                     double currentFreq = currentCall.getAlleleFreq();
-                    Circle circle = new Circle(currentCall.getStart() * zoomLevel, originalTrackHeight * currentFreq, 1);
+                    Circle circle = new Circle(currentCall.getStart() * zoomLevel, AFTrackHeight * currentFreq, 1);
                     circle.setFill(Color.BLACK);
                     circle.setStroke(Color.BLACK);
                     freqPane.getChildren().add(circle);
@@ -763,8 +841,8 @@ public class View {
          * Pre-conditions/assumptions: Gets call pane for each sample by looking up the ID
          */
 
-        this.samplePanel.setMinWidth(chromosome.getLength() * zoomLevel);
-        this.samplePanel.setMaxWidth(chromosome.getLength() * zoomLevel);
+        this.tracksPanel.setMinWidth(chromosome.getLength() * zoomLevel);
+        this.tracksPanel.setMaxWidth(chromosome.getLength() * zoomLevel);
 
         // loops through each sample and gets the sample pane to update, access order does not matter
         for (Sample sample : samples) {
@@ -790,9 +868,9 @@ public class View {
                 callRect.setArcWidth(5);   // horizontal roundness
                 callRect.setArcHeight(5);
                 if (Objects.equals(currentCall.getType(), "DUP")) {
-                    callRect.setStroke(Color.rgb(40, 70, 160));
+                    callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
                     callRect.setOpacity(0.5);
-                    callRect.setFill(Color.rgb(65, 105, 225));
+                    callRect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("fill"));
                     double percentageHeight = originalTrackHeight * 0.15;
                     double percentageLength = currentCall.getLength()*zoomLevel * 0.1;
                     double endX = currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - percentageLength;
@@ -800,49 +878,51 @@ public class View {
                     Line lineDup2 = new Line(currentCall.getStart()*zoomLevel + percentageLength, originalTrackHeight - percentageHeight, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - percentageLength, originalTrackHeight - percentageHeight);
                     Line lineDup3 = new Line(currentCall.getStart()*zoomLevel + percentageLength, percentageHeight, currentCall.getStart()*zoomLevel + percentageLength, originalTrackHeight - percentageHeight);
                     Line lineDup4 = new Line(currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - percentageLength, percentageHeight, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - percentageLength, originalTrackHeight - percentageHeight);
-                    lineDup1.setStroke(Color.rgb(40, 70, 160));
-                    lineDup2.setStroke(Color.rgb(40, 70, 160));
-                    lineDup3.setStroke(Color.rgb(40, 70, 160));
-                    lineDup4.setStroke(Color.rgb(40, 70, 160));
-                    currentCalls.getChildren().add(lineDup1);
-                    currentCalls.getChildren().add(lineDup2);
-                    currentCalls.getChildren().add(lineDup3);
-                    currentCalls.getChildren().add(lineDup4);
+                    lineDup1.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
+                    lineDup2.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
+                    lineDup3.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
+                    lineDup4.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
+                    if (!Objects.equals(chromosome.getName(), "<ALL>")) {
+                        currentCalls.getChildren().add(lineDup1);
+                        currentCalls.getChildren().add(lineDup2);
+                        currentCalls.getChildren().add(lineDup3);
+                        currentCalls.getChildren().add(lineDup4);
+                    }
                 }
                 else if (Objects.equals(currentCall.getType(), "INV")) {
-                    callRect.setStroke(Color.rgb(200, 140, 0));
+                    callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INV").get("stroke"));
                     callRect.setOpacity(0.5);
-                    callRect.setFill(Color.rgb(255, 195, 0 ));
+                    callRect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INV").get("fill"));
                     Line lineInv1 = new Line(currentCall.getStart()*zoomLevel, 1, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, originalTrackHeight-2);
                     Line lineInv2 = new Line(currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, 1, currentCall.getStart()*zoomLevel, originalTrackHeight-2);
-                    lineInv1.setStroke(Color.rgb(200, 140, 0));
-                    lineInv2.setStroke(Color.rgb(200, 140, 0));
+                    lineInv1.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INV").get("stroke"));
+                    lineInv2.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INV").get("stroke"));
                     lineInv1.setOpacity(0.6);
                     lineInv2.setOpacity(0.6);
                     currentCalls.getChildren().add(lineInv1);
                     currentCalls.getChildren().add(lineInv2);
                 }
                 else if (Objects.equals(currentCall.getType(), "DEL")) {
-                    callRect.setStroke(Color.rgb(120, 30, 2));
+                    callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DEL").get("stroke"));
                     callRect.setOpacity(0.5);
-                    callRect.setFill(Color.rgb(164, 42, 4));
+                    callRect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DEL").get("fill"));
                     Line lineDel1 = new Line(currentCall.getStart()*zoomLevel, 1, currentCall.getStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), originalTrackHeight-2);
                     Line lineDel2 = new Line(currentCall.getStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), originalTrackHeight-2, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, 1);
-                    lineDel1.setStroke(Color.rgb(120, 30, 2));
-                    lineDel2.setStroke(Color.rgb(120, 30, 2));
+                    lineDel1.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DEL").get("stroke"));
+                    lineDel2.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DEL").get("stroke"));
                     lineDel1.setOpacity(0.4);
                     lineDel2.setOpacity(0.4);
                     currentCalls.getChildren().add(lineDel1);
                     currentCalls.getChildren().add(lineDel2);
                 }
                 else if (Objects.equals(currentCall.getType(), "INS")) {
-                    callRect.setStroke(Color.rgb(100, 140, 80));
+                    callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INS").get("stroke"));
                     callRect.setOpacity(0.5);
-                    callRect.setFill(Color.rgb(147, 197, 114));
+                    callRect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INS").get("fill"));
                     Line lineIns1 = new Line(currentCall.getStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), 1, currentCall.getStart()*zoomLevel, originalTrackHeight-2);
                     Line lineIns2 = new Line(currentCall.getStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), 1, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, originalTrackHeight-2);
-                    lineIns1.setStroke(Color.rgb(100, 140, 80));
-                    lineIns2.setStroke(Color.rgb(100, 140, 80));
+                    lineIns1.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INS").get("stroke"));
+                    lineIns2.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INS").get("stroke"));
                     lineIns1.setOpacity(0.5);
                     lineIns2.setOpacity(0.5);
                     currentCalls.getChildren().add(lineIns1);
@@ -887,13 +967,14 @@ public class View {
         }
     }
 
-    public void showTileCalls(Chromosome chromosome, ArrayList<Sample> samples, double zoomLevel, int originalTrackHeight, int startInterval, int endInterval) {
+    public void showTileCalls(Chromosome chromosome, ArrayList<Sample> samples, double zoomLevel, int originalTrackHeight, Integer startInterval, int endInterval) {
         /**
          * Pre-conditions/assumptions: Gets call pane for each sample by looking up the ID
          */
+
         System.out.println(" ------------- TRIGGERING VIEW.SHOWTILECALLS() ------------ ");
-        this.samplePanel.setMinWidth(chromosome.getLength() * zoomLevel);
-        this.samplePanel.setMaxWidth(chromosome.getLength() * zoomLevel);
+        this.tracksPanel.setMinWidth(chromosome.getLength() * zoomLevel);
+        this.tracksPanel.setMaxWidth(chromosome.getLength() * zoomLevel);
 
         // loops through each sample and gets the sample pane to update, access order does not matter
         for (Sample sample : samples) {
@@ -933,9 +1014,9 @@ public class View {
                         callRect.setArcWidth(5);   // horizontal roundness
                         callRect.setArcHeight(5);
                         if (Objects.equals(currentCall.getType(), "DUP")) {
-                            callRect.setStroke(Color.rgb(40, 70, 160));
+                            callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
                             callRect.setOpacity(0.5);
-                            callRect.setFill(Color.rgb(65, 105, 225));
+                            callRect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("fill"));
                             nodeGroups.get(currentCall.getId()).add(callRect);
                             // if the duplication rectangle is currently big enough to show the inside lines, show
                             // inset is the distance from inner border to outer border
@@ -947,10 +1028,10 @@ public class View {
                                 Line lineDup2 = new Line(currentCall.getStart()*zoomLevel + inset, originalTrackHeight - inset, endX, originalTrackHeight - inset);
                                 Line lineDup3 = new Line(currentCall.getStart()*zoomLevel + inset, inset, currentCall.getStart()*zoomLevel + inset, originalTrackHeight - inset);
                                 Line lineDup4 = new Line(endX, inset, endX, originalTrackHeight - inset);
-                                lineDup1.setStroke(Color.rgb(40, 70, 160));
-                                lineDup2.setStroke(Color.rgb(40, 70, 160));
-                                lineDup3.setStroke(Color.rgb(40, 70, 160));
-                                lineDup4.setStroke(Color.rgb(40, 70, 160));
+                                lineDup1.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
+                                lineDup2.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
+                                lineDup3.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
+                                lineDup4.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
                                 lineDup1.setOpacity(0.5);
                                 lineDup2.setOpacity(0.5);
                                 lineDup3.setOpacity(0.5);
@@ -963,8 +1044,8 @@ public class View {
                                 double middleDupX = ((currentCall.getStart()*zoomLevel + inset)+endX)/2;
                                 Line lineDup5 = new Line(currentCall.getStart()*zoomLevel + inset, originalTrackHeight - inset, middleDupX, inset);
                                 Line lineDup6 = new Line(middleDupX, inset, endX, originalTrackHeight - inset);
-                                lineDup5.setStroke(Color.rgb(40, 70, 160));
-                                lineDup6.setStroke(Color.rgb(40, 70, 160));
+                                lineDup5.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
+                                lineDup6.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
                                 lineDup5.setOpacity(0.5);
                                 lineDup6.setOpacity(0.5);
                                 currentCalls.getChildren().add(lineDup5);
@@ -984,13 +1065,13 @@ public class View {
                             }
                         }
                         else if (Objects.equals(currentCall.getType(), "INV")) {
-                            callRect.setStroke(Color.rgb(200, 140, 0));
+                            callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INV").get("stroke"));
                             callRect.setOpacity(0.5);
-                            callRect.setFill(Color.rgb(255, 195, 0 ));
+                            callRect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INV").get("fill"));
                             Line lineInv1 = new Line(currentCall.getStart()*zoomLevel, 1, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, originalTrackHeight-2);
                             Line lineInv2 = new Line(currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, 1, currentCall.getStart()*zoomLevel, originalTrackHeight-2);
-                            lineInv1.setStroke(Color.rgb(200, 140, 0));
-                            lineInv2.setStroke(Color.rgb(200, 140, 0));
+                            lineInv1.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INV").get("stroke"));
+                            lineInv2.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INV").get("stroke"));
                             lineInv1.setOpacity(0.6);
                             lineInv2.setOpacity(0.6);
                             currentCalls.getChildren().add(lineInv1);
@@ -1001,13 +1082,13 @@ public class View {
                             nodeGroups.get(currentCall.getId()).add(lineInv2);
                         }
                         else if (Objects.equals(currentCall.getType(), "DEL")) {
-                            callRect.setStroke(Color.rgb(120, 30, 2));
+                            callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DEL").get("stroke"));
                             callRect.setOpacity(0.5);
-                            callRect.setFill(Color.rgb(164, 42, 4));
+                            callRect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DEL").get("fill"));
                             Line lineDel1 = new Line(currentCall.getStart()*zoomLevel, 1, currentCall.getStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), originalTrackHeight-2);
                             Line lineDel2 = new Line(currentCall.getStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), originalTrackHeight-2, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, 1);
-                            lineDel1.setStroke(Color.rgb(120, 30, 2));
-                            lineDel2.setStroke(Color.rgb(120, 30, 2));
+                            lineDel1.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DEL").get("stroke"));
+                            lineDel2.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DEL").get("stroke"));
                             lineDel1.setOpacity(0.4);
                             lineDel2.setOpacity(0.4);
                             currentCalls.getChildren().add(lineDel1);
@@ -1018,13 +1099,13 @@ public class View {
                             nodeGroups.get(currentCall.getId()).add(lineDel2);
                         }
                         else if (Objects.equals(currentCall.getType(), "INS")) {
-                            callRect.setStroke(Color.rgb(100, 140, 80));
+                            callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INS").get("stroke"));
                             callRect.setOpacity(0.5);
-                            callRect.setFill(Color.rgb(147, 197, 114));
+                            callRect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INS").get("fill"));
                             Line lineIns1 = new Line(currentCall.getStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), 1, currentCall.getStart()*zoomLevel, originalTrackHeight-2);
                             Line lineIns2 = new Line(currentCall.getStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), 1, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, originalTrackHeight-2);
-                            lineIns1.setStroke(Color.rgb(100, 140, 80));
-                            lineIns2.setStroke(Color.rgb(100, 140, 80));
+                            lineIns1.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INS").get("stroke"));
+                            lineIns2.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INS").get("stroke"));
                             lineIns1.setOpacity(0.5);
                             lineIns2.setOpacity(0.5);
                             currentCalls.getChildren().add(lineIns1);
@@ -1152,7 +1233,14 @@ public class View {
                 // do nothing
             }
             Label mateLabel = (Label) callInfoSideContainer.lookup("#mate");
-            mateLabel.setText(call.getAlternate());
+            Pattern pattern = Pattern.compile("([\\[\\]])(.+)\\1");
+            Matcher matcher = pattern.matcher(call.getAlternate());
+            if (matcher.find()) {
+                mateLabel.setText(matcher.group(2));
+            }
+            else {
+                System.err.println("Error: could not identify mate region in ALT field for BND or TRA. ID is " + call.getId() + " and alternate is " + call.getAlternate());
+            }
         }
         // call is not breakend type, make sure mate container node is removed
         else {
@@ -1308,14 +1396,19 @@ public class View {
         // GENEREPEAT
         // AF
         // PILEUP
-        Pane callsWrapper = new Pane();
-        callsWrapper.setPrefWidth(refLength * zoomLevel);
+        StackPane callsWrapper = new StackPane();
+        callsWrapper.setPadding(new Insets(1, 0, 1, 0));
+
+        Pane freqPane = new Pane();
+        callsWrapper.getChildren().add(freqPane);
+
+        freqPane.setPrefWidth(refLength * zoomLevel);
         // force height of track (or else it will collapse if there is no content)
-        callsWrapper.setMinHeight(height);
-        callsWrapper.setMaxHeight(height);
+        freqPane.setMinHeight(height);
+        freqPane.setMaxHeight(height);
         if (Objects.equals(key, "AF")) {
             // set id
-            callsWrapper.setId("AlleleFreq");
+            freqPane.setId("AlleleFreq");
 
 
             Line topLine = new Line();
@@ -1328,19 +1421,16 @@ public class View {
             // Set color
             topLine.setStroke(Color.BLACK);
             bottomLine.setStroke(Color.BLACK);
-            LinearGradient lg = new LinearGradient(
-                    0, 0, 0, 1,      // startX, startY, endX, endY
-                    true,            // proportional
-                    CycleMethod.NO_CYCLE,
-                    new Stop(0.0, Color.rgb(199, 92, 92, 0.8)),    // red from 0%...
-                    new Stop(0.05, Color.rgb(199, 92, 92, 0.8)),   // ...to 5%
-                    new Stop(0.25, Color.rgb(92, 156, 92, 0.6)),  // green at center
-                    new Stop(0.75, Color.rgb(92, 156, 92, 0.6)),  // green at center
-                    new Stop(0.95, Color.rgb(199, 92, 92, 0.8)),   // red starts again at 95%
-                    new Stop(1.0, Color.rgb(199, 92, 92, 0.8))     // red to bottom
-            );
-            BackgroundFill bgFill = new BackgroundFill(lg, CornerRadii.EMPTY, Insets.EMPTY);
-            callsWrapper.setBackground(new Background(bgFill));
+            // set actions for radio controls
+            this.redGreenAFTrackItem.setOnAction(e -> {
+                this.applyAFColorTheme("red-green AF", callsWrapper);
+            });
+            this.grayscaleAFTrackItem.setOnAction(e -> {
+                this.applyAFColorTheme("grayscale AF", callsWrapper);
+            });
+            // trigger default color theme
+            this.applyAFColorTheme("red-green AF", callsWrapper);
+            this.redGreenAFTrackItem.setSelected(true);
         }
         else {
             // do nothing
@@ -1369,9 +1459,9 @@ public class View {
         labelContainer.getChildren().add(labelWrapper);
 
         infoContainer.getChildren().addAll(lockContainer, labelContainer);
-        this.samplesInfoContainer.getChildren().add(infoContainer);
+        this.annotationsInfoContainer.getChildren().add(infoContainer);
         // add sampContainer to samplesContainer
-        this.samplesContainer.getChildren().add(callsWrapper);
+        this.annotationsContainer.getChildren().add(callsWrapper);
     }
 
     public void createNewCallTrack(HashMap<String, Color> sampleColors, long refLength, double zoomLevel, String sampleName, double baseFontSize, int height) {
@@ -1381,13 +1471,6 @@ public class View {
         // force height of track (or else it will collapse if there is no content)
         callsWrapper.setMinHeight(height);
         callsWrapper.setMaxHeight(height);
-        // create labelWrapper Pane to hold sample name
-        StackPane labelWrapper = new StackPane();
-        labelWrapper.setMinWidth(this.sampleSpaceWidth * 0.7);
-        labelWrapper.setMaxWidth(this.sampleSpaceWidth * 0.7);
-        // create sample label
-        Label sampleLabel = new Label(sampleName);
-        sampleLabel.setFont(Font.font("System", baseFontSize));
 
         // create infoContainer to hold all sample info and graphics
         HBox infoContainer = new HBox();
@@ -1407,21 +1490,29 @@ public class View {
         lockIcon.setId("lock");
         lockContainer.getChildren().add(lockIcon);
         lockContainer.setAlignment(Pos.CENTER_RIGHT);
-        lockContainer.setMinWidth(this.sampleSpaceWidth * 0.3);
-        lockContainer.setMinWidth(this.sampleSpaceWidth * 0.3);
+        lockContainer.setMinWidth(this.sampleSpaceWidth * 0.2);
+        lockContainer.setMinWidth(this.sampleSpaceWidth * 0.2);
 
         // label container to hold label and color rect if applicable
-        VBox labelContainer = new VBox();
-        labelContainer.setAlignment(Pos.CENTER);
+        HBox labelContainer = new HBox();
+        labelContainer.setMinWidth(this.sampleSpaceWidth*0.8);
+        labelContainer.setMaxWidth(this.sampleSpaceWidth*0.8);
+        labelContainer.setAlignment(Pos.CENTER_LEFT);
+        // create sample color with padding around it
+        Rectangle colorRect = new Rectangle(7, 7, sampleColors.get(sampleName));
+        HBox.setMargin(colorRect, new Insets(0, 2, 0, 2));
+        // create labelWrapper Pane to hold sample name
+        StackPane labelWrapper = new StackPane();
+        Label sampleLabel = new Label(sampleName);
+        sampleLabel.setFont(Font.font("System", baseFontSize));
         labelWrapper.getChildren().add(sampleLabel);
-        Rectangle colorRect = new Rectangle(40, 2.5, sampleColors.get(sampleName));
-        labelContainer.getChildren().addAll(labelWrapper, colorRect);
+        // add elements to label container
+        labelContainer.getChildren().addAll(colorRect, labelWrapper);
 
         infoContainer.getChildren().addAll(lockContainer, labelContainer);
         this.samplesInfoContainer.getChildren().add(infoContainer);
         // add sampContainer to samplesContainer
         callsWrapper.setStyle("-fx-border-color: #DFE0DF; -fx-border-width: 0.5;");
-
         this.samplesContainer.getChildren().add(callsWrapper);
         // set IDs
         infoContainer.setId(sampleName);
@@ -1573,14 +1664,14 @@ public class View {
         return this.scrollViewportHeight;
     }
 
-    public void updateTrackHeight(double val) {
+    public void updateTrackHeight(ArrayList<Sample> samples, double val) {
         Scale scale = new Scale();
         // pivot at top edge, so it grows and shrinks from top
         scale.setPivotY(0);
         scale.setY(val);
         // remove old transforms
-        this.sampleGroup.getTransforms().clear();
-        this.sampleGroup.getTransforms().add(scale);
+        this.samplesContainer.getTransforms().clear();
+        this.samplesContainer.getTransforms().add(scale);
         this.samplesInfoContainer.getTransforms().clear();
         this.samplesInfoContainer.getTransforms().add(scale);
         triggerScrollPane();
@@ -1588,10 +1679,13 @@ public class View {
 
     private void triggerScrollPane() {
         // Apply CSS/layout for accurate prefHeight
-        double newHeight = this.sampleGroup.getBoundsInParent().getHeight();
-        sampleGroup.setMinHeight(newHeight);
-        sampleGroup.setPrefHeight(newHeight);
-        sampleGroup.setMaxHeight(newHeight);
+        double newHeight = this.samplesContainer.getBoundsInParent().getHeight() + this.annotationsContainer.getLayoutBounds().getHeight();
+        tracksGroup.setMinHeight(newHeight);
+        tracksGroup.setPrefHeight(newHeight);
+        tracksGroup.setMaxHeight(newHeight);
+        tracksContainer.setMinHeight(newHeight);
+        tracksContainer.setPrefHeight(newHeight);
+        tracksContainer.setMaxHeight(newHeight);
         ScrollBar hScrollBar = (ScrollBar) callsPanel.lookup(".scroll-bar:horizontal");
         double scrollbarHeight = 0;
         if (hScrollBar != null) {
@@ -1610,28 +1704,18 @@ public class View {
             HBox container = (HBox) samplesInfoContainer.lookup("#" + sample.getName());
 //            container.setMinHeight(originalTrackHeight * trackHeightScale);
 //            container.setMaxHeight(originalTrackHeight * trackHeightScale);
-            // get second vbox (labelcontainer)
-            VBox labelContainer = (VBox) container.getChildren().get(1);
-            // get the labelwrapper
-            Pane labelWrapper = (Pane) labelContainer.getChildren().getFirst();
+            // get second HBox (labelContainer), lockContainer is first
+            VBox lockContainer = (VBox) container.getChildren().getFirst();
+            SVGPath lockIcon = (SVGPath) lockContainer.getChildren().getFirst();
+            HBox labelContainer = (HBox) container.getChildren().get(1);
+            // get the labelwrapper and color
+            Rectangle rect = (Rectangle) labelContainer.getChildren().getFirst();
+            Pane labelWrapper = (Pane) labelContainer.getChildren().get(1);
             Label sampleLabel = (Label) labelWrapper.getChildren().getFirst();
-
-            Scale scale = null;
-            for (Transform t : samplesInfoContainer.getTransforms()) {
-                if (t instanceof Scale s) {
-                    scale = s;
-                    break;
-                }
-            }
-            if (scale != null) {
-                double scaleFactor = scale.getX();
-                // use scaleFactor to adjust font sizes
-                Font f = sampleLabel.getFont();
-                double currentFontSize = f.getSize();
-                sampleLabel.setFont(Font.font(sampleLabel.getFont().getFamily(), baseFontSize / scaleFactor));
-            }
-            double adjustedFontSize = baseFontSize / trackHeightScale;
-
+            sampleLabel.setScaleY(1.0/trackHeightScale);
+            rect.setScaleY(1.0/trackHeightScale);
+            lockIcon.setScaleY(0.75/trackHeightScale);
+            //sampleLabel.setFont(new Font(sampleLabel.getFont().getFamily(), baseFontSize*trackHeightScale));
         }
     }
 
@@ -1708,7 +1792,7 @@ public class View {
     }
 
 
-    public void moveSample(Sample sample, int OGIndex, String setting, int numAnnotations) {
+    public void moveSample(Sample sample, int OGIndex, String setting) {
         int numChecked = 0;
         // past refers to below here
         int pastChecked = 0;
@@ -1754,8 +1838,8 @@ public class View {
         this.samplesInfoContainer.getChildren().remove(container);
         this.sampleOrder.remove(sample);
         // insert at new location
-        this.samplesContainer.getChildren().add(newIndex+numAnnotations, calls);
-        this.samplesInfoContainer.getChildren().add(newIndex+numAnnotations, container);
+        this.samplesContainer.getChildren().add(newIndex, calls);
+        this.samplesInfoContainer.getChildren().add(newIndex, container);
         this.sampleOrder.add(newIndex, sample);
     }
 
@@ -1902,5 +1986,56 @@ public class View {
 
     public boolean isDragging() {
         return this.dragging;
+    }
+
+
+    public void applyAFColorTheme(String theme, StackPane callsWrapper) {
+        // RED GREEN GRADIENT
+        LinearGradient redGreenGradient = new LinearGradient(
+                0, 0, 0, 1,      // startX, startY, endX, endY
+                true,            // proportional
+                CycleMethod.NO_CYCLE,
+                new Stop(0.0, Color.rgb(199, 92, 92, 0.8)),    // red from 0%...
+                new Stop(0.05, Color.rgb(199, 92, 92, 0.8)),   // ...to 5%
+                new Stop(0.25, Color.rgb(92, 156, 92, 0.6)),  // green at center
+                new Stop(0.75, Color.rgb(92, 156, 92, 0.6)),  // green at center
+                new Stop(0.95, Color.rgb(199, 92, 92, 0.8)),   // red starts again at 95%
+                new Stop(1.0, Color.rgb(199, 92, 92, 0.8))     // red to bottom
+        );
+        BackgroundFill redGreenFill = new BackgroundFill(redGreenGradient, CornerRadii.EMPTY, Insets.EMPTY);
+
+        // GRAYSCALE GRADIENT
+        LinearGradient grayscaleGradient = new LinearGradient(
+                0, 0, 0, 1,      // startX, startY, endX, endY
+                true,            // proportional
+                CycleMethod.NO_CYCLE,
+                new Stop(0.0, Color.rgb(140, 144, 140, 0.8)),    // gray
+                new Stop(0.05, Color.rgb(140, 144, 140, 0.8)),   // gray
+                new Stop(0.25, Color.rgb(245, 245, 245, 0.6)),  // platinum
+                new Stop(0.75, Color.rgb(245, 245, 245, 0.6)),  // platinum
+                new Stop(0.95, Color.rgb(140, 144, 140, 0.8)),   // gray
+                new Stop(1.0, Color.rgb(140, 144, 140, 0.8))     // gray
+        );
+        BackgroundFill grayscaleFill = new BackgroundFill(grayscaleGradient, CornerRadii.EMPTY, Insets.EMPTY);
+
+        // apply to AF callsWrapper based on specified theme
+        if (Objects.equals(theme, "red-green AF")) {
+            callsWrapper.setBackground(new Background(redGreenFill));
+        }
+        if (Objects.equals(theme, "grayscale AF")) {
+            callsWrapper.setBackground(new Background(grayscaleFill));
+        }
+    }
+
+    public void updateCurrentSVGlyphTheme(String theme) {
+        if (Objects.equals(theme, "default")) {
+            this.currentSVGlyphTheme = "default";
+        }
+        else if (Objects.equals(theme, "colorblind")) {
+            this.currentSVGlyphTheme = "colorblind";
+        }
+        else {
+            // do nothing, not recognized, update for bug later
+        }
     }
 }
