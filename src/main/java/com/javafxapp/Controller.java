@@ -1,24 +1,22 @@
 package com.javafxapp;
 
 import java.io.File;
-import java.text.DecimalFormat;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.input.MouseEvent;
 import javafx.stage.FileChooser;
-import javafx.event.ActionEvent;
 
 
 public class Controller {
     private Model model;
     private View view;
+    // constructor
     public Controller(Model model, View view) {
         this.model = model;
         this.view = view;
+        // listeners
         view.importListener(e -> {
             this.importFile();
         });
@@ -67,7 +65,7 @@ public class Controller {
             this.showChromosome(selectedChrom);
         });
         view.processRegionButtonListener(e -> {
-           this.processCustomRegion(view.getTextFieldRegion());
+            this.processCustomRegion(view.getTextFieldRegion());
         });
         view.showMateButtonListener(e -> {
             String result = this.processShowMate();
@@ -80,8 +78,11 @@ public class Controller {
         });
     }
 
+    /**
+     * Function that is called immediately after VCF file is selected; processes VCF file and shows visualization
+     */
     public void importFile() {
-        // create and show the open file dialog (view is the parent). returns int indicating how user closed dialog
+        // create and show the open file dialog. returns int indicating how user closed dialog
         FileChooser chooser = new FileChooser();
         chooser.setTitle("Open File");
         File file = chooser.showOpenDialog(view.getPrimaryStage());
@@ -98,43 +99,38 @@ public class Controller {
                 System.err.println("Error: Could not load selected file. Exiting.");
                 System.exit(1);
             }
-            // DEBUG TO SEE WHICH NODE
-//            view.getPrimaryStage().getScene().addEventFilter(MouseEvent.MOUSE_MOVED, e -> {
-//                Node hovered = e.getPickResult().getIntersectedNode();
-//                System.out.println("Mouse over: " + hovered);
-//            });
+            // SEQUENCE FOR SHOWING VCF DATA
+            // reset model and view
             this.model.reset();
             this.view.reset();
+            // process VCF file
             System.out.println("PROCESSING FILE...");
             model.processFile(fileContent);
+            // set current chromosome to <ALL> and initialize and draw reference
             System.out.println("INIT AND DRAW REFERENCE...");
             model.setCurrentChrom(model.getRefChromosomes().get("<ALL>"));
             view.initReference(model.getRefChromosomes(), model.getRefTotalLength());
             view.drawReference(model.getRefChromosomes(), "<ALL>");
+            // set zoom and show marker and coordinate system
             System.out.println("SETTING ZOOM AND SHOWING MARKER AND COORDS...");
             model.setZoom(view.initZoomWG(model.getRefTotalLength()));
             view.showCoords(model.getCurrentChrom(), -1, model.getZoomLevel(), model.getRefChromosomes());
             view.updateMarker(model.getCurrentChrom(), model.getZoomLevel(), model.getCurrentChrom().getLength(), 0);
             System.out.println("SHOW SIDE PANE...");
+            // initialize side pane and samples
             view.initSidePane(model.getSamples(), model.getSampleColors());
             System.out.println("SHOW SAMPLES....");
             view.initSamples(model.getSamples(), model.getSampleColors(), model.getRefTotalLength(), model.getZoomLevel(), model.getBaseFontSize(), model.getOriginalTrackHeight(), model.getAFTrackHeight());
-
+            // enable controls
             System.out.println("ENABLE CONTROLS...");
             view.enableControls();
-            // triggers showChromosome()
+            // set chromosome selector to <ALL> which triggers showChromosome()
             view.setChromComboBoxValue("<ALL>");
+            // update track height to fit all samples
             this.updateTrackHeight(model.fitAllSamplesIncrement(view.getCallsPanelHeight(), view.getHorizontalSBHeight()));
-            //            view.viewportWidthChange(e -> {
-//                this.processViewportWidthChange();
-//            });
+            // set up listeners
             view.browserDragged((obs,oldVal, newVal) -> {
-                if (view.isDragging()) {
-                    this.processScrollChange(oldVal.doubleValue(), newVal.doubleValue());
-                }
-                else {
-                    System.out.println("CALLED BROWSER DRAGGED (HVALUE CHANGED) BUT NOT DRAGGING");
-                }
+                this.processScrollChange(oldVal.doubleValue(), newVal.doubleValue());
             });
             view.markerDragged(e -> {
                 this.processMarkerDragged(e);
@@ -143,17 +139,22 @@ public class Controller {
         // user closed or cancelled file
         else {
             System.out.println("File was not chosen.");
-            // do nothing
         }
     }
 
+    /**
+     * Controls updating the zoom
+     * @param text String text of the button that is pressed (either zoom in or out)
+     */
     public void updateZoom(String text) {
-        System.out.println("----- TRIGGERING CONTROLLER.UPDATEZOOM() ----------");
+        // if the chromosome is all, do nothing
         if (Objects.equals(model.getCurrentChrom().getName(), "<ALL>")) {
             // not meant to zoom in on <ALL> region so do nothing
         }
+        // otherwise, process
         else {
             double factor;
+            // set factor based on zoom in or out
             if (Objects.equals(text, "Zoom +")) {
                 factor = 1.5;
             }
@@ -163,6 +164,7 @@ public class Controller {
             else {
                 throw new IllegalArgumentException("Unexpected zoom button text " + text);
             }
+            // get proportion of the screen, start coordinate, and center coordinate
             double oldProportion = model.getGenomicProportion(view.getViewportWidth(), model.getCurrentChrom(), model.getZoomLevel());
             double start = view.getStartFromHVal(view.getHValue(), model.getCurrentChrom(), model.getZoomLevel());
             int intStart = (int) start;
@@ -177,11 +179,11 @@ public class Controller {
             model.updateCoordIncrement(view.getViewportWidth(), model.getCurrentChrom());
             // show coords
             view.showCoords(model.getCurrentChrom(), model.getTickSpacing(), model.getZoomLevel(), model.getRefChromosomes());
-
+            // update selections
             view.updateSelections(model.getSelections(), level);
 
             // update newStart based on result
-            System.out.println("---------------ANCHOR IS " + anchor);
+            // get new proportion based on new zoom level
             double newProportion = model.getGenomicProportion(view.getViewportWidth(), model.getCurrentChrom(), model.getZoomLevel());
             long newStart = centerStart - (int) (newProportion/2);
             long newEnd = centerStart + (int) (newProportion/2);
@@ -205,55 +207,83 @@ public class Controller {
             System.out.println("UPDATED ZOOM SHOWING START: " + newStart + " and END : " + newEnd);
             boolean updateStart = model.updateCurrentTileStart(model.getStartInterval((int) newStart));
             boolean updateEnd = model.updateCurrentTileEnd(model.getEndInterval((int) newEnd));
-            view.showTileCalls(model.getCurrentChrom(), view.getSampleOrderInView(), level, model.getOriginalTrackHeight(), model.getBufferStartTile(), model.getBufferEndTile());
-            view.showTileAlleleFreq(model.getCurrentChrom(), level, model.getAFTrackHeight(), model.getStartInterval((int) newStart), model.getEndInterval((int) newEnd));
-            double offset = ((double) newStart / model.getCurrentChrom().getLength()) * view.getMarkerWrapperWidth();
+            // show calls and allele frequency
+            view.showSVCalls(model.getRefChromosomes(), model.getCurrentChrom(), model.getSamples(), level, model.getOriginalTrackHeight(), model.getTiles(), model.getBufferStartTile(), model.getBufferEndTile());
+            view.showAlleleFreq(model.getRefChromosomes(), model.getCurrentChrom(), level, model.getAFTrackHeight(), model.getTiles(), model.getStartInterval((int) newStart), model.getEndInterval((int) newEnd));
             // update scroll and marker based on newStart and offset (calculated from newStart)
+            double offset = ((double) newStart / model.getCurrentChrom().getLength()) * view.getMarkerWrapperWidth();
             view.syncScroll(view.setScroll((int) newStart, model.getCurrentChrom(), model.getZoomLevel()));
             view.setScroll((int) newStart, model.getCurrentChrom(), model.getZoomLevel());
             view.updateMarker(model.getCurrentChrom(), level, model.getGenomicProportion(view.getViewportWidth(), model.getCurrentChrom(), model.getZoomLevel()), offset);
         }
     }
 
+    /**
+     * Clears all selections made
+     */
     public void clearSelections() {
+        // updates view and model
         view.clearAllSelections();
         model.clearSelections();
     }
 
+    /**
+    Controls processing the selections for Color by Haplotype
+     **/
     public void processSelections() {
         view.showPlot(model.processHaplotypeSelections(view.getSampleOrderInView()));
     }
 
+    /**
+     * Controls showing the same calls as pinned
+     */
     public void processShowSameCalls() {
         // want to show the same calls, so we are going to hide the different ones
         view.hideCalls(view.getSampleOrderInView(), model.getDiffCallsFromPinned(view.getPinCheckboxes()));
     }
 
+    /**
+    Controls showing diff calls from pinned
+     **/
     public void processShowDiffCalls() {
         view.hideCalls(view.getSampleOrderInView(), model.getSameCallsFromPinned(view.getPinCheckboxes()));
     }
 
+    /**
+     * Controls update when a selection is made
+     * @param e the mouse event from releasing the mouse
+     */
     public void updateReleaseSelection(MouseEvent e) {
+        // create new selection
         Selection selection = new Selection(view.getSelectionRectangle().getX(), e.getX(), model.getCurrentChrom().getName(), model.getZoomLevel());
+        // update model and view
         model.addSelection(selection);
         view.clearActiveSelection();
     }
 
+    /**
+     * Controls updating the track height scale
+     * @param increment double value to increment height by
+     */
     public void updateTrackHeight(double increment) {
+        // update in model
         model.updateTrackHeightScale(increment);
+        // scale tracks in view and redraw sample info
         view.updateTrackHeight(model.getSamples(), model.getTrackHeightScale());
         view.redrawSampleInfoAfterScale(model.getSamples(), model.getBaseFontSize(), model.getTrackHeightScale(), model.getOriginalTrackHeight());
     }
 
+    /**
+     * Controls updates after chromosome is selected in dropdown box
+     * @param selectedChrom the String name of the selected Chromosome
+     */
     public void showChromosome(String selectedChrom) {
         System.out.println("-------- TRIGGERING CONTROLLER.SHOWCHROMOSOME() ------------");
         // set new chromosome
         Chromosome chrom = model.getRefChromosomes().get(selectedChrom);
         model.setCurrentChrom(chrom);
         // update zoom level
-        System.out.println("TRIGGER UPDATE ZOOM");
         model.updateZoomLevelByRegion(chrom.getLength(), view.getViewportWidth(), view.isVerticalSBVisible(), view.getVerticalSBWidth());
-        System.out.println("DONE UPDATE ZOOM");
         // update coord increment
         model.updateCoordIncrement(view.getViewportWidth(), model.getCurrentChrom());
         // show coords
@@ -261,32 +291,40 @@ public class Controller {
         view.showCoords(model.getCurrentChrom(), model.getTickSpacing(), model.getZoomLevel(), model.getRefChromosomes());
         // show calls
         if (Objects.equals(selectedChrom, "<ALL>")) {
-            view.showChromosomeCalls(chrom, view.getSampleOrderInView(), model.getZoomLevel(), model.getOriginalTrackHeight());
+            view.showSVCalls(model.getRefChromosomes(), chrom, model.getSamples(), model.getZoomLevel(), model.getOriginalTrackHeight(), model.getTiles(), -1, -1);
         }
         else {
-            view.showTileCalls(chrom, view.getSampleOrderInView(), model.getZoomLevel(), model.getOriginalTrackHeight(), model.getStartInterval(1), model.getEndInterval((int) chrom.getLength()));
+            view.showSVCalls(model.getRefChromosomes(), chrom, model.getSamples(), model.getZoomLevel(), model.getOriginalTrackHeight(), model.getTiles(), -1, -1);
         }
-        view.showChromosomeAlleleFreq(chrom, model.getZoomLevel(), model.getAFTrackHeight());
+        // show allele frequency
+        view.showAlleleFreq(model.getRefChromosomes(), chrom, model.getZoomLevel(), model.getAFTrackHeight(), model.getTiles(), -1, -1);
+        // show reference and marker
         view.drawReference(model.getRefChromosomes(), model.getCurrentChrom().getName());
         view.updateMarker(chrom, model.getZoomLevel(), chrom.getLength(), 0);
     }
 
-//    public void processViewportWidthChange() {
-//        System.out.println("PROCESSING VIEWPORT WIDTH CHANGE");
-//        //view.updateMarkerOnViewportScaleOrZoom(model.getCurrentChrom(), model.getRefTotalLength(), model.getZoomLevel());
-//    }
-
+    /**
+     * Controls showing the mate region when the 'show mate' button is clicked in the side pane
+     * @return custom region to show for mate region, uses the same genomic proportion as when the button is clicked
+     */
     public String processShowMate() {
+        // get genomic proportion of screen
         long length = (int) model.getGenomicProportion(view.getViewportWidth(), model.getCurrentChrom(), model.getZoomLevel());
+        // get alternate and extract mate region between brackets
         String alternate = view.getLiveCall().getAlternate();
         Pattern pattern = Pattern.compile("[\\[\\]](.+)[\\[\\]]");
         Matcher altInfo = pattern.matcher(alternate);
+        // if alternate region extracted
         if (altInfo.find()) {
+            // find region
             Pattern regionPattern = Pattern.compile("(.+):(.+)");
             Matcher region = regionPattern.matcher(altInfo.group(1));
+            // if region in correct format
             if (region.find()) {
+                // extract chromosome and coordinate
                 String chrom = region.group(1);
                 long coords = Integer.parseInt(region.group(2));
+                // get start and end of screen by adding proportion
                 long start = coords - length;
                 long end = coords + length;
 
@@ -300,43 +338,56 @@ public class Controller {
 
                 // make sure end is in range
                 if (end > model.getRefChromosomes().get(chrom).getLength()) {
-                   end = model.getRefChromosomes().get(chrom).getLength();
+                    end = model.getRefChromosomes().get(chrom).getLength();
                 }
                 else {
                     // do nothing
                 }
-
+                // return custom region
                 return chrom + ":" + start + "-" + end;
             }
         }
+        // otherwise return null
         return "null";
     }
 
+    /**
+     * Controls updating when the browser is scrolled (the hvalue property of scrollpane changes)
+     * @param oldVal previous hvalue
+     * @param newVal new hvalue after scroll
+     */
     public void processScrollChange(double oldVal, double newVal) {
         view.syncScroll(newVal);
-        System.out.println(" --------- TRIGGER CONTROLLER.PROCESSSCROLLCHANGE() --------------");
-        DecimalFormat df = new DecimalFormat("#,##0.################");
+        // get genomic proportion, start and end value in view
         double proportion = model.getGenomicProportion(view.getViewportWidth(), model.getCurrentChrom(), model.getZoomLevel());
         double start = view.getStartFromHVal(newVal, model.getCurrentChrom(), model.getZoomLevel());
         double end = start + proportion;
+        // check if need to update tiles
         boolean updateStart = model.updateCurrentTileStart(model.getStartInterval((int) start));
         boolean updateEnd = model.updateCurrentTileEnd(model.getEndInterval((int) end));
+        // if yes, then update tiles and show new SV calls and allele frequency
         if (updateStart || updateEnd) {
-            view.showTileCalls(model.getCurrentChrom(), view.getSampleOrderInView(), model.getZoomLevel(), model.getOriginalTrackHeight(), model.getBufferStartTile(), model.getBufferEndTile());
-            view.showTileAlleleFreq(model.getCurrentChrom(), model.getZoomLevel(), model.getAFTrackHeight(), model.getStartInterval((int) start), model.getEndInterval((int) end));
+            view.showSVCalls(model.getRefChromosomes(), model.getCurrentChrom(), model.getSamples(), model.getZoomLevel(), model.getOriginalTrackHeight(), model.getTiles(), model.getBufferStartTile(), model.getBufferEndTile());
+            view.showAlleleFreq(model.getRefChromosomes(), model.getCurrentChrom(), model.getZoomLevel(), model.getAFTrackHeight(), model.getTiles(), model.getStartInterval((int) start), model.getEndInterval((int) end));
         }
     }
 
+    /**
+     * Controls updating the marker after drag
+     * @param e the Mouse event from dragging the marker
+     */
     public void processMarkerDragged(MouseEvent e) {
         view.updateMarkerOnDrag(e);
     }
 
+    /**
+     * Controls processing input in the custom text region input.
+     * @param regionText text the user entered as a region to navigate to
+     */
     public void processCustomRegion(String regionText) {
-        System.out.println("PROCESSING REGION");
         // if region entered is empty, reset text field
         if (Objects.equals(regionText, "")) {
             view.clearRegionField();
-            System.out.println("REGION IS EMPTY"); 
         }
         // otherwise
         else {
@@ -345,7 +396,9 @@ public class Controller {
                 String regex = "(.+):(\\d+)-(\\d+)";
                 Pattern pattern = Pattern.compile(regex);
                 Matcher matcher = pattern.matcher(regionText);
+                // if correctly formatted expression found
                 if (matcher.find()) {
+                    // extract the chromosome, start, end, and calculate length
                     String selectedChrom = matcher.group(1);
                     int start = Integer.parseInt(matcher.group(2));
                     int end = Integer.parseInt(matcher.group(3));
@@ -361,22 +414,24 @@ public class Controller {
                     // show coords
                     view.showCoords(model.getCurrentChrom(), model.getTickSpacing(), model.getZoomLevel(), model.getRefChromosomes());
                     // show calls
-                    view.showTileCalls(chrom, view.getSampleOrderInView(), model.getZoomLevel(), model.getOriginalTrackHeight(), model.getStartInterval((int) start), model.getEndInterval((int) end));
-                    view.showTileAlleleFreq(chrom, model.getZoomLevel(), model.getAFTrackHeight(), model.getStartInterval((int) start), model.getEndInterval((int) end));
+                    view.showSVCalls(model.getRefChromosomes(), chrom, model.getSamples(), model.getZoomLevel(), model.getOriginalTrackHeight(), model.getTiles(), model.getStartInterval((int) start), model.getEndInterval((int) end));
+                    view.showAlleleFreq(model.getRefChromosomes(), chrom, model.getZoomLevel(), model.getAFTrackHeight(), model.getTiles(), model.getStartInterval((int) start), model.getEndInterval((int) end));
                     view.drawReference(model.getRefChromosomes(), chrom.getName());
                     double offset = ((double) start / chrom.getLength()) * view.getMarkerWrapperWidth();
                     view.setScroll(start, chrom, model.getZoomLevel());
                     view.updateMarker(chrom, model.getZoomLevel(), length, offset);
                 }
+                // otherwise show pop up error message
                 else {
                     view.showInvalidRegionAlert(regionText);
                 }
             }
+            // otherwise show pop up error message
             else {
                 view.showInvalidRegionAlert(regionText);
             }
         }
-        System.out.println(regionText);
+        // clear text field once processed
         view.clearRegionField();
     }
 }

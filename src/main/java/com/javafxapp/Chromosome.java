@@ -5,42 +5,47 @@ import java.util.HashMap;
 
 public class Chromosome {
     private String name;
-    private long length;
-    private long absoluteStart;
+    private long length; // length extracted from length in ##contig line
+    private long absoluteStart; // start of the chromosome considering all chromosomes previous
     private double pixelWidth;
     private double pixelAbsoluteOffset;
-    private HashMap<Integer, ArrayList<Call>> tiledCallStarts;
-    private int tileEndInterval;
-    private ArrayList<Call> allCalls;
-
-    /**
-     *
-     * @param name
-     * @param length
-     * @param absoluteStart reflects the start position from the start of the REFERENCE
-     */
+    private int tileEndInterval; // end tile interval for Chromosome (tile intervals range from [1,end] inclusive
+    // constructor
     public Chromosome(String name, long length, long absoluteStart, int tileSize) {
         this.name = name;
         this.length = length;
         this.absoluteStart = absoluteStart;
         this.tileEndInterval = Math.toIntExact((length - 1) / tileSize + 1);
-        System.out.println("END FOR CHROMOSOME IS " + name + " " + tileEndInterval);
-        this.tiledCallStarts = new HashMap<>();
-        this.allCalls = new ArrayList<>();
     }
 
+    /**
+     * Get the end tile interval for Chromosome
+     * @return integer of the end tile interval
+     */
     public int getTileEndInterval() {
         return this.tileEndInterval;
     }
 
+    /**
+     * Get absolute start position for Chromosome (considering all chromosomes previous)
+     * @return long value of the absolute start for Chromosome
+     */
     public long getAbsoluteStart() {
         return this.absoluteStart;
     }
 
+    /**
+     * Get length of Chromosome
+     * @return long value for length of Chromosome
+     */
     public long getLength() {
         return this.length;
     }
 
+    /**
+     * Get name of Chromosome
+     * @return String of Chromosome name
+     */
     public String getName() {
         return this.name;
     }
@@ -59,29 +64,5 @@ public class Chromosome {
 
     public double getPixelAbsoluteOffset() {
         return this.pixelAbsoluteOffset;
-    }
-
-    public void addTiledCall(Call call, int tileSize) {
-        int start = call.getStart();
-        int startInterval = (start - 1) / tileSize + 1;
-        if (tiledCallStarts.containsKey(startInterval)) {
-            // do nothing
-        }
-        else {
-            tiledCallStarts.put(startInterval, new ArrayList<>());
-        }
-        tiledCallStarts.get(startInterval).add(call);
-    }
-
-    public HashMap<Integer, ArrayList<Call>> getTiledCallStarts() {
-        return this.tiledCallStarts;
-    }
-
-    public void addCall(Call call) {
-        this.allCalls.add(call);
-    }
-
-    public ArrayList<Call> getAllCalls() {
-        return this.allCalls;
     }
 }

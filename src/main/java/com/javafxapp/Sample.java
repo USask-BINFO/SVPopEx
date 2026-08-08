@@ -1,84 +1,17 @@
 package com.javafxapp;
-import javafx.scene.layout.Pane;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Objects;
 
 public class Sample {
     private String name;
-    private ArrayList<Call> calls = new ArrayList<>();
-    private LinkedHashMap<String, ArrayList<Call>> callsByChromosome = new LinkedHashMap<>();
-    private HashMap<String, HashMap<Integer, ArrayList<Call>>> tiledCalls = new HashMap<>();
-    public Sample(String sampleName, LinkedHashMap<String, Chromosome> refChromosomes) {
+    // constructor
+    public Sample(String sampleName) {
         this.name = sampleName;
-        // add each Chromosome name to callsByChromosome hashmap and set value to empty ArrayList
-        for (String chromosomeName : refChromosomes.keySet()) {
-            callsByChromosome.put(chromosomeName, new ArrayList<>());
-            this.initTileCallsForChrom(refChromosomes.get(chromosomeName));
-        }
     }
 
-    public void initTileCallsForChrom(Chromosome chrom) {
-        // create empty hashmap for chromosome
-        tiledCalls.put(chrom.getName(), new HashMap<>());
-        // fill with all possible intervals
-        for (int i=1; i<=chrom.getTileEndInterval();i++) {
-            tiledCalls.get(chrom.getName()).put(i, new ArrayList<>());
-        }
-    }
-
+    /**
+     * Get Sample name
+     * @return String holding Sample name
+     */
     public String getName() {
         return this.name;
     }
-
-    public void addCall(String chromosomeName, Call call) {
-        // all calls
-        this.calls.add(call);
-        // calls for the chromosome
-        callsByChromosome.get(chromosomeName).add(call);
-    }
-
-    public void addToTiledCalls(String chromosomeName, Call call, int tileSize) {
-        if (tiledCalls.containsKey(chromosomeName)) {
-            // do nothing, already contains chromosome hashmap
-        } else {
-            tiledCalls.put(chromosomeName, new HashMap<>());
-        }
-        int start = call.getStart();
-        int end = call.getEnd();
-        int startInterval = (start - 1) / tileSize + 1;
-        int endInterval = (end - 1) / tileSize + 1;
-        for (int i=startInterval; i<endInterval+1; i++) {
-            tiledCalls.get(chromosomeName).get(i).add(call);
-        }
-    }
-
-    public HashMap<String, HashMap<Integer, ArrayList<Call>>> getTiledCalls() {
-//        System.out.println("SHOWING TILED CALLS");
-//        for (String chr : tiledCalls.keySet()) {
-//            HashMap<Integer, ArrayList<Call>> tiles = tiledCalls.get(chr);
-//
-//            System.out.println(chr);
-//
-//            for (Integer tile : tiles.keySet()) {
-//                int count = tiles.get(tile) == null ? 0 : tiles.get(tile).size();
-//                System.out.println("  tile " + tile + ": " + count + " calls");
-//            }
-//        }
-        return this.tiledCalls;
-    }
-
-
-
-
-    public ArrayList<Call> getCalls() {
-        return this.calls;
-    }
-
-    public ArrayList<Call> getChromosomeCalls(String chrom) {
-        return this.callsByChromosome.get(chrom);
-    }
-
 }
