@@ -1,14 +1,14 @@
 package com.javafxapp;
 
 public class Selection {
-    // NOTE THAT THESE ARE THE VIEWPORT DISTANCES/COORDS NOT GENOMIC
-    private double startX;
-    private double endX;
-    private double length;
+    private double startX; // start X coordinate of the start of the selection rectangle relative to parent container
+    private double endX; // end X coordinate of the end of the selection rectangle relative to the parent container
+    private double length; // X coordinate difference (pixel length) of selection
     private double zoomLevel;
     private double genomicStart;
     private double genomicEnd;
     private String chromosome;
+    // constructor
     public Selection(double startX, double endX, String chromosome, double zoomLevel) {
         this.startX = startX;
         this.endX = endX;
@@ -17,37 +17,61 @@ public class Selection {
         this.genomicStart = this.startX/this.zoomLevel;
         this.genomicEnd = this.endX/this.zoomLevel;
         this.chromosome = chromosome;
-    }
-    public String toString() {
-        System.out.println("START: " + String.format("%.0f", genomicStart));
-        System.out.println("END: " + String.format("%.0f", genomicEnd));
-        return "Start: " + startX + " , End: " + endX;
+        System.out.println("Genomic Start: " + genomicStart + ", Genomic End: " + genomicEnd + ", Pixel Start: " + startX + ", Pixel End: " + endX);
     }
 
-    public double getStart() {
+    /**
+     * Gets information about Selection
+     * @return String containing information about Selection
+     */
+    public String toString() {
+        return "Genomic Start: " + genomicStart + ", Genomic End: " + genomicEnd + ", Pixel Start: " + startX + ", Pixel End: " + endX;
+    }
+
+    /**
+     * Gets pixel start coordinate for Selection
+     * @return double value for pixel start coordinate
+     */
+    public double getPixelStart() {
         return this.startX;
     }
 
-    public double getEndX() {
-        return this.endX;
-    }
-
-    public double getLength() {
+    /**
+     * Gets pixel length of Selection
+     * @return double value for pixel length of Selection
+     */
+    public double getPixelLength() {
         return this.length;
     }
 
+    /**
+     * Get start coordinate of Selection
+     * @return double value for Selection start coordinate
+     */
     public double getGenomicStart() {
         return this.genomicStart;
     }
 
+    /**
+     * Get end coordinate of Selection
+     * @return double value for Selection end coordinate
+     */
     public double getGenomicEnd() {
         return this.genomicEnd;
     }
 
+    /**
+     * Get zoom level at the time Selection was made
+     * @return double value representing zoom level when the Selection was made
+     */
     public double getZoomLevel() {
         return this.zoomLevel;
     }
 
+    /**
+     * Get name for the Chromosome the Selection was made in
+     * @return String representing name of Chromosome the Selection was made
+     */
     public String getChromosome() {
         return this.chromosome;
     }
