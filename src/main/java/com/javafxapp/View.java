@@ -1,16 +1,12 @@
 package com.javafxapp;
 
 import javafx.animation.TranslateTransition;
-import javafx.beans.binding.Bindings;
 import javafx.beans.value.ChangeListener;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
-import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.geometry.VPos;
 import javafx.scene.Cursor;
-import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
@@ -22,15 +18,12 @@ import javafx.scene.shape.*;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.scene.transform.Scale;
-import javafx.scene.transform.Transform;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import javafx.stage.Screen;
 
 
-import java.sql.SQLOutput;
 import java.util.*;
-import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -76,7 +69,6 @@ public class View {
     private final Menu AFColorThemesMenu = new Menu("Allele Frequency Track");
     private final Menu SVGlyphThemesMenu = new Menu("SV Glyphs");
     private final ToggleGroup AFThemesGroup = new ToggleGroup();
-    private final RadioMenuItem redGreenAFTrackItem = new RadioMenuItem("Red-Green");
     private final RadioMenuItem grayscaleAFTrackItem = new RadioMenuItem("Grayscale");
     private final ToggleGroup SVGlyphThemesGroup = new ToggleGroup();
     private final RadioMenuItem defaultSVGlyphColorItem = new RadioMenuItem("Default");
@@ -156,7 +148,6 @@ public class View {
 
     private final ScrollPane callsPanel = new ScrollPane(tracksGroup);
     private final HashMap<String, ArrayList<Node>> nodeGroups = new HashMap<>();
-    private boolean dragging = false;
 
 
     public View(Stage primaryStage) {
@@ -212,10 +203,10 @@ public class View {
         sidePaneContainer.setMinWidth(300);
         sidePaneContainer.setMaxWidth(300);
         sidePaneContainer.setStyle("-fx-background-color: #e0e0e0;"
-        + "-fx-background-radius: 5px;"
-        + "-fx-border-color: #c0c0c0;"
-        + "-fx-border-radius: 5px;"
-        + "-fx-border-width: 1;");
+                + "-fx-background-radius: 5px;"
+                + "-fx-border-color: #c0c0c0;"
+                + "-fx-border-radius: 5px;"
+                + "-fx-border-width: 1;");
         sidePaneContainer.setTranslateX(300);
         // close button
         sidePaneContainer.getChildren().add(closeButtonContainer);
@@ -377,9 +368,7 @@ public class View {
         });
         defaultSVGlyphColorItem.setSelected(true);
         // AF toggling
-        AFColorThemesMenu.getItems().add(redGreenAFTrackItem);
         AFColorThemesMenu.getItems().add(grayscaleAFTrackItem);
-        redGreenAFTrackItem.setToggleGroup(AFThemesGroup);
         grayscaleAFTrackItem.setToggleGroup(AFThemesGroup);
         // ---------- LOGO CONTAINER --------------
         logoRectangle.setFill(Color.TRANSPARENT);
@@ -553,7 +542,7 @@ public class View {
         this.callsContentContainer.getChildren().add(callsPanel);
         tracksInfoPanel.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         tracksInfoPanel.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-        tracksInfoPanel.vvalueProperty().bindBidirectional(callsPanel.vvalueProperty());
+        //tracksInfoPanel.vvalueProperty().bind(callsPanel.vvalueProperty());
         tracksInfoPanel.setStyle("-fx-background-color: transparent;");
         this.callsPanel.setStyle("-fx-focus-color: transparent; -fx-faint-focus-color: transparent;");
         this.callsPanel.setStyle("-fx-background-color:transparent;");
@@ -561,9 +550,6 @@ public class View {
         this.callsPanel.setMinWidth(Screen.getPrimary().getBounds().getWidth() - sampleSpaceWidth);
         this.callsPanel.setPrefWidth(Screen.getPrimary().getBounds().getWidth() - sampleSpaceWidth);
         this.callsPanel.setMaxWidth(Screen.getPrimary().getBounds().getWidth() - sampleSpaceWidth);
-        callsPanel.setOnMousePressed(e -> {
-            this.hBarPressed(e, callsPanel.getHvalue());
-        });
         callsPanel.setOnMouseReleased(e -> {
             this.hBarReleased(e, callsPanel.getHvalue());
         });
@@ -599,21 +585,35 @@ public class View {
         double topOfPanelOnScreen = callsPanel.localToScreen(0, 0).getY();
         double windowBottomOnScreen = callsPanel.getScene().getWindow().getY() + callsPanel.getScene().getWindow().getHeight();
         StackPane.setAlignment(layout, Pos.TOP_CENTER);
-        callsPanel.setMinHeight(0);
+        callsPanel.setMinHeight(windowBottomOnScreen - topOfPanelOnScreen);
         callsPanel.setPrefHeight(windowBottomOnScreen - topOfPanelOnScreen);
         callsPanel.setMaxHeight(windowBottomOnScreen - topOfPanelOnScreen);
         callsPanel.setFitToHeight(false);
         callsPanel.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
         this.scrollViewportHeight = windowBottomOnScreen - topOfPanelOnScreen;
+
+        // bind the layout height and content height of the tracks info with the calls panel
+        tracksInfoPanel.prefHeightProperty().bind(callsPanel.prefHeightProperty());
+        tracksInfoPanel.minHeightProperty().bind(callsPanel.minHeightProperty());
+        tracksInfoPanel.maxHeightProperty().bind(callsPanel.maxHeightProperty());
+        Region callsContent = (Region) callsPanel.getContent();
+        Region tracksContent = (Region) tracksInfoPanel.getContent();
+        tracksContent.prefHeightProperty().bind(callsContent.prefHeightProperty());
+        tracksContent.minHeightProperty().bind(callsContent.minHeightProperty());
+        tracksContent.maxHeightProperty().bind(callsContent.maxHeightProperty());
+        // Now that the heights of scrollpanes are identical, bind the vvalues
+        tracksInfoPanel.vvalueProperty().bind(callsPanel.vvalueProperty());
     }
 
     /**
-     * Resets View so new file can be uploaded.
+     * Resets the relavent components in the View such that a new VCF file can be uploaded.
      */
     public void reset() {
+        // clear panes
         this.ticksWrapper.getChildren().clear();
         this.selectionWrapper.getChildren().clear();
         this.samplesContainer.getChildren().clear();
+        // disable buttons
         this.zoomInButton.setDisable(true);
         this.zoomOutButton.setDisable(true);
         this.processButton.setDisable(true);
@@ -790,39 +790,60 @@ public class View {
         this.callsPanel.setPannable(true);   // Optional: enables mouse drag scrolling
     }
 
-    public void showChromosomeAlleleFreq(Chromosome chromosome, double zoomLevel, int AFTrackHeight) {
+    /*
+    Shows the allele frequency markers for a given chromosome in specified tiles
+    @param refContigs - Map of <String,Chromosome> of Chromosome objects
+    @param chromosome - Chromosome object to show allele freq markers for
+    @param zoomLevel - double for the current zoom level
+    @param AFTrackHeight - integer for the AF track height
+    @param allCalls - Map of <Chromosome<Int,Tile>> that holds tiles for Chromosome objects
+    @param startInterval - start interval of allele freq to show (-1 if whole chrom)
+    @param endInterval - end interval of allele freq to show (-1 if whole chrom)
+     */
+    public void showAlleleFreq(LinkedHashMap<String,Chromosome> refContigs, Chromosome chromosome, double zoomLevel, int AFTrackHeight, HashMap<Chromosome,HashMap<Integer,Tile>> allTiles, int startInterval, int endInterval) {
+        // accessing track, clearing it, and updating the width
         Pane freqPane = (Pane) this.annotationsContainer.lookup("#" + "AlleleFreq");
         freqPane.getChildren().clear();
         freqPane.setMinWidth(chromosome.getLength() * zoomLevel);
         freqPane.setPrefWidth(chromosome.getLength() * zoomLevel);
         freqPane.setMaxWidth(chromosome.getLength() * zoomLevel);
-        for (int i=0; i<chromosome.getAllCalls().size(); i++) {
-            Call currentCall = chromosome.getAllCalls().get(i);
-            double currentFreq = chromosome.getAllCalls().get(i).getAlleleFreq();
-            Circle circle;
-            if (Objects.equals(chromosome.getName(), "<ALL>")) {
-                circle = new Circle(currentCall.getAbsoluteStart()*zoomLevel, AFTrackHeight * currentFreq, 1);
-            }
-            else {
-                circle = new Circle(currentCall.getStart()*zoomLevel, AFTrackHeight * currentFreq, 1);
-            }
-            circle.setFill(Color.BLACK);
-            circle.setStroke(Color.BLACK);
-            freqPane.getChildren().add(circle);
-        }
-    }
 
-    public void showTileAlleleFreq(Chromosome chromosome, double zoomLevel, int AFTrackHeight, int startInterval, int endInterval) {
-        Pane freqPane = (Pane) this.annotationsContainer.lookup("#" + "AlleleFreq");
-        freqPane.getChildren().clear();
-        freqPane.setMinWidth(chromosome.getLength() * zoomLevel);
-        freqPane.setPrefWidth(chromosome.getLength() * zoomLevel);
-        freqPane.setMaxWidth(chromosome.getLength() * zoomLevel);
-        // loop through each tile
-        for (int i=startInterval; i<endInterval+1; i++) {
-            // for each call
-            try {
-                for (Call currentCall : chromosome.getTiledCallStarts().get(i)) {
+        // loop through and show all chromosomes
+        if (Objects.equals(chromosome.getName(), "<ALL>")) {
+            // loop through each chromosome
+            for (Map.Entry<String, Chromosome> chromEntry : refContigs.entrySet()) {
+                if (Objects.equals(chromEntry.getKey(), "<ALL>")) {
+                    // do nothing when we reach <ALL> becauase we are showing all chromosomes anyway
+                }
+                else {
+                    // loop through each tile
+                    for (Map.Entry<Integer, Tile> tileEntry : allTiles.get(chromEntry.getValue()).entrySet()) {
+                        Tile tile = tileEntry.getValue();
+                        for (int i=0; i<tile.getTileCalls().size(); i++) {
+                            Call currentCall = tile.getTileCalls().get(i);
+                            double currentFreq = tile.getTileCalls().get(i).getAlleleFreq();
+                            Circle circle;
+                            // ** needs to be absolutestart here because we are showing for <ALL>
+                            circle = new Circle(currentCall.getAbsoluteStart()*zoomLevel, AFTrackHeight * currentFreq, 1);
+                            circle.setFill(Color.BLACK);
+                            circle.setStroke(Color.BLACK);
+                            freqPane.getChildren().add(circle);
+                        }
+                    }
+                }
+            }
+        }
+        // only showing one chromosome of interest
+        else {
+            // if whole chromosome needs to be shown, find end interval
+            if (startInterval == -1 && endInterval == -1) {
+                startInterval = 1;
+                endInterval = chromosome.getTileEndInterval();
+            }
+            // show tiles of interest
+            for (int i=startInterval; i<=endInterval; i++) {
+                Tile tile = allTiles.get(chromosome).get(i);
+                for (Call currentCall : tile.getTileCalls()) {
                     double currentFreq = currentCall.getAlleleFreq();
                     Circle circle = new Circle(currentCall.getStart() * zoomLevel, AFTrackHeight * currentFreq, 1);
                     circle.setFill(Color.BLACK);
@@ -830,186 +851,148 @@ public class View {
                     freqPane.getChildren().add(circle);
                 }
             }
-            catch (NullPointerException e) {
-                continue;
-            }
         }
     }
 
-    public void showChromosomeCalls(Chromosome chromosome, ArrayList<Sample> samples, double zoomLevel, int originalTrackHeight) {
+    /*
+    Shows the SV calls for a given chromosome in specified tiles
+    @param refContigs - Map of <String,Chromosome> to hold reference sequences
+    @param chromosome - Chromosome object of chromosome to show calls
+    @param samples - ArrayList of Sample objects
+    @param zoomLevel - double for the current zoom level
+    @param originalTrackHeight - double for the original SV track height
+    @param allTiles - Map of <Chromosome,HashMap<Integer,Tile>> to hold tile information, tiles numbered starting from 1
+    @param startInterval - start interval of region to show, -1 if showing whole chromosome(s)
+    @param endInterval - end interval of region to show, -1 if showing whole chromosome(s)
+     */
+    public void showSVCalls(LinkedHashMap<String,Chromosome> refContigs, Chromosome chromosome, ArrayList<Sample> samples, double zoomLevel, int originalTrackHeight, HashMap<Chromosome,HashMap<Integer,Tile>> allTiles, int startInterval, int endInterval) {
         /**
          * Pre-conditions/assumptions: Gets call pane for each sample by looking up the ID
          */
-
+        // updating width
         this.tracksPanel.setMinWidth(chromosome.getLength() * zoomLevel);
         this.tracksPanel.setMaxWidth(chromosome.getLength() * zoomLevel);
-
-        // loops through each sample and gets the sample pane to update, access order does not matter
+        // update width for sample tracks
         for (Sample sample : samples) {
             Pane currentCalls = (Pane) this.samplesContainer.lookup("#" + sample.getName());
             currentCalls.getChildren().clear();
             currentCalls.setMinWidth(chromosome.getLength() * zoomLevel);
             currentCalls.setPrefWidth(chromosome.getLength() * zoomLevel);
             currentCalls.setMaxWidth(chromosome.getLength() * zoomLevel);
-            // loop through each call
-            for (int j=0; j<sample.getChromosomeCalls(chromosome.getName()).size(); j++) {
-                // get the current Call and set its id for the call and rectangle
-                Call currentCall = sample.getChromosomeCalls(chromosome.getName()).get(j);
-                Rectangle callRect;
-                if (Objects.equals(chromosome.getName(), "<ALL>")) {
-                    callRect = new Rectangle(currentCall.getAbsoluteStart()*zoomLevel, 1, currentCall.getLength()*zoomLevel, originalTrackHeight-2);
-                }
-                else {
-                    callRect = new Rectangle(currentCall.getStart()*zoomLevel, 1, currentCall.getLength()*zoomLevel, originalTrackHeight-2);
-                }
-                // styling
-                callRect.setOpacity(1);
-                callRect.setStrokeWidth(2);
-                callRect.setArcWidth(5);   // horizontal roundness
-                callRect.setArcHeight(5);
-                if (Objects.equals(currentCall.getType(), "DUP")) {
-                    callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
-                    callRect.setOpacity(0.5);
-                    callRect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("fill"));
-                    double percentageHeight = originalTrackHeight * 0.15;
-                    double percentageLength = currentCall.getLength()*zoomLevel * 0.1;
-                    double endX = currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - percentageLength;
-                    Line lineDup1 = new Line(currentCall.getStart()*zoomLevel + percentageLength, percentageHeight, endX, percentageHeight);
-                    Line lineDup2 = new Line(currentCall.getStart()*zoomLevel + percentageLength, originalTrackHeight - percentageHeight, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - percentageLength, originalTrackHeight - percentageHeight);
-                    Line lineDup3 = new Line(currentCall.getStart()*zoomLevel + percentageLength, percentageHeight, currentCall.getStart()*zoomLevel + percentageLength, originalTrackHeight - percentageHeight);
-                    Line lineDup4 = new Line(currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - percentageLength, percentageHeight, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - percentageLength, originalTrackHeight - percentageHeight);
-                    lineDup1.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
-                    lineDup2.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
-                    lineDup3.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
-                    lineDup4.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
-                    if (!Objects.equals(chromosome.getName(), "<ALL>")) {
-                        currentCalls.getChildren().add(lineDup1);
-                        currentCalls.getChildren().add(lineDup2);
-                        currentCalls.getChildren().add(lineDup3);
-                        currentCalls.getChildren().add(lineDup4);
+        }
+
+        // show calls for all chromosomes
+        if (Objects.equals(chromosome.getName(), "<ALL>")) {
+            System.out.println("SHOWING ALL");
+            // loop through all chromosomes
+            for (Map.Entry<String, Chromosome> chromEntry : refContigs.entrySet()) {
+                System.out.println("PROCESSING " + chromEntry.getValue().getName());
+                if (Objects.equals(chromEntry.getKey(), "<ALL>")) {
+                    // do nothing when we reach <ALL> becauase we are showing all chromosomes anyway
+                } else {
+                    // loop through each tile
+                    for (Map.Entry<Integer, Tile> tileEntry : allTiles.get(chromEntry.getValue()).entrySet()) {
+                        System.out.println("PROCESSING TILE " + tileEntry.getKey() + " FOR CHROMSOME " + chromosome.getName());
+                        Tile tile = tileEntry.getValue();
+                        // show the calls for each sample
+                        for (Sample sample : samples) {
+                            Pane currentCalls = (Pane) this.samplesContainer.lookup("#" + sample.getName());
+                            for (Call currentCall : tile.getSampleCalls().get(sample)) {
+                                Rectangle callRect;
+                                callRect = new Rectangle(currentCall.getAbsoluteStart()*zoomLevel, 1, currentCall.getLength()*zoomLevel, originalTrackHeight-2);
+                                // styling
+                                callRect.setOpacity(1);
+                                callRect.setStrokeWidth(2);
+                                callRect.setArcWidth(5);
+                                callRect.setArcHeight(5);
+                                // DUP STYLING
+                                if (Objects.equals(currentCall.getType(), "DUP")) {
+                                    callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
+                                    callRect.setOpacity(0.5);
+                                    callRect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("fill"));
+                                }
+                                else if (Objects.equals(currentCall.getType(), "INV")) {
+                                    callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INV").get("stroke"));
+                                    callRect.setOpacity(0.5);
+                                    callRect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INV").get("fill"));
+                                    Line lineInv1 = new Line(currentCall.getAbsoluteStart()*zoomLevel, 1, currentCall.getAbsoluteStart()*zoomLevel + currentCall.getLength()*zoomLevel, originalTrackHeight-2);
+                                    Line lineInv2 = new Line(currentCall.getAbsoluteStart()*zoomLevel + currentCall.getLength()*zoomLevel, 1, currentCall.getAbsoluteStart()*zoomLevel, originalTrackHeight-2);
+                                    lineInv1.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INV").get("stroke"));
+                                    lineInv2.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INV").get("stroke"));
+                                    lineInv1.setOpacity(0.6);
+                                    lineInv2.setOpacity(0.6);
+                                    currentCalls.getChildren().add(lineInv1);
+                                    currentCalls.getChildren().add(lineInv2);
+                                }
+                                else if (Objects.equals(currentCall.getType(), "DEL")) {
+                                    callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DEL").get("stroke"));
+                                    callRect.setOpacity(0.5);
+                                    callRect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DEL").get("fill"));
+                                    Line lineDel1 = new Line(currentCall.getAbsoluteStart()*zoomLevel, 1, currentCall.getAbsoluteStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), originalTrackHeight-2);
+                                    Line lineDel2 = new Line(currentCall.getAbsoluteStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), originalTrackHeight-2, currentCall.getAbsoluteStart()*zoomLevel + currentCall.getLength()*zoomLevel, 1);
+                                    lineDel1.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DEL").get("stroke"));
+                                    lineDel2.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DEL").get("stroke"));
+                                    lineDel1.setOpacity(0.4);
+                                    lineDel2.setOpacity(0.4);
+                                    currentCalls.getChildren().add(lineDel1);
+                                    currentCalls.getChildren().add(lineDel2);
+                                }
+                                else if (Objects.equals(currentCall.getType(), "INS")) {
+                                    callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INS").get("stroke"));
+                                    callRect.setOpacity(0.5);
+                                    callRect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INS").get("fill"));
+                                    Line lineIns1 = new Line(currentCall.getAbsoluteStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), 1, currentCall.getAbsoluteStart()*zoomLevel, originalTrackHeight-2);
+                                    Line lineIns2 = new Line(currentCall.getAbsoluteStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), 1, currentCall.getAbsoluteStart()*zoomLevel + currentCall.getLength()*zoomLevel, originalTrackHeight-2);
+                                    lineIns1.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INS").get("stroke"));
+                                    lineIns2.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INS").get("stroke"));
+                                    lineIns1.setOpacity(0.5);
+                                    lineIns2.setOpacity(0.5);
+                                    currentCalls.getChildren().add(lineIns1);
+                                    currentCalls.getChildren().add(lineIns2);
+                                }
+                                else if (Objects.equals(currentCall.getType(), "BND") || Objects.equals(currentCall.getType(), "TRA")){
+                                    callRect.setStroke(Color.BLACK);
+                                    callRect.setOpacity(0.7);
+                                    callRect.setFill(Color.BLACK);
+                                    callRect.getStrokeDashArray().setAll(12.0, 6.0);
+                                }
+                                else {
+                                    System.err.println("Unrecognized/unsupported SV type that was not caught earlier: " + currentCall.getType() + ". Ignoring call.");
+                                    continue;
+                                }
+                                currentCalls.getChildren().add(callRect);
+                            }
+                        }
                     }
                 }
-                else if (Objects.equals(currentCall.getType(), "INV")) {
-                    callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INV").get("stroke"));
-                    callRect.setOpacity(0.5);
-                    callRect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INV").get("fill"));
-                    Line lineInv1 = new Line(currentCall.getStart()*zoomLevel, 1, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, originalTrackHeight-2);
-                    Line lineInv2 = new Line(currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, 1, currentCall.getStart()*zoomLevel, originalTrackHeight-2);
-                    lineInv1.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INV").get("stroke"));
-                    lineInv2.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INV").get("stroke"));
-                    lineInv1.setOpacity(0.6);
-                    lineInv2.setOpacity(0.6);
-                    currentCalls.getChildren().add(lineInv1);
-                    currentCalls.getChildren().add(lineInv2);
-                }
-                else if (Objects.equals(currentCall.getType(), "DEL")) {
-                    callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DEL").get("stroke"));
-                    callRect.setOpacity(0.5);
-                    callRect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DEL").get("fill"));
-                    Line lineDel1 = new Line(currentCall.getStart()*zoomLevel, 1, currentCall.getStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), originalTrackHeight-2);
-                    Line lineDel2 = new Line(currentCall.getStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), originalTrackHeight-2, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, 1);
-                    lineDel1.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DEL").get("stroke"));
-                    lineDel2.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DEL").get("stroke"));
-                    lineDel1.setOpacity(0.4);
-                    lineDel2.setOpacity(0.4);
-                    currentCalls.getChildren().add(lineDel1);
-                    currentCalls.getChildren().add(lineDel2);
-                }
-                else if (Objects.equals(currentCall.getType(), "INS")) {
-                    callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INS").get("stroke"));
-                    callRect.setOpacity(0.5);
-                    callRect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INS").get("fill"));
-                    Line lineIns1 = new Line(currentCall.getStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), 1, currentCall.getStart()*zoomLevel, originalTrackHeight-2);
-                    Line lineIns2 = new Line(currentCall.getStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), 1, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, originalTrackHeight-2);
-                    lineIns1.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INS").get("stroke"));
-                    lineIns2.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INS").get("stroke"));
-                    lineIns1.setOpacity(0.5);
-                    lineIns2.setOpacity(0.5);
-                    currentCalls.getChildren().add(lineIns1);
-                    currentCalls.getChildren().add(lineIns2);
-                }
-                else if (Objects.equals(currentCall.getType(), "BND") || Objects.equals(currentCall.getType(), "TRA")){
-                    callRect.setStroke(Color.BLACK);
-                    callRect.setOpacity(0.7);
-                    callRect.setFill(Color.BLACK);
-                    callRect.getStrokeDashArray().setAll(12.0, 6.0);
-                }
-                else {
-                    System.err.println("Unrecognized/unsupported SV type that was not caught earlier: " + currentCall.getType() + ". Ignoring call.");
-                    continue;
-                }
-                currentCalls.getChildren().add(callRect);
-                callRect.setOnMouseEntered(e -> {
-                    callRect.setCursor(Cursor.HAND);
-                });
-                callRect.setOnMouseClicked(e -> {
-                    callRect.setStroke(Color.BLACK);
-                    this.showCallInformation(currentCall, samples);
-                    this.setLiveCall(currentCall);
-                    this.openSidePane();
-                });
             }
-        }
-    }
 
-    public void hideCalls(ArrayList<Sample> samples, ArrayList<Call> calls) {
-        // loop through each sample
-        for (Sample sample : samples) {
-            // get sample track
-            Pane currentCalls = (Pane) this.samplesContainer.lookup("#" + sample.getName());
-            // loop through calls to hide
-            for (Call call : calls) {
-                for (Node nodeToRemove : nodeGroups.get(call.getId())) {
-                    //currentCalls.getChildren().remove(nodeToRemove);
-                    nodeToRemove.setOpacity(0.01);
-                }
+        }
+        // show calls for a region
+        else {
+            System.out.println("SHOWING REGION ONLY");
+            // if whole chromosome needs to be shown, find end interval
+            if (startInterval == -1 && endInterval == -1) {
+                startInterval = 1;
+                endInterval = chromosome.getTileEndInterval();
             }
-        }
-    }
-
-    public void showTileCalls(Chromosome chromosome, ArrayList<Sample> samples, double zoomLevel, int originalTrackHeight, Integer startInterval, int endInterval) {
-        /**
-         * Pre-conditions/assumptions: Gets call pane for each sample by looking up the ID
-         */
-
-        System.out.println(" ------------- TRIGGERING VIEW.SHOWTILECALLS() ------------ ");
-        this.tracksPanel.setMinWidth(chromosome.getLength() * zoomLevel);
-        this.tracksPanel.setMaxWidth(chromosome.getLength() * zoomLevel);
-
-        // loops through each sample and gets the sample pane to update, access order does not matter
-        for (Sample sample : samples) {
-            ArrayList<String> seenIds = new ArrayList<>();
-            Pane currentCalls = (Pane) this.samplesContainer.lookup("#" + sample.getName());
-            currentCalls.getChildren().clear();
-            currentCalls.setMinWidth(chromosome.getLength() * zoomLevel);
-            currentCalls.setPrefWidth(chromosome.getLength() * zoomLevel);
-            currentCalls.setMaxWidth(chromosome.getLength() * zoomLevel);
-            // loop through each tile
-            System.out.println("START INTERVAL IS " + startInterval);
-            System.out.println("END INTERVAL IS " + endInterval);
-            System.out.println("CHROMOSOME IS " + chromosome.getName());
-            System.out.println("CHROMOSOME END INTERVAL IS " + chromosome.getTileEndInterval());
             for (int i=startInterval; i<=endInterval; i++) {
-                // for each call
-                for (Call currentCall : sample.getTiledCalls().get(chromosome.getName()).get(i)) {
-                    // already seen this call and added it
-                    if (seenIds.contains(currentCall.getId())) {
-                        // do nothing
-                    }
-                    // haven't added this call in any other tiles for this sample yet
-                    else {
-                        seenIds.add(currentCall.getId());
-                        // make sure call is added to node groups
-                        if (!nodeGroups.containsKey(currentCall.getId())) {
-                            nodeGroups.put(currentCall.getId(), new ArrayList<>());
-                        }
-                        else {
-                            // do nothing
-                        }
-                        Rectangle callRect = new Rectangle(currentCall.getStart()*zoomLevel, 1, currentCall.getLength()*zoomLevel, originalTrackHeight-2);
-                        Polygon traPoly = new Polygon();
+                System.out.println("PROCESSING TILE " + i + " FOR CHROMSOME " + chromosome.getName());
+                Tile tile = allTiles.get(chromosome).get(i);
+                for (Sample sample : samples) {
+                    // get sample pane
+                    Pane currentCalls = (Pane) this.samplesContainer.lookup("#" + sample.getName());
+                    // loop through sample calls for tile
+                    for (Call currentCall : tile.getSampleCalls().get(sample)) {
+//                        if (!nodeGroups.containsKey(currentCall.getId())) {
+//                            nodeGroups.put(currentCall.getId(), new ArrayList<>());
+//                        }
+//                        else {
+//                            // do nothing
+//                        }
+                        Rectangle callRect;
+                        callRect = new Rectangle(currentCall.getStart()*zoomLevel, 1, currentCall.getLength()*zoomLevel, originalTrackHeight-2);
                         // styling
-                        callRect.setOpacity(1);
                         callRect.setStrokeWidth(2);
                         callRect.setArcWidth(5);   // horizontal roundness
                         callRect.setArcHeight(5);
@@ -1017,7 +1000,7 @@ public class View {
                             callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
                             callRect.setOpacity(0.5);
                             callRect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("fill"));
-                            nodeGroups.get(currentCall.getId()).add(callRect);
+                            //nodeGroups.get(currentCall.getId()).add(callRect);
                             // if the duplication rectangle is currently big enough to show the inside lines, show
                             // inset is the distance from inner border to outer border
                             int inset = 5;
@@ -1051,12 +1034,12 @@ public class View {
                                 currentCalls.getChildren().add(lineDup5);
                                 currentCalls.getChildren().add(lineDup6);
                                 // add to node groups
-                                nodeGroups.get(currentCall.getId()).add(lineDup1);
-                                nodeGroups.get(currentCall.getId()).add(lineDup2);
-                                nodeGroups.get(currentCall.getId()).add(lineDup3);
-                                nodeGroups.get(currentCall.getId()).add(lineDup4);
-                                nodeGroups.get(currentCall.getId()).add(lineDup5);
-                                nodeGroups.get(currentCall.getId()).add(lineDup6);
+                                //nodeGroups.get(currentCall.getId()).add(lineDup1);
+//                                nodeGroups.get(currentCall.getId()).add(lineDup2);
+//                                nodeGroups.get(currentCall.getId()).add(lineDup3);
+//                                nodeGroups.get(currentCall.getId()).add(lineDup4);
+//                                nodeGroups.get(currentCall.getId()).add(lineDup5);
+//                                nodeGroups.get(currentCall.getId()).add(lineDup6);
 
                             }
                             // otherwise, don't add additional lines
@@ -1077,9 +1060,9 @@ public class View {
                             currentCalls.getChildren().add(lineInv1);
                             currentCalls.getChildren().add(lineInv2);
                             // add to node groups
-                            nodeGroups.get(currentCall.getId()).add(callRect);
-                            nodeGroups.get(currentCall.getId()).add(lineInv1);
-                            nodeGroups.get(currentCall.getId()).add(lineInv2);
+//                            nodeGroups.get(currentCall.getId()).add(callRect);
+//                            nodeGroups.get(currentCall.getId()).add(lineInv1);
+//                            nodeGroups.get(currentCall.getId()).add(lineInv2);
                         }
                         else if (Objects.equals(currentCall.getType(), "DEL")) {
                             callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DEL").get("stroke"));
@@ -1094,9 +1077,9 @@ public class View {
                             currentCalls.getChildren().add(lineDel1);
                             currentCalls.getChildren().add(lineDel2);
                             // add to node groups
-                            nodeGroups.get(currentCall.getId()).add(callRect);
-                            nodeGroups.get(currentCall.getId()).add(lineDel1);
-                            nodeGroups.get(currentCall.getId()).add(lineDel2);
+//                            nodeGroups.get(currentCall.getId()).add(callRect);
+//                            nodeGroups.get(currentCall.getId()).add(lineDel1);
+//                            nodeGroups.get(currentCall.getId()).add(lineDel2);
                         }
                         else if (Objects.equals(currentCall.getType(), "INS")) {
                             callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INS").get("stroke"));
@@ -1111,11 +1094,12 @@ public class View {
                             currentCalls.getChildren().add(lineIns1);
                             currentCalls.getChildren().add(lineIns2);
                             // add to node groups
-                            nodeGroups.get(currentCall.getId()).add(callRect);
-                            nodeGroups.get(currentCall.getId()).add(lineIns1);
-                            nodeGroups.get(currentCall.getId()).add(lineIns2);
+//                            nodeGroups.get(currentCall.getId()).add(callRect);
+//                            nodeGroups.get(currentCall.getId()).add(lineIns1);
+//                            nodeGroups.get(currentCall.getId()).add(lineIns2);
                         }
                         else if (Objects.equals(currentCall.getType(), "BND") || Objects.equals(currentCall.getType(), "TRA")) {
+                            Polygon traPoly = new Polygon();
                             // direction at first character, means join before
                             if (currentCall.getAlternate().charAt(0) ==  ']' || currentCall.getAlternate().charAt(0) == '[') {
                                 // joining sequence is in reverse direction
@@ -1159,9 +1143,20 @@ public class View {
                             callRect.setFill(Color.BLACK);
                             callRect.getStrokeDashArray().setAll(12.0, 6.0);
                             callRect.setStrokeWidth(3);
+                            // for TRA polygon
+                            traPoly.setFill(Color.rgb(80, 80, 80));
+                            traPoly.setId("TRA" + currentCall.getId());
+                            currentCalls.getChildren().add(traPoly);
+                            traPoly.setOnMouseEntered(this.callEnteredHandler);
+                            traPoly.setOnMouseClicked(
+                                this.callClickHandler
+//                                this.showCallInformation(currentCall, samples);
+//                                this.setLiveCall(currentCall);
+//                                this.openSidePane();
+                            );
                             // add to node groups
-                            nodeGroups.get(currentCall.getId()).add(callRect);
-                            nodeGroups.get(currentCall.getId()).add(traPoly);
+//                            nodeGroups.get(currentCall.getId()).add(callRect);
+//                            nodeGroups.get(currentCall.getId()).add(traPoly);
                         }
                         else {
                             System.err.println("Unrecognized/unsupported SV type that was not caught earlier: " + currentCall.getType() + ". Ignoring call.");
@@ -1169,29 +1164,50 @@ public class View {
                         }
                         // for call rectangle
                         currentCalls.getChildren().add(callRect);
-                        callRect.setOnMouseEntered(e -> {
-                            callRect.setCursor(Cursor.HAND);
-                        });
-                        callRect.setOnMouseClicked(e -> {
-                            callRect.setStroke(Color.BLACK);
-                            this.showCallInformation(currentCall, samples);
-                            this.setLiveCall(currentCall);
-                            this.openSidePane();
-                        });
-                        // for TRA polygon
-                        traPoly.setFill(Color.rgb(80, 80, 80));
-                        traPoly.setId("TRA" + currentCall.getId());
-                        currentCalls.getChildren().add(traPoly);
-                        traPoly.setOnMouseEntered(e -> {
-                            traPoly.setCursor(Cursor.HAND);
-                        });
-                        traPoly.setOnMouseClicked(e -> {
-                            this.showCallInformation(currentCall, samples);
-                            this.setLiveCall(currentCall);
-                            this.openSidePane();
-                        });
+                        callRect.setOnMouseEntered(this.callEnteredHandler);
+                        callRect.setOnMouseClicked(
+                            this.callClickHandler
+//                            callRect.setStroke(Color.BLACK);
+//                            this.showCallInformation(currentCall, samples);
+//                            this.setLiveCall(currentCall);
+//                            this.openSidePane();
+                        );
+                        callRect.setId(currentCall.getId());
                     }
                 }
+            }
+
+        }
+    }
+
+    private EventHandler<MouseEvent> callClickHandler = e -> {
+        Rectangle rect = (Rectangle) e.getSource();
+        Call call = (Call) rect.getUserData();
+        rect.setStroke(Color.BLACK);
+        this.openSidePane();
+    };
+
+    private EventHandler<MouseEvent> callEnteredHandler = e -> {
+        Node node = (Node) e.getSource();
+        node.setCursor(Cursor.HAND);
+    };
+
+    public void hideCalls(ArrayList<Sample> samples, ArrayList<Call> calls) {
+        // loop through each sample
+        for (Sample sample : samples) {
+            // get sample track
+            Pane currentCalls = (Pane) this.samplesContainer.lookup("#" + sample.getName());
+            // loop through calls to hide
+            for (Call call : calls) {
+                System.out.println("CALL TO STRING " + call.toString());
+                Node rect = currentCalls.lookup("#" + call.getId());
+                if (rect != null) {
+                    rect.setOpacity(0.01);
+                }
+//                for (Node nodeToRemove : nodeGroups.get(call.getId())) {
+//                    //currentCalls.getChildren().remove(nodeToRemove);
+//                    nodeToRemove.setOpacity(0.01);
+//                }
             }
         }
     }
@@ -1422,15 +1438,12 @@ public class View {
             topLine.setStroke(Color.BLACK);
             bottomLine.setStroke(Color.BLACK);
             // set actions for radio controls
-            this.redGreenAFTrackItem.setOnAction(e -> {
-                this.applyAFColorTheme("red-green AF", callsWrapper);
-            });
             this.grayscaleAFTrackItem.setOnAction(e -> {
                 this.applyAFColorTheme("grayscale AF", callsWrapper);
             });
             // trigger default color theme
-            this.applyAFColorTheme("red-green AF", callsWrapper);
-            this.redGreenAFTrackItem.setSelected(true);
+            this.applyAFColorTheme("grayscale AF", callsWrapper);
+            this.grayscaleAFTrackItem.setSelected(true);
         }
         else {
             // do nothing
@@ -1645,15 +1658,8 @@ public class View {
         }
     }
 
-    public void hBarPressed(MouseEvent e, double hValue) {
-        dragging = true;
-    }
-
     public void hBarReleased(MouseEvent e, double hValue) {
-        dragging = false;
-        System.out.println("CLOSE HVALUE " + hValue);
-        System.out.println("RELEASING HBAR!!!!!!");
-        syncScroll(hValue);
+        this.syncScroll(hValue);
     }
 
     public double getMarkerWrapperWidth() {
@@ -1674,7 +1680,7 @@ public class View {
         this.samplesContainer.getTransforms().add(scale);
         this.samplesInfoContainer.getTransforms().clear();
         this.samplesInfoContainer.getTransforms().add(scale);
-        triggerScrollPane();
+        this.triggerScrollPane();
     }
 
     private void triggerScrollPane() {
@@ -1744,8 +1750,8 @@ public class View {
         this.ticksWrapper.getChildren().removeIf(node -> node instanceof Rectangle);
         // add back each selection considering the zoom
         for (int i=0; i<selections.size(); i++) {
-            double start = (selections.get(i).getStart() * zoomLevel) / selections.get(i).getZoomLevel();
-            double length = (selections.get(i).getLength() * zoomLevel) / selections.get(i).getZoomLevel();
+            double start = (selections.get(i).getPixelStart() * zoomLevel) / selections.get(i).getZoomLevel();
+            double length = (selections.get(i).getPixelLength() * zoomLevel) / selections.get(i).getZoomLevel();
             Rectangle rect = new Rectangle(start, 0, length, selectionWrapper.getHeight());
             rect.setFill(Color.GRAY);
             rect.setOpacity(0.3);
@@ -1984,9 +1990,6 @@ public class View {
         marker.setOnMouseDragged(handler);
     }
 
-    public boolean isDragging() {
-        return this.dragging;
-    }
 
 
     public void applyAFColorTheme(String theme, StackPane callsWrapper) {
