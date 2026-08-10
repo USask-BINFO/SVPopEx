@@ -800,9 +800,7 @@ public class Model {
                             Pattern genotypePattern = Pattern.compile(genotypeRegex);
                             Matcher genotypeMatcher = genotypePattern.matcher(fields[startCol]);
                             // assign reference length if match is found
-                            System.out.println("LINE IS " + currentCall);
                             if (genotypeMatcher.find()) {
-                                System.out.println("GENOTYPE FOR SAMPLE " + sample.getName() + " IS " + genotypeMatcher.group(1));
                                 genotypes.put(sample.getName(), genotypeMatcher.group(1));
                                 if (genotypeMatcher.group(1).contains("1")) {
                                     currentCall.addViewNodes(sample);
