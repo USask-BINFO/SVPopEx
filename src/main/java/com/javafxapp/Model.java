@@ -19,26 +19,47 @@ public class Model {
     private HashMap<String, Color> sampleColors = new HashMap<>();
     private ArrayList<Selection> selections = new ArrayList<>();
     private double zoomLevel = 0.2;
-    private ArrayList<Integer> increments = new ArrayList<>(Arrays.asList(100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000, 500000, 1000000, 2000000, 5000000, 10000000, 20000000, 50000000));
+    private final ArrayList<Integer> increments = new ArrayList<>(Arrays.asList(100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000, 500000, 1000000, 2000000, 5000000, 10000000, 20000000, 50000000));
     private int coordIncrementIndex = 3;
     private double trackHeightScale = 1;
     private final double baseFontSize = 12;
     private final int originalTrackHeight = 100;
-    private int tileSize = 20000000;
+    private final int tileSize = 20000000;
     private Integer currentTileBufferStart = null;
     private Integer currentTileBufferEnd = null;
-    private int tileBuffer = 2;
-    private int AFTrackHeight = 88;
+    private final int tileBuffer = 2;
+    private final int AFTrackHeight = 88;
     private final Set<String> supportedSVTypes = Set.of("TRA", "BND", "INS", "DEL", "INV", "DUP");
+    private boolean changingChromInView = false;
+    private ArrayList<String> annotationIDs = new ArrayList<>();
+    private final int featureTrackHeight = 26;
 
     /**
      * Clears the relevant data structures in the Model such that a new VCF file can be chosen and the structures can be repopulated.
      */
     public void reset() {
+        setCurrentChrom(null);
+        this.refChromosomes.clear();
+        this.allTiles.clear();
+        this.refTotalLength = 0;
         this.samples.clear();
         this.sampleColors.clear();
         this.selections.clear();
-        setCurrentChrom(null);
+        this.zoomLevel = 0.2;
+        this.coordIncrementIndex = 3;
+        this.trackHeightScale = 1;
+        this.currentTileBufferStart = null;
+        this.currentTileBufferEnd = null;
+        this.changingChromInView = false;
+        this.annotationIDs.clear();
+    }
+
+    public int getFeatureTrackHeight() {
+        return this.featureTrackHeight;
+    }
+
+    public boolean getChangingChromInView() {
+        return this.changingChromInView;
     }
 
     /**
@@ -67,38 +88,47 @@ public class Model {
 
     /**
      * Checks whether the padding or view tiles need to be updated
-     * @param newStartTile corresponds to the start of the tile for the region in view INCLUDES BUFFER
+     * @param newStartTile corresponds to the start of the tile for the region in view
      * @return boolean whether new tiles need to be shown, true if yes, and false otherwise
      */
     public boolean updateCurrentTileStart(int newStartTile) {
-        // if the variable hasn't been set yet, set it to new tile start
+        // if the variable hasn't been set yet, set it to new tile start minus buffer
         if (this.currentTileBufferStart == null) {
-            this.currentTileBufferStart = newStartTile;
+            // if buffer would be before the start, set it to starting tile (1)
+            if (newStartTile - this.tileBuffer <= 1) {
+                this.currentTileBufferStart = 1;
+            }
+            // otherwise set to start minus buffer
+            else {
+                this.currentTileBufferStart = newStartTile - this.tileBuffer;
+            }
             return true;
         }
         // both at min, do nothing
-        if (this.currentTileBufferStart == 1 && newStartTile == 1) {
+        else if (this.currentTileBufferStart == 1 && newStartTile == 1) {
             // do nothing
-            System.out.println("EXECUTED CASE 1");
             return false;
         }
         // currently already the same, do nothing
         else if (this.currentTileBufferStart == (newStartTile)-tileBuffer) {
             // do nothing
-            System.out.println("EXECUTE CASE 2");
             return false;
         }
         // otherwise different, update
         else {
-            // if either are less than 1, set to 1
-            if (newStartTile < 1 || newStartTile-tileBuffer < 1) {
-                System.out.println("CASE 3 - UPDATING BUFFER TO 1st TILE");
-                this.currentTileBufferStart = 1;
-                return true;
+            // if buffer will be less than 1, set to 1
+            if (newStartTile-tileBuffer < 1) {
+                if (this.currentTileBufferStart == 1) {
+                    // do nothing
+                    return false;
+                }
+                else {
+                    this.currentTileBufferStart = 1;
+                    return true;
+                }
             }
             // in any other case, set current to newStart-buffer
             else {
-                System.out.println("CASE 4 - UPDATING BUFFER TO " + (newStartTile-tileBuffer));
                 this.currentTileBufferStart = newStartTile-tileBuffer;
                 return true;
             }
@@ -107,38 +137,49 @@ public class Model {
 
     /**
      * Checks whether the current end tile needs to be updated
-     * @param newEndTile corresponds to the end tile for the region in view INCLUDES BUFFER
+     * @param newEndTile corresponds to the end tile for the region in view
      * @return true if end tile needs to be updated, false otherwise
      */
     public boolean updateCurrentTileEnd(int newEndTile) {
         // find max end for the chromosome
-        int maxEndTile = getStartInterval((int) currentChrom.getLength());
+        int maxEndTile = getInterval((int) currentChrom.getLength());
         // if end is not set yet, set it
         if (this.currentTileBufferEnd == null) {
-            this.currentTileBufferEnd = newEndTile;
+            if (newEndTile + this.tileBuffer >= maxEndTile) {
+                this.currentTileBufferEnd = maxEndTile;
+            }
+            else {
+                this.currentTileBufferEnd = newEndTile + this.tileBuffer;
+            }
             return true;
         }
-        // already equal
-        if (this.currentTileBufferEnd == (newEndTile+tileBuffer)) {
+        // both at max, do nothing
+        else if (this.currentTileBufferEnd == maxEndTile && newEndTile == maxEndTile) {
             // do nothing
-            System.out.println("CASE 1 END");
             return false;
         }
-        // greater than end and needs to be updated to max
-        else if (newEndTile+tileBuffer > maxEndTile && currentTileBufferEnd != maxEndTile) {
-            System.out.println("CASE 2 END");
-            this.currentTileBufferEnd = maxEndTile;
-            return true;
-        }
-        // if buffer should be greater than end, but buffer is already at max, do nothing
-        else if (newEndTile+tileBuffer > maxEndTile && currentTileBufferEnd == maxEndTile) {
-            System.out.println("CASE 3 END");
+        // currently already the same, do nothing
+        else if (this.currentTileBufferEnd == (newEndTile+tileBuffer)) {
+            // do nothing
             return false;
         }
+        // otherwise different, update
         else {
-            System.out.println("CASE 4 END");
-            this.currentTileBufferEnd = newEndTile+tileBuffer;
-            return true;
+            if (newEndTile + this.tileBuffer > maxEndTile) {
+                if (this.currentTileBufferEnd == maxEndTile) {
+                    // do nothing
+                    return false;
+                }
+                else {
+                    this.currentTileBufferEnd = maxEndTile;
+                    return true;
+                }
+            }
+            // in any other case, set current to end+buffer
+            else {
+                this.currentTileBufferEnd = newEndTile + this.tileBuffer;
+                return true;
+            }
         }
     }
 
@@ -176,8 +217,7 @@ public class Model {
      */
     public double fitAllSamplesIncrement(double panelHeight, double SBHeight) {
         // extra 0.5 adds half a sample to bottom allowing all samples to fit fully and prevent scrolling
-        double scale = ((panelHeight - SBHeight - AFTrackHeight) / (samples.size()+0.5)) / this.originalTrackHeight;
-        System.out.println("SCALE IS " + scale);
+        double scale = ((panelHeight - SBHeight - AFTrackHeight) / (samples.size()+0.3)) / this.originalTrackHeight;
         return scale - 1;
     }
 
@@ -340,8 +380,8 @@ public class Model {
                 // get coordinates for selection and starting and ending tiles
                 double selectionStart = selection.getGenomicStart();
                 double selectionEnd = selection.getGenomicEnd();
-                int startInterval = getStartInterval((int) selectionStart);
-                int endInterval = getEndInterval((int) selectionEnd);
+                int startInterval = getInterval((int) selectionStart);
+                int endInterval = getInterval((int) selectionEnd);
                 // create structure to hold IDs for pinned calls
                 ArrayList<String> pinnedCallIds = new ArrayList<>();
                 // loop through each tile
@@ -350,8 +390,10 @@ public class Model {
                     for (Sample checkedSample : checkedSamples) {
                         // loop through the calls
                         for (Call currentCall : allTiles.get(refChromosomes.get(selection.getChromosome())).get(i).getSampleCalls().get(checkedSample)) {
-                            // if in region
-                            if (currentCall.getStart() > selectionStart && currentCall.getEnd() < selectionEnd) {
+                            // if in region (does not have to be entirely contained)
+                            if (currentCall.getStart() > selectionStart && currentCall.getEnd() < selectionEnd ||
+                            currentCall.getStart() < selectionStart && currentCall.getEnd() > selectionStart ||
+                            currentCall.getStart() < selectionEnd && currentCall.getEnd() > selectionEnd) {
                                 // if this call has already been seen with another pinned sample, do nothing
                                 if (pinnedCallIds.contains(currentCall.getId())) {
                                     // do nothing
@@ -377,8 +419,10 @@ public class Model {
                         else {
                             // loop through the calls
                             for (Call currentCall : allTiles.get(refChromosomes.get(selection.getChromosome())).get(i).getSampleCalls().get(sample)) {
-                                // if in region
-                                if (currentCall.getStart() > selectionStart && currentCall.getEnd() < selectionEnd) {
+                                // if in region (does not have to be contained)
+                                if (currentCall.getStart() > selectionStart && currentCall.getEnd() < selectionEnd ||
+                                        currentCall.getStart() < selectionStart && currentCall.getEnd() > selectionStart ||
+                                        currentCall.getStart() < selectionEnd && currentCall.getEnd() > selectionEnd) {
                                     // if this call has already been seen with another pinned sample, do nothing
                                     if (pinnedCallIds.contains(currentCall.getId())) {
                                         // do nothing
@@ -434,8 +478,8 @@ public class Model {
                 // get start and end coordinates, and start and end tiles
                 double selectionStart = selection.getGenomicStart();
                 double selectionEnd = selection.getGenomicEnd();
-                int startInterval = getStartInterval((int) selectionStart);
-                int endInterval = getEndInterval((int) selectionEnd);
+                int startInterval = getInterval((int) selectionStart);
+                int endInterval = getInterval((int) selectionEnd);
                 // create structure to hold IDs for pinned calls
                 ArrayList<String> pinnedCallIds = new ArrayList<>();
                 // loop through each tile
@@ -444,8 +488,10 @@ public class Model {
                     for (Sample checkedSample : checkedSamples) {
                         // loop through the calls
                         for (Call currentCall : allTiles.get(refChromosomes.get(selection.getChromosome())).get(i).getSampleCalls().get(checkedSample)) {
-                            // if in region
-                            if (currentCall.getStart() > selectionStart && currentCall.getEnd() < selectionEnd) {
+                            // if in region (does not have to be contained)
+                            if (currentCall.getStart() > selectionStart && currentCall.getEnd() < selectionEnd ||
+                                    currentCall.getStart() < selectionStart && currentCall.getEnd() > selectionStart ||
+                                    currentCall.getStart() < selectionEnd && currentCall.getEnd() > selectionEnd) {
                                 // if this call has already been seen with another pinned sample, do nothing
                                 if (pinnedCallIds.contains(currentCall.getId())) {
                                     // do nothing
@@ -608,14 +654,14 @@ public class Model {
                 double calcLength = selection.getPixelLength() * zoomLevel / selection.getZoomLevel();
                 int curIndex = 0;
                 for (Sample sample : sampleOrder) {
-                    Rectangle newRect = new Rectangle(calcStart, (curIndex*(originalTrackHeight*trackHeightScale))+(this.AFTrackHeight), calcLength, (originalTrackHeight*trackHeightScale));
+                    Rectangle newRect = new Rectangle(calcStart, (curIndex*(originalTrackHeight*trackHeightScale))+(this.AFTrackHeight+2)+((this.featureTrackHeight+5)*this.annotationIDs.size()), calcLength, (originalTrackHeight*trackHeightScale));
                     Color color = this.sampleColors.get(equiv.get(sample.getName()).getFirst());
                     result.put(newRect, color);
                     curIndex++;
                 }
-                for (Map.Entry<String, ArrayList<String>> entry : equiv.entrySet()) {
-                    System.out.println(entry.getKey() + " = " + entry.getValue());
-                }
+//                for (Map.Entry<String, ArrayList<String>> entry : equiv.entrySet()) {
+//                    System.out.println(entry.getKey() + " = " + entry.getValue());
+//                }
             }
         }
         return result;
@@ -713,6 +759,102 @@ public class Model {
     }
 
     /**
+     * Main function for processing the data within the GFF3 file
+     * @param fileContent String of read GFF data
+     */
+    public String processGFFFile(String fileContent) {
+        System.out.println("PROCESSING GFF FILE!");
+        // create new annotation id
+        String currentID = "";
+        // if no annotation added yet, add as 1st
+        if (this.annotationIDs.isEmpty()) {
+            currentID = "annotation1";
+            this.annotationIDs.add(currentID);
+        }
+        // otherwise increment id
+        else {
+            int nextIncrement = this.annotationIDs.size() + 1;
+            currentID = "annotation" + nextIncrement;
+            this.annotationIDs.add(currentID);
+        }
+        // splits on \n or \r\n (carriage return or newline)
+        String[] lines = fileContent.split("\\r?\\n");
+        // loop through each line in the file
+        for (String line : lines) {
+            String[] fields = line.split("\t");
+            // check if type is equal to gene as currently only genes are supported
+            if (!Objects.equals(fields[2], "gene")) {
+                System.err.println("Error: Only GFF3 features of type 'gene' are currently supported. Ignoring GFF3 feature.");
+                System.err.println(line);
+                continue;
+            }
+            String IDInfoRegex = "ID=(.+?)(;|$)";
+            String nameInfoRegex = "Name=(.+?)(;|$)";
+            String descriptionInfoRegex = "Description=(.+?)(;|$)";
+
+            Pattern IDInfoPattern = Pattern.compile(IDInfoRegex);
+            Pattern nameInfoPattern = Pattern.compile(nameInfoRegex);
+            Pattern descriptionInfoPattern = Pattern.compile(descriptionInfoRegex);
+
+            Matcher IDInfoMatcher = IDInfoPattern.matcher(fields[8]);
+            Matcher nameInfoMatcher = nameInfoPattern.matcher(fields[8]);
+            Matcher descriptionInfoMatcher = descriptionInfoPattern.matcher(fields[8]);
+            // cannot match type
+            if (!IDInfoMatcher.find()) {
+                System.err.println("Error: Could not find ID for GFF3 feature. Ignoring GFF3 feature.");
+                System.err.println(line);
+            }
+            // can match type
+            else {
+                // get Chromosome object
+                Chromosome chrom = refChromosomes.get(fields[0]);
+                // check if it matches chromosomes within VCF file
+                if (chrom == null) {
+                    // ignore feature if no matching chromosomes
+                    System.err.println("Error: Chromosome for GFF3 feature does not match a chromosome in VCF file. Ignoring GFF3 feature.");
+                    System.err.println(line);
+                }
+                // otherwise create new feature
+                else {
+                    // set name and description initially to empty strings
+                    String name = "";
+                    String description = "";
+                    // if couldn't find name match
+                    if (!nameInfoMatcher.find()) {
+                        // don't print error if name is missing, just keep empty string
+                    }
+                    // otherwise set name to name match
+                    else {
+                        name = nameInfoMatcher.group(1);
+                    }
+                    // if couldn't find description match
+                    if (!descriptionInfoMatcher.find()) {
+                        // don't print error if description is missing, just keep empty string
+                    }
+                    // otherwise set description to description match
+                    else {
+                        description = descriptionInfoMatcher.group(1);
+                    }
+                    int start = Integer.parseInt(fields[3]);
+                    int end = Integer.parseInt(fields[4]);
+                    if (end < start) {
+                        System.err.println("Error: GFF3 feature does not follow GFF3 specification as end is less than start. Ignoring GFF3 feature.");
+                        System.err.println(line);
+                    }
+                    long absoluteStart = refChromosomes.get(fields[0]).getAbsoluteStart() + start;
+                    Feature feature = new Feature(chrom, fields[2], start, end, IDInfoMatcher.group(1), name, description, absoluteStart);
+                    this.addToTiledFeatures(feature, currentID);
+                }
+            }
+        }
+        return currentID;
+    }
+
+    public ArrayList<String> getAnnotationIDs() {
+        return this.annotationIDs;
+    }
+
+    /**
      * Main function for processing the data within the VCF file
      * @param fileContent String of read VCF data
      */
@@ -803,7 +945,7 @@ public class Model {
                             if (genotypeMatcher.find()) {
                                 genotypes.put(sample.getName(), genotypeMatcher.group(1));
                                 if (genotypeMatcher.group(1).contains("1")) {
-                                    currentCall.addViewNodes(sample);
+                                    sample.getAllSampleCalls().add(currentCall);
                                 }
                             }
                             // otherwise print error
@@ -820,6 +962,12 @@ public class Model {
                 }
             }
         }
+//        for (Sample sample : this.samples) {
+//            System.out.println("PRINTING CALLS FOR SAMPLE " + sample.getName());
+//            for (Call call : sample.getAllSampleCalls()) {
+//                System.out.println(call.toString());
+//            }
+//        }
     }
 
     /**
@@ -829,7 +977,7 @@ public class Model {
      */
     public void initTilesForChromosome(Chromosome chrom) {
         // get end tile
-        int end = this.getEndInterval((int) chrom.getLength());
+        int end = this.getInterval((int) chrom.getLength());
         // loop through tile intervals for chromosome
         for (int i=1; i<= end; i++) {
             // create new tile and add to allTiles structure for that Chromosome
@@ -846,28 +994,40 @@ public class Model {
      * @param currentCall Call to add to Tile
      */
     public void addToTiledCalls(Call currentCall) {
-        // find the appropriate tile
-        Tile tile = this.findTileForCall(currentCall);
-        // add to all calls for that tile
-        tile.add(currentCall);
-        // loop through samples and add if heterozygous or homozygous alternate
-        for (Sample sample : samples) {
-            if (currentCall.getGenotypes().get(sample.getName()).contains("1")) {
-                tile.addSampleCall(sample, currentCall);
+        // find the appropriate spanning tiles for call
+        int start = this.getInterval(currentCall.getStart());
+        int end = this.getInterval(currentCall.getEnd());
+        // loop through the spanning tiles
+        for (int i=start; i<=end; i++) {
+            Tile tile = allTiles.get(refChromosomes.get(currentCall.getChromosome())).get(i);
+            // add to all calls for that tile
+            tile.add(currentCall);
+            // loop through samples and add if heterozygous or homozygous alternate
+            for (Sample sample : samples) {
+                if (currentCall.getGenotypes().get(sample.getName()).contains("1")) {
+                    tile.addSampleCall(sample, currentCall);
+                }
             }
         }
     }
 
+    public void addToTiledFeatures(Feature currentFeature, String annotationID) {
+        // find the appropriate tile
+        Tile tile = this.findTileForFeature(currentFeature);
+        // add to features for that tile and annotation ID
+        tile.addFeature(currentFeature, annotationID);
+    }
+
     /**
-     * The Tile the given Call belongs to is identified, based on chromosome and start position
-     * @param call
-     * @return
+     * Given Feature is added to the Features for that tile
+     * @param currentFeature Feature to add to Feature
+     *
      */
-    public Tile findTileForCall(Call call) {
+    public Tile findTileForFeature(Feature currentFeature) {
         // find tile number
-        int num = ((call.getStart()/tileSize)+1);
+        int num = ((currentFeature.getStart()/tileSize)+1);
         // extract tile from chromosome
-        Tile tile = allTiles.get(refChromosomes.get(call.getChromosome())).get(num);
+        Tile tile = allTiles.get(currentFeature.getChromosome()).get(num);
         return tile;
     }
 
@@ -885,20 +1045,11 @@ public class Model {
 
     /**
      * Gets the appropriate tile based on a coordinate and the stored tile size
-     * @param start start coordinate to determine tile for
+     * @param coord coordinate to determine tile for
      * @return int value of the tile
      */
-    public int getStartInterval(int start) {
-        return ((start - 1) / this.tileSize + 1);
-    }
-
-    /**
-     * Gets the appropriate tile based on a coordinate and the stored tile size
-     * @param end end coordinate to determine tile for
-     * @return int value of the tile
-     */
-    public int getEndInterval(int end) {
-        return (end - 1) / this.tileSize + 1;
+    public int getInterval(int coord) {
+        return ((coord - 1) / this.tileSize + 1);
     }
 
     /**
@@ -936,6 +1087,10 @@ public class Model {
         double proportionVisible = viewportWidth / contentWidth;
         // get length of genomic proportion in view
         return proportionVisible * chrom.getLength();
+    }
+
+    public void changingChromosome(boolean state) {
+        this.changingChromInView = state;
     }
 
     /**
