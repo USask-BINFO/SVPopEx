@@ -20,6 +20,9 @@ public class Controller {
         view.importListener(e -> {
             this.importFile();
         });
+        view.gffImportListener(e -> {
+            this.importGFF();
+        });
         view.zoomInListener(e -> {
             Button source = (Button) e.getSource();
             String text = source.getText();
@@ -61,8 +64,11 @@ public class Controller {
             view.closeSidePane();
         });
         view.chromComboBoxListener(e -> {
-            String selectedChrom = view.chromComboBox.getValue();
-            this.showChromosome(selectedChrom);
+            // to prevent triggering this as combo box is cleared while resetting
+            if (!view.isResetting()) {
+                String selectedChrom = view.chromComboBox.getValue();
+                this.showChromosome(selectedChrom);
+            }
         });
         view.processRegionButtonListener(e -> {
             this.processCustomRegion(view.getTextFieldRegion());
@@ -76,6 +82,34 @@ public class Controller {
                 this.processCustomRegion(result);
             }
         });
+    }
+
+    /**
+     * Function that is called immediately after GFF file is selected; processes file and shows annotations in new track
+     */
+    public void importGFF() {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Open GFF3 file");
+        File file = chooser.showOpenDialog(view.getPrimaryStage());
+        if (file != null) {
+            // try to read in file
+            String fileContent = "";
+            try {
+                // get model to read file
+                fileContent = model.loadFile(file);
+            }
+            catch (Exception ex) {
+                System.err.println("Error: Could not load selected file. Exiting.");
+                System.exit(1);
+            }
+            String trackID = model.processGFFFile(fileContent);
+            view.addNewFeatureID(trackID);
+            view.createNewAnnotationTrack(model.getRefTotalLength(), model.getZoomLevel(), "Genes", model.getBaseFontSize(), model.getFeatureTrackHeight(), "GENES", trackID);
+            // do this to trigger correctly scaling the tracks with the new track
+            this.updateTrackHeight(0);
+            view.showAnnotations(trackID, model.getRefChromosomes(), model.getCurrentChrom(), model.getZoomLevel(), model.getTiles(), -1, -1);
+        }
+
     }
 
     /**
@@ -130,7 +164,12 @@ public class Controller {
             this.updateTrackHeight(model.fitAllSamplesIncrement(view.getCallsPanelHeight(), view.getHorizontalSBHeight()));
             // set up listeners
             view.browserDragged((obs,oldVal, newVal) -> {
-                this.processScrollChange(oldVal.doubleValue(), newVal.doubleValue());
+                if (model.getChangingChromInView()) {
+                    // do nothing
+                }
+                else {
+                    this.processScrollChange(oldVal.doubleValue(), newVal.doubleValue());
+                }
             });
             view.markerDragged(e -> {
                 this.processMarkerDragged(e);
@@ -205,13 +244,17 @@ public class Controller {
 
             // show calls
             System.out.println("UPDATED ZOOM SHOWING START: " + newStart + " and END : " + newEnd);
-            boolean updateStart = model.updateCurrentTileStart(model.getStartInterval((int) newStart));
-            boolean updateEnd = model.updateCurrentTileEnd(model.getEndInterval((int) newEnd));
+            boolean updateStart = model.updateCurrentTileStart(model.getInterval((int) newStart));
+            boolean updateEnd = model.updateCurrentTileEnd(model.getInterval((int) newEnd));
             // show calls and allele frequency
             view.showSVCalls(model.getRefChromosomes(), model.getCurrentChrom(), model.getSamples(), level, model.getOriginalTrackHeight(), model.getTiles(), model.getBufferStartTile(), model.getBufferEndTile());
-            view.showAlleleFreq(model.getRefChromosomes(), model.getCurrentChrom(), level, model.getAFTrackHeight(), model.getTiles(), model.getStartInterval((int) newStart), model.getEndInterval((int) newEnd));
+            view.showAlleleFreq(model.getRefChromosomes(), model.getCurrentChrom(), level, model.getAFTrackHeight(), model.getTiles(), model.getInterval((int) newStart), model.getInterval((int) newEnd));
+            for (String annotationID : model.getAnnotationIDs()) {
+                view.showAnnotations(annotationID, model.getRefChromosomes(), model.getCurrentChrom(), model.getZoomLevel(), model.getTiles(), model.getBufferStartTile(), model.getBufferEndTile());
+            }
             // update scroll and marker based on newStart and offset (calculated from newStart)
             double offset = ((double) newStart / model.getCurrentChrom().getLength()) * view.getMarkerWrapperWidth();
+            System.out.println("CALLED IN UPDATE ZOOM");
             view.syncScroll(view.setScroll((int) newStart, model.getCurrentChrom(), model.getZoomLevel()));
             view.setScroll((int) newStart, model.getCurrentChrom(), model.getZoomLevel());
             view.updateMarker(model.getCurrentChrom(), level, model.getGenomicProportion(view.getViewportWidth(), model.getCurrentChrom(), model.getZoomLevel()), offset);
@@ -228,7 +271,7 @@ public class Controller {
     }
 
     /**
-    Controls processing the selections for Color by Haplotype
+     Controls processing the selections for Color by Haplotype
      **/
     public void processSelections() {
         view.showPlot(model.processHaplotypeSelections(view.getSampleOrderInView()));
@@ -243,7 +286,7 @@ public class Controller {
     }
 
     /**
-    Controls showing diff calls from pinned
+     Controls showing diff calls from pinned
      **/
     public void processShowDiffCalls() {
         view.hideCalls(view.getSampleOrderInView(), model.getSameCallsFromPinned(view.getPinCheckboxes()));
@@ -278,29 +321,36 @@ public class Controller {
      * @param selectedChrom the String name of the selected Chromosome
      */
     public void showChromosome(String selectedChrom) {
+        model.changingChromosome(true);
         System.out.println("-------- TRIGGERING CONTROLLER.SHOWCHROMOSOME() ------------");
         // set new chromosome
+        System.out.println("SELECTED CHROMOSOME IS " + selectedChrom);
         Chromosome chrom = model.getRefChromosomes().get(selectedChrom);
+        System.out.println(chrom);
+        System.out.println(chrom.getLength());
+        System.out.println("CHROM TO STRING " + chrom.getLength());
         model.setCurrentChrom(chrom);
         // update zoom level
         model.updateZoomLevelByRegion(chrom.getLength(), view.getViewportWidth(), view.isVerticalSBVisible(), view.getVerticalSBWidth());
         // update coord increment
         model.updateCoordIncrement(view.getViewportWidth(), model.getCurrentChrom());
         // show coords
-        view.syncScroll(0);
+        System.out.println("CALLING WEIRD CODE HERE");
+        double newVal = 0.0;
+        view.syncScroll(newVal);
         view.showCoords(model.getCurrentChrom(), model.getTickSpacing(), model.getZoomLevel(), model.getRefChromosomes());
         // show calls
-        if (Objects.equals(selectedChrom, "<ALL>")) {
-            view.showSVCalls(model.getRefChromosomes(), chrom, model.getSamples(), model.getZoomLevel(), model.getOriginalTrackHeight(), model.getTiles(), -1, -1);
-        }
-        else {
-            view.showSVCalls(model.getRefChromosomes(), chrom, model.getSamples(), model.getZoomLevel(), model.getOriginalTrackHeight(), model.getTiles(), -1, -1);
+        view.showSVCalls(model.getRefChromosomes(), chrom, model.getSamples(), model.getZoomLevel(), model.getOriginalTrackHeight(), model.getTiles(), -1, -1);
+        for (String annotationID : model.getAnnotationIDs()) {
+            view.showAnnotations(annotationID, model.getRefChromosomes(), model.getCurrentChrom(), model.getZoomLevel(), model.getTiles(), -1, -1);
         }
         // show allele frequency
         view.showAlleleFreq(model.getRefChromosomes(), chrom, model.getZoomLevel(), model.getAFTrackHeight(), model.getTiles(), -1, -1);
         // show reference and marker
         view.drawReference(model.getRefChromosomes(), model.getCurrentChrom().getName());
         view.updateMarker(chrom, model.getZoomLevel(), chrom.getLength(), 0);
+        model.changingChromosome(false);
+
     }
 
     /**
@@ -311,7 +361,10 @@ public class Controller {
         // get genomic proportion of screen
         long length = (int) model.getGenomicProportion(view.getViewportWidth(), model.getCurrentChrom(), model.getZoomLevel());
         // get alternate and extract mate region between brackets
-        String alternate = view.getLiveCall().getAlternate();
+        String alternate = "";
+        if (view.getLiveComponent() instanceof Call liveCall) {
+            alternate = liveCall.getAlternate();
+        }
         Pattern pattern = Pattern.compile("[\\[\\]](.+)[\\[\\]]");
         Matcher altInfo = pattern.matcher(alternate);
         // if alternate region extracted
@@ -357,18 +410,22 @@ public class Controller {
      * @param newVal new hvalue after scroll
      */
     public void processScrollChange(double oldVal, double newVal) {
+        System.out.println("PROCESS SCROLL CHANGE CALLED");
         view.syncScroll(newVal);
         // get genomic proportion, start and end value in view
         double proportion = model.getGenomicProportion(view.getViewportWidth(), model.getCurrentChrom(), model.getZoomLevel());
         double start = view.getStartFromHVal(newVal, model.getCurrentChrom(), model.getZoomLevel());
         double end = start + proportion;
         // check if need to update tiles
-        boolean updateStart = model.updateCurrentTileStart(model.getStartInterval((int) start));
-        boolean updateEnd = model.updateCurrentTileEnd(model.getEndInterval((int) end));
+        boolean updateStart = model.updateCurrentTileStart(model.getInterval((int) start));
+        boolean updateEnd = model.updateCurrentTileEnd(model.getInterval((int) end));
         // if yes, then update tiles and show new SV calls and allele frequency
         if (updateStart || updateEnd) {
             view.showSVCalls(model.getRefChromosomes(), model.getCurrentChrom(), model.getSamples(), model.getZoomLevel(), model.getOriginalTrackHeight(), model.getTiles(), model.getBufferStartTile(), model.getBufferEndTile());
-            view.showAlleleFreq(model.getRefChromosomes(), model.getCurrentChrom(), model.getZoomLevel(), model.getAFTrackHeight(), model.getTiles(), model.getStartInterval((int) start), model.getEndInterval((int) end));
+            for (String annotationID : model.getAnnotationIDs()) {
+                view.showAnnotations(annotationID, model.getRefChromosomes(), model.getCurrentChrom(), model.getZoomLevel(), model.getTiles(), model.getBufferStartTile(), model.getBufferEndTile());
+            }
+            view.showAlleleFreq(model.getRefChromosomes(), model.getCurrentChrom(), model.getZoomLevel(), model.getAFTrackHeight(), model.getTiles(), model.getInterval((int) start), model.getInterval((int) end));
         }
     }
 
@@ -414,8 +471,11 @@ public class Controller {
                     // show coords
                     view.showCoords(model.getCurrentChrom(), model.getTickSpacing(), model.getZoomLevel(), model.getRefChromosomes());
                     // show calls
-                    view.showSVCalls(model.getRefChromosomes(), chrom, model.getSamples(), model.getZoomLevel(), model.getOriginalTrackHeight(), model.getTiles(), model.getStartInterval((int) start), model.getEndInterval((int) end));
-                    view.showAlleleFreq(model.getRefChromosomes(), chrom, model.getZoomLevel(), model.getAFTrackHeight(), model.getTiles(), model.getStartInterval((int) start), model.getEndInterval((int) end));
+                    view.showSVCalls(model.getRefChromosomes(), chrom, model.getSamples(), model.getZoomLevel(), model.getOriginalTrackHeight(), model.getTiles(), model.getInterval((int) start), model.getInterval((int) end));
+                    for (String annotationID : model.getAnnotationIDs()) {
+                        view.showAnnotations(annotationID, model.getRefChromosomes(), model.getCurrentChrom(), model.getZoomLevel(), model.getTiles(), model.getInterval((int) start), model.getInterval((int) end));
+                    }
+                    view.showAlleleFreq(model.getRefChromosomes(), chrom, model.getZoomLevel(), model.getAFTrackHeight(), model.getTiles(), model.getInterval((int) start), model.getInterval((int) end));
                     view.drawReference(model.getRefChromosomes(), chrom.getName());
                     double offset = ((double) start / chrom.getLength()) * view.getMarkerWrapperWidth();
                     view.setScroll(start, chrom, model.getZoomLevel());
