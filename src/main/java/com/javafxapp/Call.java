@@ -8,7 +8,7 @@ import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class Call {
+public class Call implements Component {
     private String type; // from SVTYPE
     private int length; // from SVLEN, but this is absolute value regardless of what is in the VCF file
     private String chromosome;
@@ -21,7 +21,6 @@ public class Call {
     private String id; // refers to ID field for VCF call
     private Double alleleFreq;
     HashMap<String,String> genotypes = new HashMap<>();
-    HashMap<Sample, ArrayList<Node>> nodes = new HashMap<>();
     // constructor
     public Call(String type, int length, String chromosome, String qual, String filter, int start, long absoluteStart, String alternate, String id, HashMap<String,String> genotypes) {
         this.type = type;
@@ -49,17 +48,7 @@ public class Call {
      * @return String holding information for Call
      */
     public String toString() {
-        return "TYPE " + this.type + " LENGTH " + this.length + "CHROMOSOME " + this.chromosome + " START " + this.start + "ABSOLUTESTART " + this.absoluteStart + " END " + this.end + " GENOTYPES " + genotypes.toString();
-    }
-
-    public void addViewNodes(Sample sample) {
-        if (!nodes.containsKey(sample)) {
-            nodes.put(sample, new ArrayList<>());
-        }
-        else {
-
-            //nodes.get(sample).add( )
-        }
+        return "TYPE: " + this.type + " ID: " + this.id + ", LENGTH: " + this.length + ", CHROMOSOME: " + this.chromosome + ", START: " + this.start + ", ABSOLUTESTART: " + this.absoluteStart + ", END: " + this.end + ", GENOTYPES: " + genotypes.toString();
     }
 
     /**
