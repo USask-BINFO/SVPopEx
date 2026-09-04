@@ -27,6 +27,15 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+// development notes:
+// be very cautious using .lookup() method, must be on IDs without a period in the name
+// or else it will silently not work as periods are special for css. should loop over all
+// children unless using a hard-coded ID or are sure that period will not be in the ID.
+// within input files, this is relevant to:
+//      - SV IDs
+//      - gene IDs
+//      - sample names
+
 // naming conventions
 // Stage -> ...Stage
 // HBox/VBox -> ...Container
@@ -39,26 +48,42 @@ import java.util.regex.Pattern;
 // EventHandler -> ...Handler
 
 public class View {
-    private ArrayList<Sample> sampleOrder = new ArrayList<Sample>();
+    public boolean resetting = false;
+    private final ArrayList<Sample> sampleOrder = new ArrayList<Sample>();
+    private final ArrayList<String> annotationIDs = new ArrayList();
     // ----------- root and side pane ---------------
-    private VBox sidePaneContainer = new VBox(0);
-    private VBox selectionOptionsSideContainer = new VBox(20);
-    private VBox callInfoSideContainer = new VBox(7);
-    private Call liveCall = null;
-    private StackPane sidePaneSwapPanel = new StackPane(callInfoSideContainer, selectionOptionsSideContainer);
-    private ArrayList<CheckBox> pinCheckboxes = new ArrayList<>();
-    private VBox compareLabelContainer = new VBox();
-    private VBox processRegionLabelContainer = new VBox();
-    private HBox mateContainer = new HBox();
-    private Button showMateButton = new Button("Show");
-    private VBox comparators = new VBox();
-    private Button closeSidePaneButton = new Button("\u00D7");
-    private HBox closeButtonContainer = new HBox(closeSidePaneButton);
+    private final VBox sidePaneContainer = new VBox(0);
+    private final VBox selectionOptionsSideContainer = new VBox(20);
+    private final VBox callInfoSideContainer = new VBox(7);
+    private final VBox componentDetails = new VBox(6);
+    private Component liveComponent = null;
+    private final StackPane sidePaneSwapPanel = new StackPane(callInfoSideContainer, selectionOptionsSideContainer);
+    private final ArrayList<CheckBox> pinCheckboxes = new ArrayList<>();
+    private final VBox compareLabelContainer = new VBox();
+    private final VBox processRegionLabelContainer = new VBox();
+
+    private final HBox mateContainer = new HBox();
+    private final HBox idContainer = new HBox();
+    private final HBox typeContainer = new HBox();
+    private final HBox chromContainer = new HBox();
+    private final HBox posContainer = new HBox();
+    private final HBox lengthContainer = new HBox();
+    private final HBox qualContainer = new HBox();
+    private final HBox filterContainer = new HBox();
+    private final VBox genotypeContainer = new VBox();
+    private final HBox nameContainer = new HBox();
+    private final VBox descriptionContainer = new VBox();
+    private final HBox endContainer = new HBox();
+
+    private final Button showMateButton = new Button("Show");
+    private final VBox comparators = new VBox();
+    private final Button closeSidePaneButton = new Button("\u00D7");
+    private final HBox closeButtonContainer = new HBox(closeSidePaneButton);
     private final VBox layout = new VBox(3);
-    private StackPane root = new StackPane(layout, sidePaneContainer);
+    private final StackPane root = new StackPane(layout, sidePaneContainer);
     private final Stage primaryStage;
-    private TranslateTransition slideIn = new TranslateTransition(Duration.millis(300), sidePaneContainer);
-    private TranslateTransition slideOut = new TranslateTransition(Duration.millis(300), sidePaneContainer);
+    private final TranslateTransition slideIn = new TranslateTransition(Duration.millis(300), sidePaneContainer);
+    private final TranslateTransition slideOut = new TranslateTransition(Duration.millis(300), sidePaneContainer);
     // ---------- menuBar -------------
     private final MenuBar menuBar = new MenuBar();
     private final Menu fileMenu = new Menu("File");
@@ -86,7 +111,7 @@ public class View {
     private StackPane rectangleWithLabels = new StackPane(referenceWrapper, labelsBox);
     private StackPane rectWithMarker = new StackPane(rectangleWithLabels, markerWrapper);
     // ---------- tickContainer ----------
-    private SVGPath handIcon = new SVGPath();
+    private final SVGPath handIcon = new SVGPath();
     private final HBox tickContainer = new HBox();
     private final Pane spaceWrapper = new Pane();
     private final Pane ticksWrapper = new Pane();
@@ -94,39 +119,39 @@ public class View {
     private final int sampleSpaceWidth = 90;
     // ----------- logoContainer ------------------
     private final HBox logoContainer = new HBox();
-    private Rectangle logoRectangle = new Rectangle(158, 61);
-    private Image logoImage = new Image("file:./src/main/resources/com/javafxapp/logo.png",
+    private final Rectangle logoRectangle = new Rectangle(158, 61);
+    private final Image logoImage = new Image(getClass().getResource("/com/javafxapp/logo.png").toString(),
             0, 0,
             true,
             true);
-    private ImagePattern imagePattern = new ImagePattern(
+    private final ImagePattern imagePattern = new ImagePattern(
             logoImage
     );
     // ----------- control container --------
-    private GridPane controlWrapper = new GridPane();
-    private ColumnConstraints controlCol0 = new ColumnConstraints();
-    private ColumnConstraints controlCol1 = new ColumnConstraints();
-    private ColumnConstraints controlCol2 = new ColumnConstraints();
+    private final GridPane controlWrapper = new GridPane();
+    private final ColumnConstraints controlCol0 = new ColumnConstraints();
+    private final ColumnConstraints controlCol1 = new ColumnConstraints();
+    private final ColumnConstraints controlCol2 = new ColumnConstraints();
     // nav container
     private final HBox navContainer = new HBox(10);
-    private TextField regionField = new TextField();
+    private final TextField regionField = new TextField();
     public ComboBox<String> chromComboBox = new ComboBox<>();
-    private Button processRegionButton = new Button("Go");
+    private final Button processRegionButton = new Button("Go");
     // controls
     private final HBox generalControlContainer = new HBox();
-    private Region generalControlSpacer = new Region();
-    private Button zoomInButton = new Button("Zoom +");
-    private Button zoomOutButton = new Button("Zoom -");
-    private Button processButton = new Button("Color by Haplotype");
-    private Button showSameButton = new Button("Show Same Calls");
-    private Button showDiffButton = new Button("Show Diff Calls");
-    private Button shrinkTrackHeightButton = new Button("- Height");
-    private Button growTrackHeightButton = new Button("+ Height");
+    private final Region generalControlSpacer = new Region();
+    private final Button zoomInButton = new Button("Zoom +");
+    private final Button zoomOutButton = new Button("Zoom -");
+    private final Button processButton = new Button("Color by Haplotype");
+    private final Button showSameButton = new Button("Show Same Calls");
+    private final Button showDiffButton = new Button("Show Diff Calls");
+    private final Button shrinkTrackHeightButton = new Button("- Height");
+    private final Button growTrackHeightButton = new Button("+ Height");
     // ------------ selectionControlContainer ------------------
     private final HBox selectionControlContainer = new HBox();
-    private Region selectionControlSpacer = new Region();
-    private Button clearButton = new Button("Clear");
-    private Button sidePaneButton = new Button("Comparative Options");
+    private final Region selectionControlSpacer = new Region();
+    private final Button clearButton = new Button("Clear");
+    private final Button sidePaneButton = new Button("Comparative Options");
     // ---------- callsPanel ----------
     private double scrollViewportHeight = 0;
     private final HBox callsContentContainer = new HBox();
@@ -169,6 +194,7 @@ public class View {
         this.SVGlyphColorThemes.get("default").put("DUP", new HashMap<>());
         this.SVGlyphColorThemes.get("default").put("INS", new HashMap<>());
         this.SVGlyphColorThemes.get("default").put("DEL", new HashMap<>());
+        this.SVGlyphColorThemes.get("default").put("gene", new HashMap<>()); // in lower case because in lower case in GFF3
         this.SVGlyphColorThemes.get("default").get("INV").put("fill", Color.rgb(255, 195, 0 ));
         this.SVGlyphColorThemes.get("default").get("INV").put("stroke", Color.rgb(200, 140, 0));
         this.SVGlyphColorThemes.get("default").get("DUP").put("fill", Color.rgb(65, 105, 225));
@@ -177,12 +203,15 @@ public class View {
         this.SVGlyphColorThemes.get("default").get("INS").put("stroke", Color.rgb(100, 140, 80));
         this.SVGlyphColorThemes.get("default").get("DEL").put("fill", Color.rgb(164, 42, 4));
         this.SVGlyphColorThemes.get("default").get("DEL").put("stroke", Color.rgb(120, 30, 2));
+        this.SVGlyphColorThemes.get("default").get("gene").put("fill", Color.rgb(	106, 38, 153));
+        this.SVGlyphColorThemes.get("default").get("gene").put("stroke", Color.rgb(72, 13, 110));
         // colorblind friendly
         this.SVGlyphColorThemes.put("colorblind", new HashMap<>());
         this.SVGlyphColorThemes.get("colorblind").put("INV", new HashMap<>());
         this.SVGlyphColorThemes.get("colorblind").put("DUP", new HashMap<>());
         this.SVGlyphColorThemes.get("colorblind").put("INS", new HashMap<>());
         this.SVGlyphColorThemes.get("colorblind").put("DEL", new HashMap<>());
+        this.SVGlyphColorThemes.get("colorblind").put("gene", new HashMap<>());
         this.SVGlyphColorThemes.get("colorblind").get("INV").put("fill", Color.rgb(249, 214, 44));
         this.SVGlyphColorThemes.get("colorblind").get("INV").put("stroke", Color.rgb(199, 171, 35));
         this.SVGlyphColorThemes.get("colorblind").get("DUP").put("fill", Color.rgb(113, 111, 111));
@@ -191,6 +220,9 @@ public class View {
         this.SVGlyphColorThemes.get("colorblind").get("INS").put("stroke", Color.rgb(24, 109, 183));
         this.SVGlyphColorThemes.get("colorblind").get("DEL").put("fill", Color.rgb(150, 38, 22));
         this.SVGlyphColorThemes.get("colorblind").get("DEL").put("stroke", Color.rgb(120, 30, 18));
+        // same as default, have to add gene styling to themes because method to remove click outline require this to not be hard-coded
+        this.SVGlyphColorThemes.get("colorblind").get("gene").put("fill", Color.rgb(106, 38, 153));
+        this.SVGlyphColorThemes.get("colorblind").get("gene").put("stroke", Color.rgb(72, 13, 110));
 
 
         // ---------- ROOT AND SIDE PANE ---------
@@ -279,6 +311,7 @@ public class View {
         callInfoSideContainer.getChildren().add(callTitle);
         callTitle.setWrapText(true);
         callInfoSideContainer.getChildren().add(new Separator());
+        callInfoSideContainer.getChildren().add(componentDetails);
 
         // create labels with ids to be filled with info when call is selected
         Label idFill = new Label("");
@@ -289,23 +322,55 @@ public class View {
         chromFill.setId("chrom");
         Label posFill = new Label("");
         posFill.setId("pos");
+        Label endFill = new Label("");
+        endFill.setId("end");
         Label lengthFill = new Label("");
         lengthFill.setId("length");
         Label qualFill = new Label("");
         qualFill.setId("qual");
         Label filterFill = new Label("");
         filterFill.setId("filter");
-
-        this.mateContainer.setId("bndContainer");
-        this.mateContainer.setAlignment(Pos.CENTER_LEFT);
+        Label nameFill = new Label("");
+        nameFill.setId("name");
+        Label descriptionFill = new Label("");
+        descriptionFill.setId("description");
+        descriptionFill.setWrapText(true);
+        descriptionFill.setPrefWidth(280);
+        descriptionFill.setPadding(new Insets(0,10,0,10));
         Label mateFill = new Label("");
         mateFill.setId("mate");
-
         Label genotypesFill = new Label("");
         genotypesFill.setId("genotypes");
         // styling to set genotypes to the right
         genotypesFill.setPadding(new Insets(0, 0, 0, 15));
 
+        // set ids for containers and alignment
+        this.mateContainer.setId("mateContainer");
+        this.mateContainer.setAlignment(Pos.CENTER_LEFT);
+        this.idContainer.setId("idContainer");
+        this.idContainer.setAlignment(Pos.CENTER_LEFT);
+        this.typeContainer.setId("typeContainer");
+        this.typeContainer.setAlignment(Pos.CENTER_LEFT);
+        this.chromContainer.setId("chromContainer");
+        this.chromContainer.setAlignment(Pos.CENTER_LEFT);
+        this.posContainer.setId("posContainer");
+        this.posContainer.setAlignment(Pos.CENTER_LEFT);
+        this.lengthContainer.setId("lengthContainer");
+        this.lengthContainer.setAlignment(Pos.CENTER_LEFT);
+        this.qualContainer.setId("qualContainer");
+        this.qualContainer.setAlignment(Pos.CENTER_LEFT);
+        this.filterContainer.setId("filterContainer");
+        this.filterContainer.setAlignment(Pos.CENTER_LEFT);
+        this.genotypeContainer.setId("genotypeContainer");
+        this.genotypeContainer.setAlignment(Pos.CENTER_LEFT);
+        this.nameContainer.setId("nameContainer");
+        this.nameContainer.setAlignment(Pos.CENTER_LEFT);
+        this.descriptionContainer.setId("descriptionContainer");
+        this.descriptionContainer.setAlignment(Pos.CENTER_LEFT);
+        this.endContainer.setId("endContainer");
+        this.endContainer.setAlignment(Pos.CENTER_LEFT);
+
+        // fill labels with text
         Label idLabel = new Label("ID: ");
         idLabel.setStyle(regularStyle);
         Label typeLabel = new Label("TYPE: ");
@@ -324,18 +389,26 @@ public class View {
         mateLabel.setStyle(regularStyle);
         Label genotypesLabel = new Label("GENOTYPES: ");
         genotypesLabel.setStyle(regularStyle);
+        Label endLabel = new Label("END: ");
+        endLabel.setStyle(regularStyle);
+        Label nameLabel = new Label("NAME: ");
+        nameLabel.setStyle(regularStyle);
+        Label descriptionLabel = new Label("DESCRIPTION: ");
+        descriptionLabel.setStyle(regularStyle);
 
-        callInfoSideContainer.getChildren().add(new HBox(idLabel, idFill));
-        callInfoSideContainer.getChildren().add(new HBox(typeLabel, typeFill));
-        callInfoSideContainer.getChildren().add(new HBox(chromLabel, chromFill));
-        callInfoSideContainer.getChildren().add(new HBox(posLabel, posFill));
-        callInfoSideContainer.getChildren().add(new HBox(lengthLabel, lengthFill));
-        callInfoSideContainer.getChildren().add(new HBox(qualLabel, qualFill));
-        callInfoSideContainer.getChildren().add(new HBox(filterLabel, filterFill));
-        mateContainer.getChildren().addAll(mateLabel, mateFill, showMateButton);
-        callInfoSideContainer.getChildren().add(mateContainer);
-        callInfoSideContainer.getChildren().add(genotypesLabel);
-        callInfoSideContainer.getChildren().add(genotypesFill);
+        // add labels to individual container, and add container
+        this.idContainer.getChildren().addAll(idLabel, idFill);
+        this.nameContainer.getChildren().addAll(nameLabel, nameFill);
+        this.typeContainer.getChildren().addAll(typeLabel, typeFill);
+        this.chromContainer.getChildren().addAll(chromLabel, chromFill);
+        this.posContainer.getChildren().addAll(posLabel, posFill);
+        this.endContainer.getChildren().addAll(endLabel, endFill);
+        this.lengthContainer.getChildren().addAll(lengthLabel, lengthFill);
+        this.qualContainer.getChildren().addAll(qualLabel, qualFill);
+        this.descriptionContainer.getChildren().addAll(descriptionLabel, descriptionFill);
+        this.filterContainer.getChildren().addAll(filterLabel, filterFill);
+        this.mateContainer.getChildren().addAll(mateLabel, mateFill, showMateButton);
+        this.genotypeContainer.getChildren().addAll(genotypesLabel, genotypesFill);
 
         // upon creation the selection container is visible
         selectionOptionsSideContainer.setVisible(true);
@@ -344,10 +417,11 @@ public class View {
         callInfoSideContainer.setVisible(false);
         callInfoSideContainer.setManaged(false);
 
-
         // ---------- MENU --------------
         fileMenu.getItems().add(importVCFItem);
-        //fileMenu.getItems().add(importGFFItem);
+        fileMenu.getItems().add(importGFFItem);
+        // initially disable import gff until VCF is uploaded
+        importGFFItem.setDisable(true);
         menuBar.getMenus().add(fileMenu);
         menuBar.getMenus().add(viewMenu);
         viewMenu.getItems().add(colorThemesMenu);
@@ -520,7 +594,14 @@ public class View {
         handIcon.setScaleX(1);
         handIcon.setScaleY(1);
         handIcon.setId("handIcon");
-
+        // display hand icon
+        handIcon.layoutXProperty().bind(spaceWrapper.widthProperty().subtract(handIcon.boundsInLocalProperty().get().getWidth()).subtract(spaceWrapper.widthProperty().multiply(0.25)));
+        handIcon.layoutYProperty().bind(
+                spaceWrapper.heightProperty()
+                        .subtract(spaceWrapper.heightProperty().multiply(0.1)) // 25% from bottom
+                        .subtract(handIcon.boundsInLocalProperty().get().getHeight()) // move icon top up
+        );
+        spaceWrapper.getChildren().add(handIcon);
         tickContainer.getChildren().add(spaceWrapper);
         this.tickContainer.setPrefHeight(40);
         this.tickContainer.setMinHeight(40);
@@ -563,6 +644,7 @@ public class View {
      * Enables all buttons in controlContainer and sidePane. Side Pane translation also done here after layout is complete
      **/
     public void enableControls() {
+        this.importGFFItem.setDisable(false);
         this.colorThemesMenu.setDisable(false);
         this.zoomInButton.setDisable(false);
         this.zoomOutButton.setDisable(false);
@@ -583,7 +665,7 @@ public class View {
 
         // 2. Get the total height of the window
         double topOfPanelOnScreen = callsPanel.localToScreen(0, 0).getY();
-        double windowBottomOnScreen = callsPanel.getScene().getWindow().getY() + callsPanel.getScene().getWindow().getHeight();
+        double windowBottomOnScreen = callsPanel.getScene().getWindow().getY() + callsPanel.getScene().getWindow().getHeight() - 10;
         StackPane.setAlignment(layout, Pos.TOP_CENTER);
         callsPanel.setMinHeight(windowBottomOnScreen - topOfPanelOnScreen);
         callsPanel.setPrefHeight(windowBottomOnScreen - topOfPanelOnScreen);
@@ -609,10 +691,21 @@ public class View {
      * Resets the relavent components in the View such that a new VCF file can be uploaded.
      */
     public void reset() {
+        this.resetting = true;
+        this.sampleOrder.clear();
+        this.annotationIDs.clear();
+        this.liveComponent = null;
+        this.pinCheckboxes.clear();
+        this.comparators.getChildren().clear();
+        this.chromComboBox.getItems().clear();
         // clear panes
         this.ticksWrapper.getChildren().clear();
         this.selectionWrapper.getChildren().clear();
+        this.annotationsInfoContainer.getChildren().clear();
+        this.samplesInfoContainer.getChildren().clear();
+        this.annotationsContainer.getChildren().clear();
         this.samplesContainer.getChildren().clear();
+
         // disable buttons
         this.zoomInButton.setDisable(true);
         this.zoomOutButton.setDisable(true);
@@ -626,6 +719,11 @@ public class View {
         this.closeSidePaneButton.setDisable(true);
         this.processRegionButton.setDisable(true);
         this.showMateButton.setDisable(true);
+        this.resetting = false;
+    }
+
+    public boolean isResetting() {
+        return this.resetting;
     }
 
     public Scene getScene() {
@@ -682,15 +780,6 @@ public class View {
      */
     public void initReference(LinkedHashMap<String, Chromosome> refContigs, long totalRefLength) {
         // add necessary icon as init reference
-        // display hand icon
-        handIcon.layoutXProperty().bind(spaceWrapper.widthProperty().subtract(handIcon.boundsInLocalProperty().get().getWidth()).subtract(spaceWrapper.widthProperty().multiply(0.25)));
-        handIcon.layoutYProperty().bind(
-                spaceWrapper.heightProperty()
-                        .subtract(spaceWrapper.heightProperty().multiply(0.1)) // 25% from bottom
-                        .subtract(handIcon.boundsInLocalProperty().get().getHeight()) // move icon top up
-        );
-        spaceWrapper.getChildren().add(handIcon);
-
         referenceWrapper.setBackground(new Background(new BackgroundFill(Color.WHITE, CornerRadii.EMPTY, Insets.EMPTY)));
 //        referenceWrapper.setBorder(new Border(new BorderStroke(
 //                Color.BLACK,
@@ -782,7 +871,7 @@ public class View {
         Post-conditions: Samples added to sampleOrder ArrayList
          */
         // add additional track for allele frequency
-        this.createNewAnnotationTrack(refLength, zoomLevel, "Allele Freq.", baseFontSize, AFTrackHeight, "AF");
+        this.createNewAnnotationTrack(refLength, zoomLevel, "Allele Freq.", baseFontSize, AFTrackHeight, "AF", "AlleleFreq");
         for (Sample sample : samples) {
             sampleOrder.add(sample);
             this.createNewCallTrack(sampleColors, refLength, zoomLevel, sample.getName(), baseFontSize, originalTrackHeight);
@@ -819,15 +908,19 @@ public class View {
                     // loop through each tile
                     for (Map.Entry<Integer, Tile> tileEntry : allTiles.get(chromEntry.getValue()).entrySet()) {
                         Tile tile = tileEntry.getValue();
+                        // loop through all calls
                         for (int i=0; i<tile.getTileCalls().size(); i++) {
                             Call currentCall = tile.getTileCalls().get(i);
-                            double currentFreq = tile.getTileCalls().get(i).getAlleleFreq();
-                            Circle circle;
-                            // ** needs to be absolutestart here because we are showing for <ALL>
-                            circle = new Circle(currentCall.getAbsoluteStart()*zoomLevel, AFTrackHeight * currentFreq, 1);
-                            circle.setFill(Color.BLACK);
-                            circle.setStroke(Color.BLACK);
-                            freqPane.getChildren().add(circle);
+                            // showing allele frequencies for SV calls with the start in this tile
+                            if (currentCall.getStart() >= tile.getStart() && currentCall.getStart() <= tile.getEnd()) {
+                                double currentFreq = tile.getTileCalls().get(i).getAlleleFreq();
+                                Circle circle;
+                                // ** needs to be absolutestart here because we are showing for <ALL>
+                                circle = new Circle(currentCall.getAbsoluteStart()*zoomLevel, AFTrackHeight * currentFreq, 1);
+                                circle.setFill(Color.BLACK);
+                                circle.setStroke(Color.BLACK);
+                                freqPane.getChildren().add(circle);
+                            }
                         }
                     }
                 }
@@ -844,11 +937,87 @@ public class View {
             for (int i=startInterval; i<=endInterval; i++) {
                 Tile tile = allTiles.get(chromosome).get(i);
                 for (Call currentCall : tile.getTileCalls()) {
-                    double currentFreq = currentCall.getAlleleFreq();
-                    Circle circle = new Circle(currentCall.getStart() * zoomLevel, AFTrackHeight * currentFreq, 1);
-                    circle.setFill(Color.BLACK);
-                    circle.setStroke(Color.BLACK);
-                    freqPane.getChildren().add(circle);
+                    if (currentCall.getStart() >= tile.getStart() && currentCall.getStart() <= tile.getEnd()) {
+                        double currentFreq = currentCall.getAlleleFreq();
+                        Circle circle = new Circle(currentCall.getStart() * zoomLevel, AFTrackHeight * currentFreq, 1);
+                        circle.setFill(Color.BLACK);
+                        circle.setStroke(Color.BLACK);
+                        freqPane.getChildren().add(circle);
+                    }
+                }
+            }
+        }
+    }
+
+    public void showAnnotations(String annotationID, LinkedHashMap<String,Chromosome> refContigs, Chromosome chromosome, double zoomLevel, HashMap<Chromosome,HashMap<Integer,Tile>> allTiles, int startInterval, int endInterval) {
+        // accessing track, clearing it, and updating the width
+        Pane annotationPane = (Pane) this.annotationsContainer.lookup("#" + annotationID);
+        annotationPane.getChildren().clear();
+        annotationPane.setMinWidth(chromosome.getLength() * zoomLevel);
+        annotationPane.setPrefWidth(chromosome.getLength() * zoomLevel);
+        annotationPane.setMaxWidth(chromosome.getLength() * zoomLevel);
+        // loop through and show all chromosomes
+        if (Objects.equals(chromosome.getName(), "<ALL>")) {
+            // loop through each chromosome
+            for (Map.Entry<String, Chromosome> chromEntry : refContigs.entrySet()) {
+                if (Objects.equals(chromEntry.getKey(), "<ALL>")) {
+                    // do nothing when we reach <ALL> becauase we are showing all chromosomes anyway
+                }
+                else {
+                    // loop through each tile
+                    for (Map.Entry<Integer, Tile> tileEntry : allTiles.get(chromEntry.getValue()).entrySet()) {
+                        Tile tile = tileEntry.getValue();
+                        // loop through features for that annotation ID
+                        if (tile.getTileFeatures().containsKey(annotationID)) {
+                            for (int i=0; i<tile.getTileFeatures().get(annotationID).size(); i++) {
+                                Feature currentFeature = tile.getTileFeatures().get(annotationID).get(i);
+                                Rectangle rect;
+                                // ** needs to be absolutestart here because we are showing for <ALL>
+                                rect = new Rectangle(currentFeature.getAbsoluteStart()*zoomLevel, 1, currentFeature.getLength()*zoomLevel, 20);
+                                rect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("gene").get("fill"));
+                                rect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("gene").get("stroke"));
+                                rect.setStrokeWidth(1.5);
+                                rect.setOpacity(0.7);
+                                rect.setArcWidth(5);
+                                rect.setArcHeight(5);
+                                annotationPane.getChildren().add(rect);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // only showing one chromosome of interest
+        else {
+            // if whole chromosome needs to be shown, find end interval
+            if (startInterval == -1 && endInterval == -1) {
+                startInterval = 1;
+                endInterval = chromosome.getTileEndInterval();
+            }
+            // show tiles of interest
+            for (int i=startInterval; i<=endInterval; i++) {
+                Tile tile = allTiles.get(chromosome).get(i);
+                if (tile.getTileFeatures().containsKey(annotationID)) {
+                    for (Feature currentFeature : tile.getTileFeatures().get(annotationID)) {
+                        // ** needs to be start here because we are showing for NOT ALL **
+                        Rectangle rect = new Rectangle(currentFeature.getStart() * zoomLevel, 1, currentFeature.getLength() * zoomLevel, 20);
+                        rect.setId(currentFeature.getId());
+                        rect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("gene").get("fill"));
+                        rect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("gene").get("stroke"));
+                        rect.setStrokeWidth(1.5);
+                        rect.setOpacity(0.7);
+                        rect.setArcWidth(5);
+                        rect.setArcHeight(5);
+                        annotationPane.getChildren().add(rect);
+                        // this method is generic to make mouse hand when entered
+                        rect.setOnMouseEntered(this.callEnteredHandler);
+                        rect.setOnMouseClicked(e -> {
+                            rect.setStroke(Color.BLACK);
+                            this.showFeatureInformation(currentFeature);
+                            this.setLiveComponent(currentFeature);
+                            this.openSidePane();
+                        });
+                    }
                 }
             }
         }
@@ -883,293 +1052,292 @@ public class View {
 
         // show calls for all chromosomes
         if (Objects.equals(chromosome.getName(), "<ALL>")) {
-            // loop through all chromosomes
-            for (Map.Entry<String, Chromosome> chromEntry : refContigs.entrySet()) {
-                if (Objects.equals(chromEntry.getKey(), "<ALL>")) {
-                    // do nothing when we reach <ALL> becauase we are showing all chromosomes anyway
-                } else {
-                    // loop through each tile
-                    for (Map.Entry<Integer, Tile> tileEntry : allTiles.get(chromEntry.getValue()).entrySet()) {
-                        Tile tile = tileEntry.getValue();
-                        // show the calls for each sample
-                        for (Sample sample : samples) {
-                            Pane currentCalls = (Pane) this.samplesContainer.lookup("#" + sample.getName());
-                            for (Call currentCall : tile.getSampleCalls().get(sample)) {
-                                Rectangle callRect;
-                                callRect = new Rectangle(currentCall.getAbsoluteStart()*zoomLevel, 1, currentCall.getLength()*zoomLevel, originalTrackHeight-2);
-                                // styling
-                                callRect.setOpacity(1);
-                                callRect.setStrokeWidth(2);
-                                callRect.setArcWidth(5);
-                                callRect.setArcHeight(5);
-                                // DUP STYLING
-                                if (Objects.equals(currentCall.getType(), "DUP")) {
-                                    callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
-                                    callRect.setOpacity(0.5);
-                                    callRect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("fill"));
-                                }
-                                else if (Objects.equals(currentCall.getType(), "INV")) {
-                                    callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INV").get("stroke"));
-                                    callRect.setOpacity(0.5);
-                                    callRect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INV").get("fill"));
-                                    Line lineInv1 = new Line(currentCall.getAbsoluteStart()*zoomLevel, 1, currentCall.getAbsoluteStart()*zoomLevel + currentCall.getLength()*zoomLevel, originalTrackHeight-2);
-                                    Line lineInv2 = new Line(currentCall.getAbsoluteStart()*zoomLevel + currentCall.getLength()*zoomLevel, 1, currentCall.getAbsoluteStart()*zoomLevel, originalTrackHeight-2);
-                                    lineInv1.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INV").get("stroke"));
-                                    lineInv2.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INV").get("stroke"));
-                                    lineInv1.setOpacity(0.6);
-                                    lineInv2.setOpacity(0.6);
-                                    currentCalls.getChildren().add(lineInv1);
-                                    currentCalls.getChildren().add(lineInv2);
-                                }
-                                else if (Objects.equals(currentCall.getType(), "DEL")) {
-                                    callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DEL").get("stroke"));
-                                    callRect.setOpacity(0.5);
-                                    callRect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DEL").get("fill"));
-                                    Line lineDel1 = new Line(currentCall.getAbsoluteStart()*zoomLevel, 1, currentCall.getAbsoluteStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), originalTrackHeight-2);
-                                    Line lineDel2 = new Line(currentCall.getAbsoluteStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), originalTrackHeight-2, currentCall.getAbsoluteStart()*zoomLevel + currentCall.getLength()*zoomLevel, 1);
-                                    lineDel1.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DEL").get("stroke"));
-                                    lineDel2.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DEL").get("stroke"));
-                                    lineDel1.setOpacity(0.4);
-                                    lineDel2.setOpacity(0.4);
-                                    currentCalls.getChildren().add(lineDel1);
-                                    currentCalls.getChildren().add(lineDel2);
-                                }
-                                else if (Objects.equals(currentCall.getType(), "INS")) {
-                                    callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INS").get("stroke"));
-                                    callRect.setOpacity(0.5);
-                                    callRect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INS").get("fill"));
-                                    Line lineIns1 = new Line(currentCall.getAbsoluteStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), 1, currentCall.getAbsoluteStart()*zoomLevel, originalTrackHeight-2);
-                                    Line lineIns2 = new Line(currentCall.getAbsoluteStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), 1, currentCall.getAbsoluteStart()*zoomLevel + currentCall.getLength()*zoomLevel, originalTrackHeight-2);
-                                    lineIns1.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INS").get("stroke"));
-                                    lineIns2.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INS").get("stroke"));
-                                    lineIns1.setOpacity(0.5);
-                                    lineIns2.setOpacity(0.5);
-                                    currentCalls.getChildren().add(lineIns1);
-                                    currentCalls.getChildren().add(lineIns2);
-                                }
-                                else if (Objects.equals(currentCall.getType(), "BND") || Objects.equals(currentCall.getType(), "TRA")){
-                                    callRect.setStroke(Color.BLACK);
-                                    callRect.setOpacity(0.7);
-                                    callRect.setFill(Color.BLACK);
-                                    callRect.getStrokeDashArray().setAll(12.0, 6.0);
-                                }
-                                else {
-                                    System.err.println("Unrecognized/unsupported SV type that was not caught earlier: " + currentCall.getType() + ". Ignoring call.");
-                                    continue;
-                                }
-                                currentCalls.getChildren().add(callRect);
-                            }
-                        }
+            // show the calls for each sample
+            for (Sample sample : samples) {
+                Pane currentCalls = (Pane) this.samplesContainer.lookup("#" + sample.getName());
+                for (Call currentCall : sample.getAllSampleCalls()) {
+                    Rectangle callRect;
+                    callRect = new Rectangle(currentCall.getAbsoluteStart()*zoomLevel, 1, currentCall.getLength()*zoomLevel, originalTrackHeight-2);
+                    // styling
+                    callRect.setOpacity(1);
+                    callRect.setStrokeWidth(2);
+                    callRect.setArcWidth(5);
+                    callRect.setArcHeight(5);
+                    // DUP STYLING
+                    if (Objects.equals(currentCall.getType(), "DUP")) {
+                        callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
+                        callRect.setOpacity(0.5);
+                        callRect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("fill"));
                     }
+                    else if (Objects.equals(currentCall.getType(), "INV")) {
+                        callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INV").get("stroke"));
+                        callRect.setOpacity(0.5);
+                        callRect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INV").get("fill"));
+                        Line lineInv1 = new Line(currentCall.getAbsoluteStart()*zoomLevel, 1, currentCall.getAbsoluteStart()*zoomLevel + currentCall.getLength()*zoomLevel, originalTrackHeight-2);
+                        Line lineInv2 = new Line(currentCall.getAbsoluteStart()*zoomLevel + currentCall.getLength()*zoomLevel, 1, currentCall.getAbsoluteStart()*zoomLevel, originalTrackHeight-2);
+                        lineInv1.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INV").get("stroke"));
+                        lineInv2.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INV").get("stroke"));
+                        lineInv1.setOpacity(0.6);
+                        lineInv2.setOpacity(0.6);
+                        currentCalls.getChildren().add(lineInv1);
+                        currentCalls.getChildren().add(lineInv2);
+                    }
+                    else if (Objects.equals(currentCall.getType(), "DEL")) {
+                        callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DEL").get("stroke"));
+                        callRect.setOpacity(0.5);
+                        callRect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DEL").get("fill"));
+                        Line lineDel1 = new Line(currentCall.getAbsoluteStart()*zoomLevel, 1, currentCall.getAbsoluteStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), originalTrackHeight-2);
+                        Line lineDel2 = new Line(currentCall.getAbsoluteStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), originalTrackHeight-2, currentCall.getAbsoluteStart()*zoomLevel + currentCall.getLength()*zoomLevel, 1);
+                        lineDel1.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DEL").get("stroke"));
+                        lineDel2.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DEL").get("stroke"));
+                        lineDel1.setOpacity(0.4);
+                        lineDel2.setOpacity(0.4);
+                        currentCalls.getChildren().add(lineDel1);
+                        currentCalls.getChildren().add(lineDel2);
+                    }
+                    else if (Objects.equals(currentCall.getType(), "INS")) {
+                        callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INS").get("stroke"));
+                        callRect.setOpacity(0.5);
+                        callRect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INS").get("fill"));
+                        Line lineIns1 = new Line(currentCall.getAbsoluteStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), 1, currentCall.getAbsoluteStart()*zoomLevel, originalTrackHeight-2);
+                        Line lineIns2 = new Line(currentCall.getAbsoluteStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), 1, currentCall.getAbsoluteStart()*zoomLevel + currentCall.getLength()*zoomLevel, originalTrackHeight-2);
+                        lineIns1.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INS").get("stroke"));
+                        lineIns2.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INS").get("stroke"));
+                        lineIns1.setOpacity(0.5);
+                        lineIns2.setOpacity(0.5);
+                        currentCalls.getChildren().add(lineIns1);
+                        currentCalls.getChildren().add(lineIns2);
+                    }
+                    else if (Objects.equals(currentCall.getType(), "BND") || Objects.equals(currentCall.getType(), "TRA")){
+                        callRect.setStroke(Color.BLACK);
+                        callRect.setOpacity(0.7);
+                        callRect.setFill(Color.BLACK);
+                        callRect.getStrokeDashArray().setAll(12.0, 6.0);
+                    }
+                    else {
+                        System.err.println("Unrecognized/unsupported SV type that was not caught earlier: " + currentCall.getType() + ". Ignoring call.");
+                        continue;
+                    }
+                    currentCalls.getChildren().add(callRect);
                 }
             }
-
         }
         // show calls for a region
         else {
-            System.out.println("SHOWING REGION ONLY");
             // if whole chromosome needs to be shown, find end interval
             if (startInterval == -1 && endInterval == -1) {
                 startInterval = 1;
                 endInterval = chromosome.getTileEndInterval();
             }
             for (int i=startInterval; i<=endInterval; i++) {
-                System.out.println("PROCESSING TILE " + i + " FOR CHROMSOME " + chromosome.getName());
                 Tile tile = allTiles.get(chromosome).get(i);
                 for (Sample sample : samples) {
                     // get sample pane
                     Pane currentCalls = (Pane) this.samplesContainer.lookup("#" + sample.getName());
                     // loop through sample calls for tile
                     for (Call currentCall : tile.getSampleCalls().get(sample)) {
-                        if (!nodeGroups.containsKey(currentCall.getId())) {
-                            nodeGroups.put(currentCall.getId(), new ArrayList<>());
+                        boolean shown = false;
+                        // check if already added in another tile
+                        for (Node child : currentCalls.getChildren()) {
+                            if (child.getId() != null && child instanceof Rectangle) {
+                                // if id of rectangle in pane equals currentCall (same call), already added
+                                if (Objects.equals(child.getId(), currentCall.getId())) {
+                                    shown = true;
+                                }
+                            }
                         }
-                        else {
-                            // do nothing
-                        }
-                        Rectangle callRect;
-                        callRect = new Rectangle(currentCall.getStart()*zoomLevel, 1, currentCall.getLength()*zoomLevel, originalTrackHeight-2);
-                        // styling
-                        callRect.setStrokeWidth(2);
-                        callRect.setArcWidth(5);   // horizontal roundness
-                        callRect.setArcHeight(5);
-                        if (Objects.equals(currentCall.getType(), "DUP")) {
-                            callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
-                            callRect.setOpacity(0.5);
-                            callRect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("fill"));
-                            nodeGroups.get(currentCall.getId()).add(callRect);
-                            // if the duplication rectangle is currently big enough to show the inside lines, show
-                            // inset is the distance from inner border to outer border
-                            int inset = 5;
-                            if (currentCall.getLength()*zoomLevel > (inset*2) && originalTrackHeight > (inset*2)) {
-                                // lines for inner border
-                                double endX = currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - inset;
-                                Line lineDup1 = new Line(currentCall.getStart()*zoomLevel + inset, inset, endX, inset);
-                                Line lineDup2 = new Line(currentCall.getStart()*zoomLevel + inset, originalTrackHeight - inset, endX, originalTrackHeight - inset);
-                                Line lineDup3 = new Line(currentCall.getStart()*zoomLevel + inset, inset, currentCall.getStart()*zoomLevel + inset, originalTrackHeight - inset);
-                                Line lineDup4 = new Line(endX, inset, endX, originalTrackHeight - inset);
-                                lineDup1.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
-                                lineDup2.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
-                                lineDup3.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
-                                lineDup4.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
-                                lineDup1.setOpacity(0.5);
-                                lineDup2.setOpacity(0.5);
-                                lineDup3.setOpacity(0.5);
-                                lineDup4.setOpacity(0.5);
-                                currentCalls.getChildren().add(lineDup1);
-                                currentCalls.getChildren().add(lineDup2);
-                                currentCalls.getChildren().add(lineDup3);
-                                currentCalls.getChildren().add(lineDup4);
-                                // lines for duplication-insert portion
-                                double middleDupX = ((currentCall.getStart()*zoomLevel + inset)+endX)/2;
-                                Line lineDup5 = new Line(currentCall.getStart()*zoomLevel + inset, originalTrackHeight - inset, middleDupX, inset);
-                                Line lineDup6 = new Line(middleDupX, inset, endX, originalTrackHeight - inset);
-                                lineDup5.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
-                                lineDup6.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
-                                lineDup5.setOpacity(0.5);
-                                lineDup6.setOpacity(0.5);
-                                currentCalls.getChildren().add(lineDup5);
-                                currentCalls.getChildren().add(lineDup6);
-                                // add to node groups
-                                nodeGroups.get(currentCall.getId()).add(lineDup1);
-                                nodeGroups.get(currentCall.getId()).add(lineDup2);
-                                nodeGroups.get(currentCall.getId()).add(lineDup3);
-                                nodeGroups.get(currentCall.getId()).add(lineDup4);
-                                nodeGroups.get(currentCall.getId()).add(lineDup5);
-                                nodeGroups.get(currentCall.getId()).add(lineDup6);
+                        if (!shown) {
+                            // add call ID to node groups
+                            if (!nodeGroups.containsKey(currentCall.getId())) {
+                                nodeGroups.put(currentCall.getId(), new ArrayList<>());
+                            }
+                            else {
+                                // do nothing
+                            }
+                            Rectangle callRect;
+                            callRect = new Rectangle(currentCall.getStart()*zoomLevel, 1, currentCall.getLength()*zoomLevel, originalTrackHeight-2);
+                            // styling
+                            callRect.setStrokeWidth(2);
+                            callRect.setArcWidth(5);   // horizontal roundness
+                            callRect.setArcHeight(5);
+                            if (Objects.equals(currentCall.getType(), "DUP")) {
+                                callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
+                                callRect.setOpacity(0.5);
+                                callRect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("fill"));
+                                nodeGroups.get(currentCall.getId()).add(callRect);
+                                // if the duplication rectangle is currently big enough to show the inside lines, show
+                                // inset is the distance from inner border to outer border
+                                int inset = 5;
+                                if (currentCall.getLength()*zoomLevel > (inset*2) && originalTrackHeight > (inset*2)) {
+                                    // lines for inner border
+                                    double endX = currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel - inset;
+                                    Line lineDup1 = new Line(currentCall.getStart()*zoomLevel + inset, inset, endX, inset);
+                                    Line lineDup2 = new Line(currentCall.getStart()*zoomLevel + inset, originalTrackHeight - inset, endX, originalTrackHeight - inset);
+                                    Line lineDup3 = new Line(currentCall.getStart()*zoomLevel + inset, inset, currentCall.getStart()*zoomLevel + inset, originalTrackHeight - inset);
+                                    Line lineDup4 = new Line(endX, inset, endX, originalTrackHeight - inset);
+                                    lineDup1.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
+                                    lineDup2.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
+                                    lineDup3.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
+                                    lineDup4.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
+                                    lineDup1.setOpacity(0.5);
+                                    lineDup2.setOpacity(0.5);
+                                    lineDup3.setOpacity(0.5);
+                                    lineDup4.setOpacity(0.5);
+                                    currentCalls.getChildren().add(lineDup1);
+                                    currentCalls.getChildren().add(lineDup2);
+                                    currentCalls.getChildren().add(lineDup3);
+                                    currentCalls.getChildren().add(lineDup4);
+                                    // lines for duplication-insert portion
+                                    double middleDupX = ((currentCall.getStart()*zoomLevel + inset)+endX)/2;
+                                    Line lineDup5 = new Line(currentCall.getStart()*zoomLevel + inset, originalTrackHeight - inset, middleDupX, inset);
+                                    Line lineDup6 = new Line(middleDupX, inset, endX, originalTrackHeight - inset);
+                                    lineDup5.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
+                                    lineDup6.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DUP").get("stroke"));
+                                    lineDup5.setOpacity(0.5);
+                                    lineDup6.setOpacity(0.5);
+                                    currentCalls.getChildren().add(lineDup5);
+                                    currentCalls.getChildren().add(lineDup6);
+                                    // add to node groups
+                                    nodeGroups.get(currentCall.getId()).add(lineDup1);
+                                    nodeGroups.get(currentCall.getId()).add(lineDup2);
+                                    nodeGroups.get(currentCall.getId()).add(lineDup3);
+                                    nodeGroups.get(currentCall.getId()).add(lineDup4);
+                                    nodeGroups.get(currentCall.getId()).add(lineDup5);
+                                    nodeGroups.get(currentCall.getId()).add(lineDup6);
 
-                            }
-                            // otherwise, don't add additional lines
-                            else {
-                                // do nothing!
-                            }
-                        }
-                        else if (Objects.equals(currentCall.getType(), "INV")) {
-                            callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INV").get("stroke"));
-                            callRect.setOpacity(0.5);
-                            callRect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INV").get("fill"));
-                            Line lineInv1 = new Line(currentCall.getStart()*zoomLevel, 1, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, originalTrackHeight-2);
-                            Line lineInv2 = new Line(currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, 1, currentCall.getStart()*zoomLevel, originalTrackHeight-2);
-                            lineInv1.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INV").get("stroke"));
-                            lineInv2.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INV").get("stroke"));
-                            lineInv1.setOpacity(0.6);
-                            lineInv2.setOpacity(0.6);
-                            currentCalls.getChildren().add(lineInv1);
-                            currentCalls.getChildren().add(lineInv2);
-                            // add to node groups
-                            nodeGroups.get(currentCall.getId()).add(callRect);
-                            nodeGroups.get(currentCall.getId()).add(lineInv1);
-                            nodeGroups.get(currentCall.getId()).add(lineInv2);
-                        }
-                        else if (Objects.equals(currentCall.getType(), "DEL")) {
-                            callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DEL").get("stroke"));
-                            callRect.setOpacity(0.5);
-                            callRect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DEL").get("fill"));
-                            Line lineDel1 = new Line(currentCall.getStart()*zoomLevel, 1, currentCall.getStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), originalTrackHeight-2);
-                            Line lineDel2 = new Line(currentCall.getStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), originalTrackHeight-2, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, 1);
-                            lineDel1.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DEL").get("stroke"));
-                            lineDel2.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DEL").get("stroke"));
-                            lineDel1.setOpacity(0.4);
-                            lineDel2.setOpacity(0.4);
-                            currentCalls.getChildren().add(lineDel1);
-                            currentCalls.getChildren().add(lineDel2);
-                            // add to node groups
-                            nodeGroups.get(currentCall.getId()).add(callRect);
-                            nodeGroups.get(currentCall.getId()).add(lineDel1);
-                            nodeGroups.get(currentCall.getId()).add(lineDel2);
-                        }
-                        else if (Objects.equals(currentCall.getType(), "INS")) {
-                            callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INS").get("stroke"));
-                            callRect.setOpacity(0.5);
-                            callRect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INS").get("fill"));
-                            Line lineIns1 = new Line(currentCall.getStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), 1, currentCall.getStart()*zoomLevel, originalTrackHeight-2);
-                            Line lineIns2 = new Line(currentCall.getStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), 1, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, originalTrackHeight-2);
-                            lineIns1.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INS").get("stroke"));
-                            lineIns2.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INS").get("stroke"));
-                            lineIns1.setOpacity(0.5);
-                            lineIns2.setOpacity(0.5);
-                            currentCalls.getChildren().add(lineIns1);
-                            currentCalls.getChildren().add(lineIns2);
-                            // add to node groups
-                            nodeGroups.get(currentCall.getId()).add(callRect);
-                            nodeGroups.get(currentCall.getId()).add(lineIns1);
-                            nodeGroups.get(currentCall.getId()).add(lineIns2);
-                        }
-                        else if (Objects.equals(currentCall.getType(), "BND") || Objects.equals(currentCall.getType(), "TRA")) {
-                            Polygon traPoly = new Polygon();
-                            // direction at first character, means join before
-                            if (currentCall.getAlternate().charAt(0) ==  ']' || currentCall.getAlternate().charAt(0) == '[') {
-                                // joining sequence is in reverse direction
-                                if (currentCall.getAlternate().charAt(0) ==  ']') {
-                                    traPoly.getPoints().addAll(
-                                            currentCall.getStart()*zoomLevel, 1.0,
-                                            currentCall.getStart()*zoomLevel, (double) originalTrackHeight /3,
-                                            currentCall.getStart()*zoomLevel-7, (double) (originalTrackHeight / 3) /2
-                                    );
                                 }
-                                // joining sequence is in forward direction
+                                // otherwise, don't add additional lines
                                 else {
-                                    traPoly.getPoints().addAll(
-                                            currentCall.getStart()*zoomLevel-7, 1.0,
-                                            currentCall.getStart()*zoomLevel-7, (double) originalTrackHeight /3,
-                                            currentCall.getStart()*zoomLevel, (double) (originalTrackHeight / 3) /2
-                                    );
+                                    // do nothing!
                                 }
                             }
-                            // otherwise other sequence joined after this ref char
-                            else {
-                                // joining sequence is in the reverse direction
-                                if (currentCall.getAlternate().charAt(currentCall.getAlternate().length() - 1) ==  ']') {
-                                    traPoly.getPoints().addAll(
-                                            currentCall.getStart()*zoomLevel+7, 1.0,
-                                            currentCall.getStart()*zoomLevel+7, (double) originalTrackHeight /3,
-                                            currentCall.getStart()*zoomLevel, (double) (originalTrackHeight / 3) /2
-                                    );
+                            else if (Objects.equals(currentCall.getType(), "INV")) {
+                                callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INV").get("stroke"));
+                                callRect.setOpacity(0.5);
+                                callRect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INV").get("fill"));
+                                Line lineInv1 = new Line(currentCall.getStart()*zoomLevel, 1, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, originalTrackHeight-2);
+                                Line lineInv2 = new Line(currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, 1, currentCall.getStart()*zoomLevel, originalTrackHeight-2);
+                                lineInv1.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INV").get("stroke"));
+                                lineInv2.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INV").get("stroke"));
+                                lineInv1.setOpacity(0.6);
+                                lineInv2.setOpacity(0.6);
+                                currentCalls.getChildren().add(lineInv1);
+                                currentCalls.getChildren().add(lineInv2);
+                                // add to node groups
+                                nodeGroups.get(currentCall.getId()).add(callRect);
+                                nodeGroups.get(currentCall.getId()).add(lineInv1);
+                                nodeGroups.get(currentCall.getId()).add(lineInv2);
+                            }
+                            else if (Objects.equals(currentCall.getType(), "DEL")) {
+                                callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DEL").get("stroke"));
+                                callRect.setOpacity(0.5);
+                                callRect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DEL").get("fill"));
+                                Line lineDel1 = new Line(currentCall.getStart()*zoomLevel, 1, currentCall.getStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), originalTrackHeight-2);
+                                Line lineDel2 = new Line(currentCall.getStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), originalTrackHeight-2, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, 1);
+                                lineDel1.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DEL").get("stroke"));
+                                lineDel2.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("DEL").get("stroke"));
+                                lineDel1.setOpacity(0.4);
+                                lineDel2.setOpacity(0.4);
+                                currentCalls.getChildren().add(lineDel1);
+                                currentCalls.getChildren().add(lineDel2);
+                                // add to node groups
+                                nodeGroups.get(currentCall.getId()).add(callRect);
+                                nodeGroups.get(currentCall.getId()).add(lineDel1);
+                                nodeGroups.get(currentCall.getId()).add(lineDel2);
+                            }
+                            else if (Objects.equals(currentCall.getType(), "INS")) {
+                                callRect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INS").get("stroke"));
+                                callRect.setOpacity(0.5);
+                                callRect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INS").get("fill"));
+                                Line lineIns1 = new Line(currentCall.getStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), 1, currentCall.getStart()*zoomLevel, originalTrackHeight-2);
+                                Line lineIns2 = new Line(currentCall.getStart()*zoomLevel + (currentCall.getLength()*zoomLevel / 2), 1, currentCall.getStart()*zoomLevel + currentCall.getLength()*zoomLevel, originalTrackHeight-2);
+                                lineIns1.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INS").get("stroke"));
+                                lineIns2.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("INS").get("stroke"));
+                                lineIns1.setOpacity(0.5);
+                                lineIns2.setOpacity(0.5);
+                                currentCalls.getChildren().add(lineIns1);
+                                currentCalls.getChildren().add(lineIns2);
+                                // add to node groups
+                                nodeGroups.get(currentCall.getId()).add(callRect);
+                                nodeGroups.get(currentCall.getId()).add(lineIns1);
+                                nodeGroups.get(currentCall.getId()).add(lineIns2);
+                            }
+                            else if (Objects.equals(currentCall.getType(), "BND") || Objects.equals(currentCall.getType(), "TRA")) {
+                                Polygon traPoly = new Polygon();
+                                // direction at first character, means join before
+                                if (currentCall.getAlternate().charAt(0) ==  ']' || currentCall.getAlternate().charAt(0) == '[') {
+                                    // joining sequence is in reverse direction
+                                    if (currentCall.getAlternate().charAt(0) ==  ']') {
+                                        traPoly.getPoints().addAll(
+                                                currentCall.getStart()*zoomLevel, 1.0,
+                                                currentCall.getStart()*zoomLevel, (double) originalTrackHeight /3,
+                                                currentCall.getStart()*zoomLevel-7, (double) (originalTrackHeight / 3) /2
+                                        );
+                                    }
+                                    // joining sequence is in forward direction
+                                    else {
+                                        traPoly.getPoints().addAll(
+                                                currentCall.getStart()*zoomLevel-7, 1.0,
+                                                currentCall.getStart()*zoomLevel-7, (double) originalTrackHeight /3,
+                                                currentCall.getStart()*zoomLevel, (double) (originalTrackHeight / 3) /2
+                                        );
+                                    }
                                 }
-                                // joining sequence is in the forward direction
+                                // otherwise other sequence joined after this ref char
                                 else {
-                                    traPoly.getPoints().addAll(
-                                            currentCall.getStart()*zoomLevel, 1.0,
-                                            currentCall.getStart()*zoomLevel, (double) originalTrackHeight /3,
-                                            currentCall.getStart()*zoomLevel+7, (double) (originalTrackHeight / 3) /2
-                                    );
+                                    // joining sequence is in the reverse direction
+                                    if (currentCall.getAlternate().charAt(currentCall.getAlternate().length() - 1) ==  ']') {
+                                        traPoly.getPoints().addAll(
+                                                currentCall.getStart()*zoomLevel+7, 1.0,
+                                                currentCall.getStart()*zoomLevel+7, (double) originalTrackHeight /3,
+                                                currentCall.getStart()*zoomLevel, (double) (originalTrackHeight / 3) /2
+                                        );
+                                    }
+                                    // joining sequence is in the forward direction
+                                    else {
+                                        traPoly.getPoints().addAll(
+                                                currentCall.getStart()*zoomLevel, 1.0,
+                                                currentCall.getStart()*zoomLevel, (double) originalTrackHeight /3,
+                                                currentCall.getStart()*zoomLevel+7, (double) (originalTrackHeight / 3) /2
+                                        );
+                                    }
                                 }
+                                callRect.setStroke(Color.BLACK);
+                                callRect.setOpacity(0.7);
+                                callRect.setFill(Color.BLACK);
+                                callRect.getStrokeDashArray().setAll(12.0, 6.0);
+                                callRect.setStrokeWidth(3);
+                                // for TRA polygon
+                                traPoly.setFill(Color.rgb(80, 80, 80));
+                                traPoly.setId("TRA" + currentCall.getId());
+                                currentCalls.getChildren().add(traPoly);
+                                traPoly.setOnMouseEntered(this.callEnteredHandler);
+                                traPoly.setOnMouseClicked(e -> {
+                                    //this.callClickHandler
+                                    this.showCallInformation(currentCall, samples);
+                                    this.setLiveComponent(currentCall);
+                                    this.openSidePane();
+                                });
+                                // add to node groups
+                                nodeGroups.get(currentCall.getId()).add(callRect);
+                                nodeGroups.get(currentCall.getId()).add(traPoly);
                             }
-                            callRect.setStroke(Color.BLACK);
-                            callRect.setOpacity(0.7);
-                            callRect.setFill(Color.BLACK);
-                            callRect.getStrokeDashArray().setAll(12.0, 6.0);
-                            callRect.setStrokeWidth(3);
-                            // for TRA polygon
-                            traPoly.setFill(Color.rgb(80, 80, 80));
-                            traPoly.setId("TRA" + currentCall.getId());
-                            currentCalls.getChildren().add(traPoly);
-                            traPoly.setOnMouseEntered(this.callEnteredHandler);
-                            traPoly.setOnMouseClicked(e -> {
+                            else {
+                                System.err.println("Unrecognized/unsupported SV type that was not caught earlier: " + currentCall.getType() + ". Ignoring call.");
+                                continue;
+                            }
+                            // for call rectangle
+                            currentCalls.getChildren().add(callRect);
+                            callRect.setOnMouseEntered(this.callEnteredHandler);
+                            callRect.setOnMouseClicked(e -> {
                                 //this.callClickHandler
+                                callRect.setStroke(Color.BLACK);
                                 this.showCallInformation(currentCall, samples);
-                                this.setLiveCall(currentCall);
+                                this.setLiveComponent(currentCall);
                                 this.openSidePane();
                             });
-                            // add to node groups
-                            nodeGroups.get(currentCall.getId()).add(callRect);
-                            nodeGroups.get(currentCall.getId()).add(traPoly);
+                            callRect.setId(currentCall.getId());
                         }
-                        else {
-                            System.err.println("Unrecognized/unsupported SV type that was not caught earlier: " + currentCall.getType() + ". Ignoring call.");
-                            continue;
-                        }
-                        // for call rectangle
-                        currentCalls.getChildren().add(callRect);
-                        callRect.setOnMouseEntered(this.callEnteredHandler);
-                        callRect.setOnMouseClicked(e -> {
-                            //this.callClickHandler
-                            callRect.setStroke(Color.BLACK);
-                            this.showCallInformation(currentCall, samples);
-                            this.setLiveCall(currentCall);
-                            this.openSidePane();
-                        });
-                        callRect.setId(currentCall.getId());
                     }
                 }
             }
@@ -1190,80 +1358,154 @@ public class View {
     };
 
     public void hideCalls(ArrayList<Sample> samples, ArrayList<Call> calls) {
-        // loop through each sample
-        for (Sample sample : samples) {
-            // get sample track
-            Pane currentCalls = (Pane) this.samplesContainer.lookup("#" + sample.getName());
-            // loop through calls to hide
-            for (Call call : calls) {
-                System.out.println("CALL TO STRING " + call.toString());
-                Node rect = currentCalls.lookup("#" + call.getId());
-                if (rect != null) {
-                    rect.setOpacity(0.01);
-                }
-                for (Node nodeToRemove : nodeGroups.get(call.getId())) {
-                    //currentCalls.getChildren().remove(nodeToRemove);
-                    nodeToRemove.setOpacity(0.01);
-                }
+        // loop through calls to hide
+        for (Call call : calls) {
+            for (Node nodeToRemove : nodeGroups.get(call.getId())) {
+                nodeToRemove.setOpacity(0.01);
             }
         }
     }
 
-    public void setLiveCall(Call call) {
-        this.liveCall = call;
+    public void addNewFeatureID(String annotationID) {
+        this.annotationIDs.add(annotationID);
     }
 
-    public Call getLiveCall() {
-        return this.liveCall;
+    public void setLiveComponent(Component component) {
+        // ** UNSET current live component **
+        if (this.liveComponent == null) {
+            // do nothing
+        }
+        // loop through samples to unset Call component
+        else if (this.liveComponent instanceof Call) {
+            for (Sample sample : this.sampleOrder) {
+                Pane samplePane = (Pane) this.samplesContainer.lookup("#" + sample.getName());
+                for (Node child : samplePane.getChildren()) {
+                    if (child.getId() != null && child instanceof Rectangle) {
+                        // if it equals the live component
+                        if (Objects.equals(child.getId(), liveComponent.getId())) {
+                            Rectangle rect = (Rectangle) child;
+                            rect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get(liveComponent.getType()).get("stroke"));
+                            // only one per sample so break after to move to next sample
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        // loop through annotation tracks to unset Feature component
+        else if (this.liveComponent instanceof Feature) {
+            for (String annotationID : this.annotationIDs) {
+                Pane annotationPane = (Pane) this.annotationsContainer.lookup("#" + annotationID);
+                for (Node child : annotationPane.getChildren()) {
+                    // if child has an id and is a rectangle
+                    if (child.getId() != null && child instanceof Rectangle) {
+                        // if it equals the live component
+                        if (Objects.equals(child.getId(), liveComponent.getId())) {
+                            Rectangle rect = (Rectangle) child;
+                            rect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get(liveComponent.getType()).get("stroke"));
+                            // only one per sample so break after to move to next sample
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        else {
+            // do nothing
+        }
+
+        // ** SET new live component **
+        // loop through samples to set new live component
+        if (component instanceof Call) {
+            for (Sample sample : this.sampleOrder) {
+                Pane samplePane = (Pane) this.samplesContainer.lookup("#" + sample.getName());
+                for (Node child : samplePane.getChildren()) {
+                    if (child.getId() != null && child instanceof Rectangle) {
+                        if (Objects.equals(child.getId(), component.getId())) {
+                            Rectangle rect = (Rectangle) child;
+                            rect.setStroke(Color.BLACK);
+                            // there will ONLY be one per sample, so break once found
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        // loop through annotations to set new live component
+        else if (component instanceof Feature) {
+            for (String annotationID : this.annotationIDs) {
+                Pane annotationPane = (Pane) this.annotationsContainer.lookup("#" + annotationID);
+                for (Node child : annotationPane.getChildren()) {
+                    // if child has an id and is a rectangle
+                    if (child.getId() != null && child instanceof Rectangle) {
+                        // if it equals the live component
+                        if (Objects.equals(child.getId(), component.getId())) {
+                            Rectangle rect = (Rectangle) child;
+                            rect.setStroke(Color.BLACK);
+                            // there will ONLY be one per annotation track, so break once found
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        else {
+            // do nothing, unexpected type for live component
+        }
+        this.liveComponent = component;
+    }
+
+    public Component getLiveComponent() {
+        return this.liveComponent;
+    }
+
+    void showFeatureInformation(Feature feature) {
+        this.componentDetails.getChildren().clear();
+        this.componentDetails.getChildren().addAll(idContainer, nameContainer, typeContainer, chromContainer, posContainer, endContainer, lengthContainer, descriptionContainer);
+        Label idLabel = (Label) componentDetails.lookup("#id");
+        idLabel.setText(feature.getId());
+        Label nameLabel = (Label) componentDetails.lookup("#name");
+        nameLabel.setText(feature.getName());
+        Label typeLabel = (Label) componentDetails.lookup("#type");
+        typeLabel.setText(feature.getType());
+        Label chromLabel = (Label) componentDetails.lookup("#chrom");
+        chromLabel.setText(feature.getChromosome().getName());
+        Label posLabel = (Label) componentDetails.lookup("#pos");
+        posLabel.setText(String.valueOf(String.format("%,d", feature.getStart())));
+        Label endLabel = (Label) componentDetails.lookup("#end");
+        endLabel.setText(String.valueOf(String.format("%,d", feature.getEnd())));
+        Label lengthLabel = (Label) componentDetails.lookup("#length");
+        lengthLabel.setText(String.valueOf(String.format("%,d", feature.getLength())));
+        Label descriptionLabel = (Label) componentDetails.lookup("#description");
+        descriptionLabel.setText(feature.getDescription());
+
+        // set call info side pane to visible
+        callInfoSideContainer.setVisible(true);
+        callInfoSideContainer.setManaged(true);
+        selectionOptionsSideContainer.setVisible(false);
+        selectionOptionsSideContainer.setManaged(false);
     }
 
     void showCallInformation(Call call, ArrayList<Sample> samples) {
-        Label idLabel = (Label) callInfoSideContainer.lookup("#id");
+        this.componentDetails.getChildren().clear();
+        this.componentDetails.getChildren().addAll(idContainer, typeContainer, chromContainer, posContainer, lengthContainer, qualContainer, filterContainer, genotypeContainer);
+        Label idLabel = (Label) componentDetails.lookup("#id");
         idLabel.setText(call.getId());
-        Label typeLabel = (Label) callInfoSideContainer.lookup("#type");
+        Label typeLabel = (Label) componentDetails.lookup("#type");
         typeLabel.setText(call.getType());
-        Label chromLabel = (Label) callInfoSideContainer.lookup("#chrom");
+        Label chromLabel = (Label) componentDetails.lookup("#chrom");
         chromLabel.setText(call.getChromosome());
-        Label posLabel = (Label) callInfoSideContainer.lookup("#pos");
+        Label posLabel = (Label) componentDetails.lookup("#pos");
         posLabel.setText(String.valueOf(String.format("%,d", call.getStart())));
-        Label lengthLabel = (Label) callInfoSideContainer.lookup("#length");
+        Label lengthLabel = (Label) componentDetails.lookup("#length");
         lengthLabel.setText(String.valueOf(call.getLength()));
-        Label qualLabel = (Label) callInfoSideContainer.lookup("#qual");
+        Label qualLabel = (Label) componentDetails.lookup("#qual");
         qualLabel.setText(call.getQual());
-        Label filterLabel = (Label) callInfoSideContainer.lookup("#filter");
+        Label filterLabel = (Label) componentDetails.lookup("#filter");
         filterLabel.setText(call.getFilter());
 
-        // try to look up mate container in side pane
-        HBox bndContainer = (HBox) callInfoSideContainer.lookup("#bndContainer");
-        // if call is a breakend type, check if it is present and add it if necessary
-        if (Objects.equals(call.getType(), "BND") || Objects.equals(call.getType(), "TRA")) {
-            // if not present, add node
-            if (bndContainer == null) {
-                callInfoSideContainer.getChildren().add(7, mateContainer);
-            }
-            // otherwise present
-            else {
-                // do nothing
-            }
-            Label mateLabel = (Label) callInfoSideContainer.lookup("#mate");
-            Pattern pattern = Pattern.compile("([\\[\\]])(.+)\\1");
-            Matcher matcher = pattern.matcher(call.getAlternate());
-            if (matcher.find()) {
-                mateLabel.setText(matcher.group(2));
-            }
-            else {
-                System.err.println("Error: could not identify mate region in ALT field for BND or TRA. ID is " + call.getId() + " and alternate is " + call.getAlternate());
-            }
-        }
-        // call is not breakend type, make sure mate container node is removed
-        else {
-            // if not null already, remove it
-            if (bndContainer != null) {
-                callInfoSideContainer.getChildren().remove(bndContainer);
-            }
-        }
-
-        Label genotypeLabel = (Label) callInfoSideContainer.lookup("#genotypes");
+        // fill genotype information
+        Label genotypeLabel = (Label) componentDetails.lookup("#genotypes");
         // clear genotype label from previous calls
         genotypeLabel.setText("");
         int count = 0;
@@ -1275,6 +1517,25 @@ public class View {
                 genotypeLabel.setText(genotypeLabel.getText() + "\n" + sample.getName() + " = " + call.getGenotypes().get(sample.getName()));
             }
             count += 1;
+        }
+
+        // if call is a breakend type, check if it is present and add it if necessary
+        if (Objects.equals(call.getType(), "BND") || Objects.equals(call.getType(), "TRA")) {
+            // add node for BND information
+            componentDetails.getChildren().add(4, mateContainer);
+            Label mateLabel = (Label) componentDetails.lookup("#mate");
+            Pattern pattern = Pattern.compile("([\\[\\]])(.+)\\1");
+            Matcher matcher = pattern.matcher(call.getAlternate());
+            if (matcher.find()) {
+                mateLabel.setText(matcher.group(2));
+            }
+            else {
+                System.err.println("Error: could not identify mate region in ALT field for BND or TRA. ID is " + call.getId() + " and alternate is " + call.getAlternate());
+            }
+        }
+        // call is not breakend type
+        else {
+            // do nothing because mate container wasn't added at the start of the method anyway
         }
 
         // set call info side pane to visible
@@ -1404,14 +1665,11 @@ public class View {
 
     // *************************************************************** TRACK CREATION FUNCTIONS ************************************************************************
 
-    public void createNewAnnotationTrack(long refLength, double zoomLevel, String trackName, double baseFontSize, int height, String key) {
+    public void createNewAnnotationTrack(long refLength, double zoomLevel, String trackName, double baseFontSize, int height, String trackType, String annotationTrackID) {
         // types
-        // GENEREPEAT
+        // GENE
         // AF
-        // PILEUP
         StackPane callsWrapper = new StackPane();
-        callsWrapper.setPadding(new Insets(1, 0, 1, 0));
-
         Pane freqPane = new Pane();
         callsWrapper.getChildren().add(freqPane);
 
@@ -1419,21 +1677,18 @@ public class View {
         // force height of track (or else it will collapse if there is no content)
         freqPane.setMinHeight(height);
         freqPane.setMaxHeight(height);
-        if (Objects.equals(key, "AF")) {
-            // set id
-            freqPane.setId("AlleleFreq");
-
-
-            Line topLine = new Line();
-            Line bottomLine = new Line();
-
-            // Make them dotted (dashed)
-            topLine.getStrokeDashArray().addAll(5.0, 5.0);
-            bottomLine.getStrokeDashArray().addAll(5.0, 5.0);
-
-            // Set color
-            topLine.setStroke(Color.BLACK);
-            bottomLine.setStroke(Color.BLACK);
+        // set id
+        freqPane.setId(annotationTrackID);
+        Line topLine = new Line();
+        Line bottomLine = new Line();
+        // Make them dotted (dashed)
+        topLine.getStrokeDashArray().addAll(5.0, 5.0);
+        bottomLine.getStrokeDashArray().addAll(5.0, 5.0);
+        // Set color
+        topLine.setStroke(Color.BLACK);
+        bottomLine.setStroke(Color.BLACK);
+        if (Objects.equals(trackType, "AF")) {
+            callsWrapper.setPadding(new Insets(1, 0, 1, 0));
             // set actions for radio controls
             this.grayscaleAFTrackItem.setOnAction(e -> {
                 this.applyAFColorTheme("grayscale AF", callsWrapper);
@@ -1441,6 +1696,10 @@ public class View {
             // trigger default color theme
             this.applyAFColorTheme("grayscale AF", callsWrapper);
             this.grayscaleAFTrackItem.setSelected(true);
+        }
+        else if (Objects.equals(trackType,"GENES")) {
+            callsWrapper.setPadding(new Insets(3, 0, 1, 0));
+            callsWrapper.setStyle("-fx-border-color: #DFE0DF; -fx-border-width: 0.5;");
         }
         else {
             // do nothing
@@ -1535,16 +1794,14 @@ public class View {
      * markerWrapper.
      * @param newVal value between 0 and 1 corresponding to the start position of the new genomic region in view
      */
-    public void syncScroll(Number newVal) {
-        System.out.println("--------------- SYNC SCROLL TRIGGERED ----------------");
-        System.out.println("new val is " + newVal);
+    public void syncScroll(double newVal) {
         // getContent() gets node scrollpane is scrolling, getboundsinlocal gets actual width and height of node, so maxX is the maximum distance that can be scrolled
         double maxX = callsPanel.getContent().getBoundsInLocal().getWidth()
                 - callsPanel.getViewportBounds().getWidth();
-        double translateX = -newVal.doubleValue() * maxX;
+        double translateX = -newVal * maxX;
         ticksWrapper.setTranslateX(translateX);
         double max = markerWrapper.getWidth() - marker.getWidth();
-        double scrollX = newVal.doubleValue() * max;
+        double scrollX = newVal * max;
         marker.setLayoutX(scrollX);
     }
 
@@ -1562,7 +1819,6 @@ public class View {
         double proportionVisible = visibleWidth/contentWidth;
         // set width
         marker.setWidth(markerWrapper.getWidth() * proportionVisible);
-        System.out.println("OFFSET IS " + offset);
         marker.setLayoutX(offset);
     }
 
@@ -1570,14 +1826,12 @@ public class View {
         //System.out.println("SET SCROLL PERCENT IS " + percent);
         this.callsPanel.layout();
         double contentWidth = callsPanel.getContent().getBoundsInLocal().getWidth();
-        System.out.println("CONTENT WIDTH FROM SETSCROLL IS " + contentWidth);
         double viewportWidth = callsPanel.getViewportBounds().getWidth();
         double maxScroll = contentWidth - viewportWidth;
 
         double scale = contentWidth / chrom.getLength();
         double targetPixelX = start * scale;
         double hvalue = targetPixelX / maxScroll;
-        System.out.println("SET SCROLL RETURN VAL IS " + hvalue);
         // triggers controller.processScrollChange()
         callsPanel.layout();
         this.callsPanel.setHvalue(hvalue);
@@ -1682,7 +1936,8 @@ public class View {
 
     private void triggerScrollPane() {
         // Apply CSS/layout for accurate prefHeight
-        double newHeight = this.samplesContainer.getBoundsInParent().getHeight() + this.annotationsContainer.getLayoutBounds().getHeight();
+        this.annotationsContainer.layout();
+        double newHeight = this.samplesContainer.getBoundsInParent().getHeight() + this.annotationsContainer.getBoundsInParent().getHeight();
         tracksGroup.setMinHeight(newHeight);
         tracksGroup.setPrefHeight(newHeight);
         tracksGroup.setMaxHeight(newHeight);
@@ -1865,6 +2120,46 @@ public class View {
     public boolean closeSidePane() {
         // if its visible (0), close it
         if (this.sidePaneContainer.getTranslateX() == 0) {
+            // remove styling from live call
+            if (this.liveComponent != null) {
+                // if call - loop through each sample to remove styling
+                if (this.liveComponent instanceof Call) {
+                    for (Sample sample : this.sampleOrder) {
+                        Pane samplePane = (Pane) this.samplesContainer.lookup("#" + sample.getName());
+                        for (Node child : samplePane.getChildren()) {
+                            if (child.getId() != null && child instanceof Rectangle) {
+                                if (Objects.equals(child.getId(), liveComponent.getId())) {
+                                    Rectangle rect = (Rectangle) child;
+                                    rect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get(liveComponent.getType()).get("stroke"));
+                                    // there is only 1 SV with this ID per track, so break
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                // if feature - loop through each annotation track to remove styling
+                else if (this.liveComponent instanceof Feature) {
+                    for (String annotationID : annotationIDs) {
+                        Pane annotationPane = (Pane) this.annotationsContainer.lookup("#" + annotationID);
+                        for (Node child : annotationPane.getChildren()) {
+                            // if child has an id and is a rectangle
+                            if (child.getId() != null && child instanceof Rectangle) {
+                                // if it equals the live component
+                                if (Objects.equals(child.getId(), liveComponent.getId())) {
+                                    Rectangle rect = (Rectangle) child;
+                                    rect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get(liveComponent.getType()).get("stroke"));
+                                    // there is only 1 component with this ID per annotation track, so break
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                else {
+                    // do nothing
+                }
+            }
             slideOut.setToX(300);
             // going to set selection info as present (default)
             slideOut.setOnFinished(event -> {
@@ -1902,7 +2197,6 @@ public class View {
         }
 
         double percent = (clampedX - startX) / (endX - startX);
-        System.out.printf("Marker at X: %.2f (%.1f%%)%n", clampedX, percent * 100);
         this.callsPanel.setHvalue(percent);
     }
 
@@ -1927,6 +2221,9 @@ public class View {
 
     public void importListener(EventHandler<ActionEvent> handler) {
         importVCFItem.setOnAction(handler);
+    }
+    public void gffImportListener(EventHandler<ActionEvent> handler) {
+        importGFFItem.setOnAction(handler);
     }
     public void zoomInListener(EventHandler<ActionEvent> handler) {
         zoomInButton.setOnAction(handler);
