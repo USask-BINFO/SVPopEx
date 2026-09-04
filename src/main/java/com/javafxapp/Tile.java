@@ -9,6 +9,7 @@ public class Tile {
     private int start; // genomic start of tile region
     private int end; // genomic end of tile region
     private ArrayList<Call> tileCalls; // ArrayList of all calls for that tile
+    private HashMap<String,ArrayList<Feature>> tileFeatures;
     private HashMap<Sample,ArrayList<Call>> sampleCalls; // HashMap holding Samples (key) and ArrayList of Calls (value)
     // constructor
     public Tile(int num, int start, int end) {
@@ -16,6 +17,7 @@ public class Tile {
         this.start = start;
         this.end = end;
         this.tileCalls = new ArrayList<Call>();
+        this.tileFeatures = new HashMap<>();
         this.sampleCalls = new HashMap<>();
     }
 
@@ -35,6 +37,30 @@ public class Tile {
             sampleCalls.put(sample, new ArrayList<>());
             sampleCalls.get(sample).add(call);
         }
+    }
+
+    public void addFeature(Feature currentFeature, String annotationID) {
+        // if annotationID already added as key, add feature
+        if (this.tileFeatures.containsKey(annotationID)) {
+            this.tileFeatures.get(annotationID).add(currentFeature);
+        }
+        // otherwise, add key to LinkedHashMap and add feature
+        else {
+            this.tileFeatures.put(annotationID, new ArrayList<>());
+            this.tileFeatures.get(annotationID).add(currentFeature);
+        }
+    }
+
+    public int getEnd() {
+        return this.end;
+    }
+
+    public int getStart() {
+        return this.start;
+    }
+
+    public HashMap<String,ArrayList<Feature>> getTileFeatures() {
+        return this.tileFeatures;
     }
 
     /**
