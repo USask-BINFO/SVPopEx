@@ -243,7 +243,7 @@ public class Controller {
             }
 
             // show calls
-            System.out.println("UPDATED ZOOM SHOWING START: " + newStart + " and END : " + newEnd);
+            //System.out.println("UPDATED ZOOM SHOWING START: " + newStart + " and END : " + newEnd);
             boolean updateStart = model.updateCurrentTileStart(model.getInterval((int) newStart));
             boolean updateEnd = model.updateCurrentTileEnd(model.getInterval((int) newEnd));
             // show calls and allele frequency
@@ -254,7 +254,6 @@ public class Controller {
             }
             // update scroll and marker based on newStart and offset (calculated from newStart)
             double offset = ((double) newStart / model.getCurrentChrom().getLength()) * view.getMarkerWrapperWidth();
-            System.out.println("CALLED IN UPDATE ZOOM");
             view.syncScroll(view.setScroll((int) newStart, model.getCurrentChrom(), model.getZoomLevel()));
             view.setScroll((int) newStart, model.getCurrentChrom(), model.getZoomLevel());
             view.updateMarker(model.getCurrentChrom(), level, model.getGenomicProportion(view.getViewportWidth(), model.getCurrentChrom(), model.getZoomLevel()), offset);
@@ -322,20 +321,14 @@ public class Controller {
      */
     public void showChromosome(String selectedChrom) {
         model.changingChromosome(true);
-        System.out.println("-------- TRIGGERING CONTROLLER.SHOWCHROMOSOME() ------------");
         // set new chromosome
-        System.out.println("SELECTED CHROMOSOME IS " + selectedChrom);
         Chromosome chrom = model.getRefChromosomes().get(selectedChrom);
-        System.out.println(chrom);
-        System.out.println(chrom.getLength());
-        System.out.println("CHROM TO STRING " + chrom.getLength());
         model.setCurrentChrom(chrom);
         // update zoom level
         model.updateZoomLevelByRegion(chrom.getLength(), view.getViewportWidth(), view.isVerticalSBVisible(), view.getVerticalSBWidth());
         // update coord increment
         model.updateCoordIncrement(view.getViewportWidth(), model.getCurrentChrom());
         // show coords
-        System.out.println("CALLING WEIRD CODE HERE");
         double newVal = 0.0;
         view.syncScroll(newVal);
         view.showCoords(model.getCurrentChrom(), model.getTickSpacing(), model.getZoomLevel(), model.getRefChromosomes());
@@ -410,7 +403,6 @@ public class Controller {
      * @param newVal new hvalue after scroll
      */
     public void processScrollChange(double oldVal, double newVal) {
-        System.out.println("PROCESS SCROLL CHANGE CALLED");
         view.syncScroll(newVal);
         // get genomic proportion, start and end value in view
         double proportion = model.getGenomicProportion(view.getViewportWidth(), model.getCurrentChrom(), model.getZoomLevel());
