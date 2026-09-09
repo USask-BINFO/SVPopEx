@@ -52,4 +52,4 @@ This project is licensed under the [GNU General Public License v3.0](LICENSE).
 ```
 
 ## Contact
-For any questions or inquires, feel free to open an [Issue](issues) or contact [mcb508@mail.usask.ca](mailto:mcb508@mail.usask.ca).
+For any questions or inquires, feel free to open an [Issue](https://github.com/USask-BINFO/SVPopEx/issues) or contact [mcb508@mail.usask.ca](mailto:mcb508@mail.usask.ca).
