@@ -16,7 +16,7 @@ SVPopEx is a Java-based application for the visualization and exploration of str
 
 
 
-## Usage
+## Input Specifications
 ### VCF Specifications: 
 - Formatting must conform to the following specifications:
   - Both single sample and multi-sample VCF files are supported. All samples must be included in the header and genotype information for each SV. 
@@ -32,7 +32,16 @@ SVPopEx is a Java-based application for the visualization and exploration of str
   - The attributes field must contain the ID tag and a corresponding value.
   - Currently only features of type 'gene' are supported.
  
-### Uploading a File
+## Test Dataset
+A sample dataset `schistosoma-test.vcf` is provided as an example of a properly formatted VCF. SVs were generated from long-read _S. mansoni_ sequencing available at NCBI BioProject PRJNA1206205 and the SM_V10 reference genome available at https://parasite.wormbase.org/Schistosoma_mansoni_prjea36577/Info/Index/. 
+
+Uploading the VCF should produce the following whole-genome view in SVPopEx:
+<img width="1850" height="961" alt="wg-hq" src="https://github.com/user-attachments/assets/52e3de8b-d7ad-42b7-9382-fadc9ac01b82" />
+
+
+
+## Usage 
+### Uploading a File:
 Get started by uploading a VCF file. Then, gene annotations in a GFF3 file can be uploaded. 
 <div align="center">
   <img width="650" height="364" alt="upload" src="https://github.com/user-attachments/assets/d3638ef7-9f0b-4d2f-b0d7-e56249ce0135">
@@ -43,7 +52,7 @@ This project is licensed under the [GNU General Public License v3.0](LICENSE).
 
 ## Citation
 ```bibtex
-@article{baker2026svpopex,
+@article{baker2026,
   author    = {Baker, Mari and Bett, Kirstin and Vargas, Ana and Jin, Lingling},
   title     = {SVPopEx: Population-Wide Visualization and Exploration of Structural Variants},
   year      = {2026},
