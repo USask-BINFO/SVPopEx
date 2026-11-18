@@ -54,10 +54,11 @@ public class View {
     // ----------- root and side pane ---------------
     private final VBox sidePaneContainer = new VBox(0);
     private final VBox selectionOptionsSideContainer = new VBox(20);
+    private final ScrollPane selectionOptionsScrollPane = new ScrollPane(selectionOptionsSideContainer);
     private final VBox callInfoSideContainer = new VBox(7);
     private final VBox componentDetails = new VBox(6);
     private Component liveComponent = null;
-    private final StackPane sidePaneSwapPanel = new StackPane(callInfoSideContainer, selectionOptionsSideContainer);
+    private final StackPane sidePaneSwapPanel = new StackPane(callInfoSideContainer, selectionOptionsScrollPane);
     private final ArrayList<CheckBox> pinCheckboxes = new ArrayList<>();
     private final VBox compareLabelContainer = new VBox();
     private final VBox processRegionLabelContainer = new VBox();
@@ -226,6 +227,13 @@ public class View {
 
 
         // ---------- ROOT AND SIDE PANE ---------
+        // scrollpane
+        selectionOptionsScrollPane.setFitToWidth(true);
+        selectionOptionsScrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
+        selectionOptionsScrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        selectionOptionsScrollPane.setFitToHeight(true);
+        selectionOptionsScrollPane.setStyle("-fx-background-color: transparent");
+
         String regularStyle = """
                 -fx-text-fill: #555555;
                 -fx-font-weight: bold;
@@ -243,6 +251,7 @@ public class View {
         // close button
         sidePaneContainer.getChildren().add(closeButtonContainer);
         sidePaneContainer.getChildren().add(sidePaneSwapPanel);
+        sidePaneSwapPanel.setStyle("-fx-background-color: #e0e0e0;");
 
         closeButtonContainer.setAlignment(Pos.TOP_RIGHT);
         // title
@@ -263,6 +272,7 @@ public class View {
         Region spacer2 = new Region();
         spacer2.setMinHeight(20);
         selectionOptionsSideContainer.setAlignment(Pos.TOP_CENTER);
+        selectionOptionsSideContainer.setStyle("-fx-background-color: #e0e0e0;");
 
         selectionOptionsSideContainer.getChildren().add(spacer1);
         selectionOptionsSideContainer.getChildren().add(title);
@@ -411,8 +421,8 @@ public class View {
         this.genotypeContainer.getChildren().addAll(genotypesLabel, genotypesFill);
 
         // upon creation the selection container is visible
-        selectionOptionsSideContainer.setVisible(true);
-        selectionOptionsSideContainer.setManaged(true);
+        selectionOptionsScrollPane.setVisible(true);
+        selectionOptionsScrollPane.setManaged(true);
         // make sure call info container is not visible
         callInfoSideContainer.setVisible(false);
         callInfoSideContainer.setManaged(false);
@@ -673,6 +683,10 @@ public class View {
         callsPanel.setFitToHeight(false);
         callsPanel.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
         this.scrollViewportHeight = windowBottomOnScreen - topOfPanelOnScreen;
+        // set height of side panel based on viewport height
+        selectionOptionsScrollPane.setMinHeight(this.scrollViewportHeight - 25);
+        selectionOptionsScrollPane.setPrefHeight(this.scrollViewportHeight - 25);
+        selectionOptionsScrollPane.setMaxHeight(this.scrollViewportHeight - 25);
 
         // bind the layout height and content height of the tracks info with the calls panel
         tracksInfoPanel.prefHeightProperty().bind(callsPanel.prefHeightProperty());
@@ -876,7 +890,7 @@ public class View {
             sampleOrder.add(sample);
             this.createNewCallTrack(sampleColors, refLength, zoomLevel, sample.getName(), baseFontSize, originalTrackHeight);
         }
-        this.callsPanel.setPannable(true);   // Optional: enables mouse drag scrolling
+        this.callsPanel.setPannable(true);
     }
 
     /*
@@ -973,7 +987,7 @@ public class View {
                                 Feature currentFeature = tile.getTileFeatures().get(annotationID).get(i);
                                 Rectangle rect;
                                 // ** needs to be absolutestart here because we are showing for <ALL>
-                                rect = new Rectangle(currentFeature.getAbsoluteStart()*zoomLevel, 1, currentFeature.getLength()*zoomLevel, 20);
+                                rect = new Rectangle(currentFeature.getAbsoluteStart()*zoomLevel, 1, currentFeature.getLength()*zoomLevel, 10);
                                 rect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("gene").get("fill"));
                                 rect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("gene").get("stroke"));
                                 rect.setStrokeWidth(1.5);
@@ -1000,7 +1014,7 @@ public class View {
                 if (tile.getTileFeatures().containsKey(annotationID)) {
                     for (Feature currentFeature : tile.getTileFeatures().get(annotationID)) {
                         // ** needs to be start here because we are showing for NOT ALL **
-                        Rectangle rect = new Rectangle(currentFeature.getStart() * zoomLevel, 1, currentFeature.getLength() * zoomLevel, 20);
+                        Rectangle rect = new Rectangle(currentFeature.getStart() * zoomLevel, 1, currentFeature.getLength() * zoomLevel, 10);
                         rect.setId(currentFeature.getId());
                         rect.setFill(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("gene").get("fill"));
                         rect.setStroke(SVGlyphColorThemes.get(this.currentSVGlyphTheme).get("gene").get("stroke"));
@@ -1009,6 +1023,17 @@ public class View {
                         rect.setArcWidth(5);
                         rect.setArcHeight(5);
                         annotationPane.getChildren().add(rect);
+
+                        // text to show description
+                        Label label = new Label(currentFeature.getDescription());
+                        // Position text inside rectangle
+                        label.setLayoutX(currentFeature.getStart() * zoomLevel);
+                        label.setLayoutY(13);
+                        label.setPrefWidth(rect.getWidth());
+                        label.setTextOverrun(OverrunStyle.ELLIPSIS);
+                        label.setWrapText(false);
+                        annotationPane.getChildren().add(label);
+
                         // this method is generic to make mouse hand when entered
                         rect.setOnMouseEntered(this.callEnteredHandler);
                         rect.setOnMouseClicked(e -> {
@@ -1482,8 +1507,8 @@ public class View {
         // set call info side pane to visible
         callInfoSideContainer.setVisible(true);
         callInfoSideContainer.setManaged(true);
-        selectionOptionsSideContainer.setVisible(false);
-        selectionOptionsSideContainer.setManaged(false);
+        selectionOptionsScrollPane.setVisible(false);
+        selectionOptionsScrollPane.setManaged(false);
     }
 
     void showCallInformation(Call call, ArrayList<Sample> samples) {
@@ -1541,8 +1566,8 @@ public class View {
         // set call info side pane to visible
         callInfoSideContainer.setVisible(true);
         callInfoSideContainer.setManaged(true);
-        selectionOptionsSideContainer.setVisible(false);
-        selectionOptionsSideContainer.setManaged(false);
+        selectionOptionsScrollPane.setVisible(false);
+        selectionOptionsScrollPane.setManaged(false);
     }
 
     /**
@@ -1698,7 +1723,7 @@ public class View {
             this.grayscaleAFTrackItem.setSelected(true);
         }
         else if (Objects.equals(trackType,"GENES")) {
-            callsWrapper.setPadding(new Insets(3, 0, 1, 0));
+            callsWrapper.setPadding(new Insets(3, 0, 3, 0));
             callsWrapper.setStyle("-fx-border-color: #DFE0DF; -fx-border-width: 0.5;");
         }
         else {
@@ -1958,10 +1983,9 @@ public class View {
         /**
          * Pre-conditions/assumptions: Gets info pane for each sample by looking up the ID
          */
+        int height = (int) (trackHeightScale*originalTrackHeight);
         for (Sample sample : samples) {
             HBox container = (HBox) samplesInfoContainer.lookup("#" + sample.getName());
-//            container.setMinHeight(originalTrackHeight * trackHeightScale);
-//            container.setMaxHeight(originalTrackHeight * trackHeightScale);
             // get second HBox (labelContainer), lockContainer is first
             VBox lockContainer = (VBox) container.getChildren().getFirst();
             SVGPath lockIcon = (SVGPath) lockContainer.getChildren().getFirst();
@@ -1973,7 +1997,10 @@ public class View {
             sampleLabel.setScaleY(1.0/trackHeightScale);
             rect.setScaleY(1.0/trackHeightScale);
             lockIcon.setScaleY(0.75/trackHeightScale);
-            //sampleLabel.setFont(new Font(sampleLabel.getFont().getFamily(), baseFontSize*trackHeightScale));
+            if (trackHeightScale*originalTrackHeight < 10) {
+                int newSize = height - 1;
+                sampleLabel.setFont(new Font(sampleLabel.getFont().getFamily(), newSize));
+            }
         }
     }
 
@@ -2163,8 +2190,8 @@ public class View {
             slideOut.setToX(300);
             // going to set selection info as present (default)
             slideOut.setOnFinished(event -> {
-                selectionOptionsSideContainer.setVisible(true);
-                selectionOptionsSideContainer.setManaged(true);
+                selectionOptionsScrollPane.setVisible(true);
+                selectionOptionsScrollPane.setManaged(true);
                 callInfoSideContainer.setVisible(false);
                 callInfoSideContainer.setManaged(false);
             });
