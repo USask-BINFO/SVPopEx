@@ -2,7 +2,8 @@
 
 ## Overview
 SVPopEx is a Java-based application for the visualization and exploration of structural variants (SVs) at the population-level. SVPopEx visualizes insertions, deletions, inversions, duplications, and translocation calls from a multi-sample VCF file alongside gene annotations from a GFF3 file. 
-<img width="1655" height="963" alt="overview" src="https://github.com/user-attachments/assets/1660f90a-dc88-4eb6-b77b-71fa069b4eec" />
+<img width="2724" height="1609" alt="overview" src="https://github.com/user-attachments/assets/7ae203fb-0b39-444d-b891-559ca5e69324" />
+
 
 
 ## Dependencies 
