@@ -24,15 +24,15 @@ public class Model {
     private double trackHeightScale = 1;
     private final double baseFontSize = 12;
     private final int originalTrackHeight = 100;
-    private final int tileSize = 20000000;
+    private final int tileSize = 15000000;
     private Integer currentTileBufferStart = null;
     private Integer currentTileBufferEnd = null;
-    private final int tileBuffer = 2;
+    private final int tileBuffer = 1;
     private final int AFTrackHeight = 88;
     private final Set<String> supportedSVTypes = Set.of("TRA", "BND", "INS", "DEL", "INV", "DUP");
     private boolean changingChromInView = false;
     private ArrayList<String> annotationIDs = new ArrayList<>();
-    private final int featureTrackHeight = 26;
+    private final int featureTrackHeight = 30;
 
     /**
      * Clears the relevant data structures in the Model such that a new VCF file can be chosen and the structures can be repopulated.
@@ -704,7 +704,7 @@ public class Model {
      */
     public void updateTrackHeightScale(double increment) {
         // if less than 10 pixels too small
-        if ((this.trackHeightScale + increment) < 0.1) {
+        if ((this.trackHeightScale + increment) < 0.02) {
             // do nothing, too small
         }
         // otherwise increase increment
@@ -794,7 +794,7 @@ public class Model {
 
             Pattern IDInfoPattern = Pattern.compile(IDInfoRegex);
             Pattern nameInfoPattern = Pattern.compile(nameInfoRegex);
-            Pattern descriptionInfoPattern = Pattern.compile(descriptionInfoRegex);
+            Pattern descriptionInfoPattern = Pattern.compile(descriptionInfoRegex, Pattern.CASE_INSENSITIVE);
 
             Matcher IDInfoMatcher = IDInfoPattern.matcher(fields[8]);
             Matcher nameInfoMatcher = nameInfoPattern.matcher(fields[8]);
