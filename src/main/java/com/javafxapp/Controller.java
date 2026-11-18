@@ -46,10 +46,10 @@ public class Controller {
             this.processShowDiffCalls();
         });
         view.shrinkTrackHeightListener(e -> {
-            this.updateTrackHeight(-0.1);
+            this.updateTrackHeight(-0.05);
         });
         view.growTrackHeightListener(e -> {
-            this.updateTrackHeight(0.1);
+            this.updateTrackHeight(0.05);
         });
         view.releaseSelectionListener(e -> {
             this.updateReleaseSelection(e);
